@@ -1,5 +1,5 @@
 add_library(ConfigFiles rwnmr_config.cpp 
-						umct_config.cpp 
+						uct_config.cpp 
 						cpmg_config.cpp 
 						pfgse_config.cpp
 						ga_config.cpp)
@@ -11,7 +11,7 @@ target_include_directories(ConfigFiles
 
 install(TARGETS ConfigFiles DESTINATION lib)
 install(FILES rwnmr_config.h 
-			  umct_config.h 
+			  uct_config.h 
 			  cpmg_config.h 
 			  pfgse_config.h
 			  ga_config.h DESTINATION include)

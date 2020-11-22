@@ -20,6 +20,7 @@
 // include CMake Configuration file
 #include "NMR_RWConfig.h"
 #include "rwnmr_config.h"
+#include "uct_config.h"
 
 // include project files
 #include "NMR_Simulation.h"
@@ -48,8 +49,11 @@ void save_GA_solution_data(vector<double> &sigmoid, NMR_Simulation &NMR);
 int main(int argc, char *argv[])
 {    
      cout << "new main function." << endl;
-     string config_path = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/rwnmr.config";
-     rwnmr_config config(config_path); 
+     string rw_config_path = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/rwnmr.config";
+     rwnmr_config rwConfig(rw_config_path); 
+     
+     string uct_config_path = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/uct.config";
+     uct_config uctConfig(uct_config_path); 
      cout << "config file read" << endl;
      return 0;
 }

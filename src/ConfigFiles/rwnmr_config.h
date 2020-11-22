@@ -4,6 +4,7 @@
 // include C++ standard libraries
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
