@@ -3,10 +3,8 @@
 #include <iomanip>
 #include <sstream>
 #include <fstream>
-#include <random>
 #include <vector>
 #include <string>
-#include <math.h>
 #include <stdint.h>
 
 #include "rwnmr_config.h"

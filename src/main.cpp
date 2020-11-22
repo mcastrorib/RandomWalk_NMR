@@ -21,6 +21,8 @@
 #include "NMR_RWConfig.h"
 #include "rwnmr_config.h"
 #include "uct_config.h"
+#include "pfgse_config.h"
+#include "cpmg_config.h"
 
 // include project files
 #include "NMR_Simulation.h"
@@ -48,13 +50,26 @@ void save_GA_solution_data(vector<double> &sigmoid, NMR_Simulation &NMR);
 // Main Program
 int main(int argc, char *argv[])
 {    
-     cout << "new main function." << endl;
-     string rw_config_path = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/rwnmr.config";
+     // -- set path to config files dir
+     string config_root = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/";
+     
+     // -- rwnmr config
+     string rw_config_path = config_root + "rwnmr.config";
      rwnmr_config rwConfig(rw_config_path); 
      
-     string uct_config_path = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/uct.config";
+     // -- uct image config
+     string uct_config_path = config_root + "uct.config";
      uct_config uctConfig(uct_config_path); 
-     cout << "config file read" << endl;
+     
+     // -- pfgse config
+     string pfgse_config_path = config_root + "pfgse.config";
+     pfgse_config pfgseConfig(pfgse_config_path);
+
+     // -- pfgse config
+     string cpmg_config_path = config_root + "cpmg.config";
+     cpmg_config cpmgConfig(cpmg_config_path);
+
+     cout << "config files read" << endl;
      return 0;
 }
 
