@@ -1,0 +1,818 @@
+tive a ideia de inserir os walkers uniformemente no espaço da seguinte forma:
+- primiero, contar os poros na imagem e obter a porosidade global
+- separar a imagem em n porcões iguais
+- definir a porosidade local
+- colocar walkers nessas regiões de maneira proporcional a porosidade local
+
+
+
+OBS
+O erro para cálculo do deslocamento quadrado médio no caso com relaxatividade:
+não é para dividir pelo numero de walkers, mas pela "energia" total acumulada por todos os walkers
+
+
+logspace sampling:
+// --
+// Run PFGSE simulation parameters
+int samples = 40;
+vector<double> exposureTime(samples);
+double max_value = 40;
+double min_value = 1;
+double gap = max_value - min_value;
+double A = (-9.0) / ((double) samples - 1.0);
+for(uint i = 0; i < samples; i++)
+{    
+	// double value = max_value - (max_value - min_value)*log10(A*i + 10);
+	double value = min_value + ((max_value - min_value) / ((double) samples - 1.0)) * i;
+	exposureTime.push_back(value);
+	// cout << "t[" << i << "] = " <<  exposureTime[i] << " ms" << endl;
+}
+// --    
+
+
+*--*--*--*--*--*--
+09/09/2020
+*--*--*--*--*--*--
+Estou investigando o efeito do aumento artificial de resolução nas iamgens, i.e, estou "quebrando" cada voxel da imagem em potencias de 2 (para facilitar na conversão rápida com um shift nos bits). 
+
+Para tal, estou testando a capacidade de recuperar a relação S/V para tempos curtos, onde não é possível para os walkers investigar toda a geometria da amostra. Fiz testes numa imagem com poro esférico voxelizado com raio r = 50 voxels. Nestas condições, a relação S/V analitica seria:
+==> S/V = 3/r = 0.06
+
+Os testes foram realizados "esticando" a imagem para amostras com 100k, 200k e 1M de walkers.
+A "quebra" dos voxels seguiu a sequencia de potências de 2, ou seja:
+res_1) cada voxel corresponde a 1 minivoxel por direção coordenada (1 no total)
+res_2) cada voxel corresponde a 2 minivoxels por direção coordenada (8 no total)
+res_3) cada voxel corresponde a 4 minivoxels por direção coordenada (64 no total)
+res_4) cada voxel corresponde a 8 minivoxels por direção coordenada (512 no total)
+
+A rotina pfgse foi executada para os seguintes tempos de observação:
+t_a = 0.67 ms
+t_b = 6.67 ms
+t_c = 40 ms
+
+-------------------------:
+- Amostra de 100K walkers:
+Na resolução 1, o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos
+S/V (t_a, res_1) = 0,101
+S/V (t_b, res_1) = 0,067
+S/V (t_c, res_1) = 0,069
+
+Na resolução 2, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_2) = 0,079
+S/V (t_b, res_2) = 0,063
+S/V (t_c, res_2) = 0,070
+
+Na resolução 3, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_3) = 0,071
+S/V (t_b, res_3) = 0,069
+S/V (t_c, res_3) = 0,070
+
+Na resolução 4, o procedimento divergiu para t_a e t_b, se aproximando da relação analitica somente em t_c 
+S/V (t_a, res_4) = -1,398
+S/V (t_b, res_4) = 0,028
+S/V (t_c, res_4) = 0,069
+
+-------------------------:
+- Amostra de 200K walkers:
+Na resolução 1, o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos
+S/V (t_a, res_1) = 0,094
+S/V (t_b, res_1) = 0,068
+S/V (t_c, res_1) = 0,069
+
+Na resolução 2, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_2) = 0,091
+S/V (t_b, res_2) = 0,067
+S/V (t_c, res_2) = 0,069
+
+Na resolução 3, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_3) = 0,090
+S/V (t_b, res_3) = 0,066
+S/V (t_c, res_3) = 0,068
+
+Na resolução 3, o procedimento divergiu para t_a e t_b, se aproximando da relação analitica somente em t_c 
+S/V (t_a, res_4) = -1,393
+S/V (t_b, res_4) = 0,025
+S/V (t_c, res_4) = 0,069
+  
+-----------------------:
+- Amostra de 1M walkers:
+Na resolução 1, o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos
+S/V (t_a, res_1) = 0,106
+S/V (t_b, res_1) = 0,071
+S/V (t_c, res_1) = 0,070
+
+Na resolução 2, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_2) = 0,089
+S/V (t_b, res_2) = 0,068
+S/V (t_c, res_2) = 0,069
+
+Na resolução 3, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_3) = 0,088
+S/V (t_b, res_3) = 0,067
+S/V (t_c, res_3) = 0,069
+
+Na resolução 3, o procedimento divergiu para t_a e t_b, se aproximando da relação analitica somente em t_c 
+S/V (t_a, res_4) = -1,393
+S/V (t_b, res_4) = 0,023
+S/V (t_c, res_4) = 0,069
+
+Aparentemente, os resultados variam pouco em função do numero de walkers. 
+Por outro lado, a mudança na resolução está alterando a precisão para valores mais baixos de tempo. 
+Aparentemente, o aumento da resolução inicialmente melhora a precisão para valores menores de tempo, mas não é um comportamento linear. A partir de certo ponto, esse valor passa a divergir.
+De fato, para os tempos muito pequenos e resolução mais alta, os valores negativos indicam que o coeficiente de difusão estimado está maior do que o coeficiente de difusão livre (bulk). Ou seja, das duas uma:
+- walkers estão experimentando uma inconsistencia estatistica devido ao numero reduzido de passos
+- walkers não estão experimentando as restrições devido às paredes dos poros.
+as duas condições combinadas estão criando a impressão que os walkers estão andando mais do que o esperado para tal intervalo de tempo.
+
+Repeti os experimentos em uma nova imagem sintética. Desta vez, o poro é caracterizado por uma esfera de raio r = 10 voxels. A relação S/V analitica é 0,3.
+A rotina pfgse foi executada para os seguintes tempos de observação:
+t_a = 0.67 ms
+t_b = 3.33 ms
+t_c = 6.67 ms
+t_d = 13.33 ms
+t_e = 26.67 ms
+t_f = 40 ms
+
+Somente a simulação com 100k walkers foi realizada pelos motivos expostos acima. 
+Os resultados foram:
+
+- Amostra de 100k walkers:
+Na resolução 1, o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos
+S/V (t_a, res_1) = 0,447
+S/V (t_b, res_1) = 0,389
+S/V (t_c, res_1) = 0,386
+S/V (t_d, res_1) = 0,377
+S/V (t_e, res_1) = 0,349
+S/V (t_f, res_1) = 0,319
+
+Na resolução 2, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_2) = 0,401
+S/V (t_b, res_2) = 0,375
+S/V (t_c, res_2) = 0,376
+S/V (t_d, res_2) = 0,375
+S/V (t_e, res_2) = 0,350
+S/V (t_f, res_2) = 0,319
+
+Na resolução 3, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_3) = 0,398
+S/V (t_b, res_3) = 0,368
+S/V (t_c, res_3) = 0,375
+S/V (t_d, res_3) = 0,375
+S/V (t_e, res_3) = 0,349
+S/V (t_f, res_3) = 0,319
+
+Na resolução 3, o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_4) = -0,851
+S/V (t_b, res_4) = 0,367
+S/V (t_c, res_4) = 0,355
+S/V (t_d, res_4) = 0,374
+S/V (t_e, res_4) = 0,349
+S/V (t_f, res_4) = 0,319
+
+
+
+O mesmo experimento, numa esfera de raio r = 5 voxels e S/V = 0,6 obteve:
+- Amostra de 100k walkers:
+Na resolução 1, o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos
+S/V (t_a, res_1) = 0,879
+S/V (t_b, res_1) = 0,760
+S/V (t_c, res_1) = 0,697
+S/V (t_d, res_1) = 0,584
+S/V (t_e, res_1) = 0,450
+S/V (t_f, res_1) = 0,378
+
+Na resolução 2, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_2) = 0,793
+S/V (t_b, res_2) = 0,742
+S/V (t_c, res_2) = 0,692
+S/V (t_d, res_2) = 0,583
+S/V (t_e, res_2) = 0,449
+S/V (t_f, res_2) = 0,378
+
+Na resolução 3, novamente o procedimento divergiu para t_a, mas se aproximou da relação analitica para os demais tempos 
+S/V (t_a, res_3) = 0,761
+S/V (t_b, res_3) = 0,742
+S/V (t_c, res_3) = 0,691
+S/V (t_d, res_3) = 0,582
+S/V (t_e, res_3) = 0,450
+S/V (t_f, res_3) = 0,378
+
+Na resolução 3, o procedimento divergiu para t_a e t_b, se aproximando da relação analitica somente em t_c 
+S/V (t_a, res_4) = -0,143
+S/V (t_b, res_4) = 0,740
+S/V (t_c, res_4) = 0,687
+S/V (t_d, res_4) = 0,582
+S/V (t_e, res_4) = 0,450
+S/V (t_f, res_4) = 0,378
+
+
+*--*--*--*--*--*--
+10/09/2020
+*--*--*--*--*--*--
+Hoje refiz o teste de difusão para a imagem com arranjo periódico de esferas com porosidade de aproximadamente 0.47. O objetivo seria averiguar o efeito obtido com a ampliação digital da resolução da imagem. Em primeiro lugar, repeti a simulação para 40 amostras de tempo de observação (de 1 a 40 ms) dividindo cada voxel da mesma forma dos experimentos acima (09/09/2020) na imagem com resolução 1 um/voxel e esferas de raio r = 5 um. Depois, realizei o mesmo procedimento na imagem com resolução de 0.5 um/voxel. Erros de segmentação começaram a acontecer, mas creio que consertei (os procedimentos de map e walk anteriores precisavam passar pela conversão de coordenadas local -> global). 
+
+
+*--*--*--*--*--*--
+11/09/2020
+*--*--*--*--*--*--
+Os resultados estão no caminho:
+'~/Documents/Doutorado_IC/tese/saved_data/bergman_test/plots_periodic_media_testing_resolutions'
+ 
+Pelo gráfico, observa-se que o experimento de "quebrar" os voxeis em subvoxeis produz um efeito positivo, mas limitado. Por exemplo, na imagem com resolução de 1 um/voxel, a relação D(t)/D0 no limite assintotico se aproxima de 0.6 (i.e, o coeficiente de difusão efetivo "restrito" é aproximadamente 60% do valor para difusão livre). Se comparamos com o valor obtido no experimento que simula completamente as condições retratadas no artigo de referência (Bergman 1995), veremos que os walkers/spins estão se difundindo menos, uma vez que nesse caso, onde o passo de cada walker corresponde à 1/100 do comprimento da aresta do cubo que define o arranjo períodico e os grãos esféricos são definidos espacialmente de maneira "analítica", o valor obtido para esse coeficiente de difusão no limite de tortuosidade, e que foi medido a partir da equação do deslocamento quadrado médio de toda a amostra, é de aproximadamente 72% do valor para difusão livre. 
+
+Ao subdividir cada voxel em partes menores, o deslocamento médio de cada spin é aparentemente maior, de forma que a relação D(t)/D0 é ligeiramente maior. Esse valor parece aumentar com essa melhora artificial na resolução da imagem. No entanto, os dados obtidos deixam claro que esse efeito não é capaz de melhorar os resultados completamente ou, melhor dizendo, o efeito dessa melhora tem um certo limite intransponível. O aumento na difusão média dos walkers em relação ao experimento com a imagem intocada e com a imagem artificialmente refinada com a quebra dos voxels originais em 8 voxels menores (para um mesmo voxel, cada dimensão passa a ter dois voxels) é maior do que o aumento observado quando comparamos esse ultimo experimento (8 minivoxels para cada voxel original) com uma ampliação ainda maior (64 minivoxels por cada voxel original). O mesmo se observa ao dividirmos ainda mais os voxels. A melhora observada entre dividir cada voxel por 64 (4 por dimensão) em comparação com quando dividimos os voxels em 512 minivoxels (8 por dimensão) é mínima e o valor absoluto da relação obtida gira em torno de 64%. Isso implica que ou chega-se num certo limite superior ou para conseguir continuar melhorando consideravelemente, é preciso dividir os voxels em cada vez menores regiões, o que pode se tornar rapidamente proibitivamente custoso para as simulações uma vez que passos menores implicam que para um mesmo tempo de observação, uma maior quantidade de passos/caminhadas são realizadas.  
+
+Veja que essa análise de minivoxels pode ser de fato confusa, talvez uma maneira mais clara de abordar a questão seria olhar da seguinte perspectiva: quando ampliamos artificialmente a resolução da imagem, o que estamos fazendo no fundo é diminuir o tamanho do passo de um walker.  
+
+Por outro lado, o experimento numa resolução de 0,5 um/voxel, já experimenta resultado mais próximo do que adotamos como "ground truth". Se comparamos o resultado nessa resolução com o resultado na resolução anterior, com os voxels divididos por 2 em cada dimensão, o que em teoria implica mesmo tamanho de passo, veremos que uma melhor resolução aproxima consideravelmente melhor a relação D(t)/D0. De fato, sem divisão de voxel, observou-se um coeficiente de difusão em torno de 66%. Ao repetir-se o experimento de diminuir o tamanho do passo (o equivalente a ampliar artificialmente a resolução) esse valor chega a 69%. As observações feitas com relação a convergencia para um certo limite superior feitas no caso de 1um/voxel também foram observadas aqui. Uma possível explicação para esse fenômeno está na perda de informação precisa sobre a relação superfície/volume na interface entre a regiões porosa e a parede rochosa. A resolução inferior implica numa descrição mais "porca" dessa interface. Como o fenomeno de difusão é modelado de tal forma que esta relação tem papel fundamental nas equações diferenciais e, principalmente, nas condições de contorno do problema, uma maior imprecisão na sua descrição é determinante para criar distorções no modelo discreto.
+
+
+*--*--*--*--*--*--
+14/09/2020
+*--*--*--*--*--*--
+Jefferson me pediu para repetir o experimento acima para esferas com raio de 10.0 e 2.5 um. Ou seja, observar o que acontece se o tamanho do arranjo periódico é dobrado ou encolhido pela metade.
+
+Para realizar o experimento, é preciso gerar o resultado de 'ground truth'. Isso é, rodar uma simulação para um caso ficticio onde a resolução da imagem sintética respeite a relação que o passo de um walker/spin seja 1/100 do tamanho da aresta do cubo que define o arranjo periódico. Portanto, basta pegar a imagem com arrajo esférico de a=100 voxels (esferas com r=50 voxels) e modificar a resolução da imagem no próprio programa RWNMR. 
+r = 2.5 um 	---> a = 5.0 um 	---> resolução = 0.05 um/voxel
+r = 10.0 um 	---> a = 20.0 um 	---> resolução = 0.2 um/voxel
+
+Para gerar o grafico D(t)/D0 vs t_adim, essa medida de tempo característico tem que variar na faixa de 0 a 1.0. No experimento anterior, foi usado um range de 1 até 40 ms pois t = t_adim * a²/D0. Logo, temos:
+r = 2.5 um 	---> a = 5.0 um 	---> t_max = 10.0 ms 
+r = 10.0 um 	---> a = 20.0 um 	---> t_max = 160.0 ms	
+
+Obs .: Para ambos os casos, com esse valor de t_max e resolução as simulações vão percorrer 60k rw-steps.
+Isso não significa que veremos os walkers/spins se movendo num mesmo padrão independente da resolução? O que quero dizer é que eles vão continuar caminhando uma mesma quantidade de voxels na média. Porém, uma coisa é chave aqui: como a resolução é diferente, o deslocamento atribuído a cada voxel passa a ser diferente, certo? Então, o que espero observar é que numa resolução mais refinada e um mesmo numero de passos numa mesma imagem base, o deslocamento quadrado médio da amostra será obrigatoriamente menor. Seguindo o mesmo raciocínio, o deslocamento na imagem com resolução mais grosseira será maior. Logo, em comparação com os dados obtidos no experimento anterior, esperamos ver o limite assintotico da curva D(t)/D0 se afastando e se aproximando de 1.0 para cada caso respectivamente.
+
+Obs2 .: Conforme analisado mais abaixo, a reflexão acima está incorreta. O que faltou considerar aqui é que o tempo característico é proporcional ao tamanho do arranjo periódico que, por sua vez, influencia na resolução usada para gerar o 'ground truth'. Conforme explicado abaixo, no fim das contas, a relação D(t)/D0 esperada (principalmente no limite t_adim = 1) é a mesma para todos os casos.
+
+Em sequência, o experimento consiste em reproduzir as simulações nas imagens correspondente à esses arranjos periódiocos em resolução de 1.0 e 0.5 um/voxel, repetindo o experimento aplicando a diminuição no tamanho do passo. 
+
+resolução = 1.0 um/voxel
+r = 2.5 um 	---> a = 5.0 um 	---> sphere r = 2.5 voxels
+r = 10.0 um 	---> a = 20.0 um 	---> sphere r = 10 voxels 
+
+resolução = 0.5 um/voxel
+r = 2.5 um 	---> a = 5.0 um 	---> sphere r = 5 voxels
+r = 10.0 um 	---> a = 20.0 um 	---> sphere r = 20 voxels 
+
+
+*--*--*--*--*--*--
+15/09/2020
+*--*--*--*--*--*--
+Infelizmente, um erro inesperado aconteceu. Ao realizar a simulação para esfera de raio r=10um na resolução de 0,5 um/voxel com um shift de 3 (ou seja, cada voxel foi dividido em 512 voxels, ou o passo de cada walker passou a ser 1/8 do valor inicial) a partir de 96 ms aparece um erro de segmentação (esse erro não aparece se eu diminuo a amostra de 100k para 10k walkers). Estou considerando algumas possibilidades:
+- toda aquela conversão no numero de passos por echo (apesar de isso não ter nenhuma influencia no método map, então me deixa reticente...).
+- pode ser um problema na conversão de inteiros? O numero de passos pode estar suplantando o limite de tipo int. As simulações começam a descambar por volta de 300k passos. 
+No entanto, pelo que percebi, o range do tipo inteiro vai até 2.14 bilhões.
+Aparentemente, era mesmo algum erro relacionado ao numero de passos totais. O estranho é que quando a amostra de walkers era pequena, não dava esse erro. No entanto, ao separar em "pulsos", ou seja, limito o numero max de caminhadas por chamada de kernel, o programa volta a rodar sem dar erro de segmentação. Agora preciso repetir o mesmo para os metodos map. Fico aqui pensando em como aplicar esse mesmo controle para o método walk. que se baseia nos valores de stepsPerEcho e numberOfEcho. Preciso controlar os passos por ai?
+
+
+*--*--*--*--*--*--
+16/09/2020
+*--*--*--*--*--*--
+Os resultados para a relação D(t)/D0 estão dando semelhantes para os 3 experimentos, o que contraria a minha expectativa inicial e me pôs em meditação sobre o motivo para tal. Anteriormente, eu imaginava que por estar fazendo a simulação na mesma imagem (esferas com 50 voxels de raio) e numa mesma quantidade de passos, eu veria um deslocamento médio em termos de voxels (delta_voxels) igual, mas que o fato de estarmos tratando a imagem com resoluções diferentes, tornaria o deslocamento "fisico" (delta_s) diferente e, consequentemente, o coeficiente de difusão também o seria.
+
+O deslocamento "fisico", delta_s, de cada walker é computado como:
+
+delta_s = delta_voxels * resolução
+
+O deslocamento quadratico médio (msd) seria:
+
+msd = somatorio_para_walkers_vivos(delta_s)²
+
+E o coeficiente de difusão seria seguindo a eq 2.18 do artigo do Bergman:
+
+D(t) = msd / (6*t)
+
+Como a resolução é a mesma para todos os voxels, é possível colocar em evidencia, tirando do somatório:
+
+msd = resolução² * somatorio_para_walkers_vivos(delta_voxels)²
+
+se fizermos um deslocamento quadratico médio em termos do deslocamento em voxels, seria:
+
+msd_voxels = somatorio_para_walkers_vivos(delta_voxels)^2
+
+E, portanto, teríamos
+D(t) = (resolução² * msd_voxels) / (6*t)
+
+Por outro lado, em nosso experimento, adotamos a condição que o tamanho do passo do walker, traduzido na implementação na forma da resolução da imagem, respeita a relação
+resolução = a/100
+
+onde "a" corresponde a aresta do arranjo cubico periódico. 
+Desta forma, o coeficiente de difusão pode ser expressado por:
+
+D(t) = ((a/100)² * msd_voxels) / (6*t)
+
+Ademais, as medições para cada caso abrangem o intervalo de tempo característico necessário para uma partícula percorrer o comprimento caractéristico da geometria da região porosa. Nesse caso, esse comprimento característico corresponde justamente a medida "a". Logo, o tempo real necessário para tal inspeção respeita a relação:
+
+t_adim = sqrt(D0 * t_real) / a
+
+Logo, isolando o tempo real t_real, e adotando t_adim = 1 (caso em que foi dado tempo para os walkers/spins inspecionarem o comprimento característico):
+
+t_real = a² / D0 
+
+Logo, substituindo t_real na equação do coeficiente de difusão teríamos:
+
+D(t) = ((a/100)² * msd_voxels) / (6 * t_real)
+D(t) = ((a/100)² * msd_voxels) / (6 * (a² / D0))
+
+Após algumas manipulações algébricas:
+D(t) = (a²)/(a²)  * msd_voxels * (D0) / (100)²(6)
+D(t) = 6.0e-4 * D0 * msd_voxels
+D(t)/D0 = 6.0e-4 * msd_voxels
+
+Ou seja, como o deslocamento quadratico médio em termos de voxels é o mesmo para cada experimento, assim como o coeficiente de difusão livre D0, o valor esperado para a relação D(t)/D0 é constante!
+
+
+*--*--*--*--*--*--
+17/09/2020
+*--*--*--*--*--*--
+Agora, pretendo fazer os testes de difusão em geometrias confinadas, conforme a referência do artigo do Callaghan 1994. Ainda não entendo completamente a solução analítica, mas posso rodar as simulações rw e analisar se ao menos qualitativamente os resultados são minimamente coerentes. 
+
+Os testes consistiriam basicamente de 3 possíveis geometrias confinadas:
+
+- dois planos paralelos infinitos confinando uma região prosa e distantes de 2a, com um gradiente aplicado na direção normal à essas barreiras. Em termos de implementação discreta, bastaria criar uma imagem com dimensões [L x L x (2a + 2)]
+sendo que nas coordenadas z = 0 e z = 2a + 1, existem paredes de espessura 1 e largura e altura do tamanho da imagem (L). Toda a região entre essas paredes seria livre para difusão.
+
+- Um longo cilindro reto e fino de raio a, com um gradiente aplicado no direção diametral (poderia ser horizontal ou vertical, se considerarmos o eixo de simetria e rotação do cilindro entrando na página/tela). Aqui seria um pouco mais complicado gerar essa implementação. Primeiro, precisaria criar o método para gerar poros cilindricos no synthrockgenerator. Isso não seria díficil, mas me tomaria provavelmente um dia de trabalho. Outra possibilidade mais rápida seria gerar um esfera com o raio pretendido e então apagar todas as imagens/fatias senão a central. Então gerar muitas cópias dessa imagem...
+Um outro empecilho é o fato do gradiente aqui estar sendo aplicado numa direção que não é z. A minha implementação ainda é limitada a aplicação do gradiente somente nesse eixo coordenado. Uma adaptação mais genérica já está nos meus planos há algumas semanas, mas ainda não foi estritamente necessário e, por isso, não foi feito. 
+
+- Um poro esférico isolado de raio a, com gradiente aplicado em uma direção diametral qualquer (por causa da simetria, a direção não importaria. Esse caso é o mais rápido pois já tenho como gerar essa geometria com minhas atuais implementações.
+
+A ideia seria principalmente analisar os padrões de difração gerados a partir dos graficos de decaimento logaritmico normalizado ln(M(k,t)/M0(0,t)) vs qa, onde a é o comprimento específico da geometria e q é o vector numero de onde 
+
+k = (2pi)^{-1} * gamma * deltinha * G  
+
+gamma = giromagnetic ratio
+deltinha = pulse width
+G = magnitude of magnetic field gradient
+
+A questão aqui é que no meu experimento anterior com essas curvas nos meios periodicos com grãos esféricos, os padrões de difração apareciam somente em circunstâncias especificas:
+
+- resolução/tamanho de passo (qual deles não ficou claro ainda) que respeitasse aquela relação com o tamanho característico da geometria em a/100
+
+- numero de walkers bem alto gerava resultados mais coerentes para k maiores
+
+Caso essas premissas não fossem atendidas, o resultado poderia virar uma verdadeira salada doida;
+Outro ponto importante que foi observado no experimento anterior dizia respeito ao posicionamento dos walkers na amostra. Por algum motivo estranho, os resultados só batiam quando os walkers eram posicionados em toda a amostra aleatoriamente. Ao contrario do que minha análise/intuição diria, se eu tentasse posicioná-los numa região central, afim de evitar efeitos de borda e valendo-se da periodicidade infinita da geometria, os padrões de difração não apareciam conforme esperado. 
+
+Até agora ainda não consigo compreender porque isso aconteceu. Veja que a curva de D(t)/D0 reagiu muito bem à essa análise. Na verdade, foi extremamente vital posicionar os walkers numa região central para evitar os efeitos de borda nesse experimento que estavam gerando uma curva D(t)/D0 muito diferente da referência do Bergman, não chegando num limite assintótico e com valores muito inferiores. Veja que no caso, pela minha análise, isso faz sentido, uma vez que estando alguns walkers proximos à borda, seria natural esperar que esses walkers possivelmente encontrariam restrições ao movimento incondizentes com a natureza infinita do arranjo geometrico periodico proposto.
+
+* * * 
+
+Estou testando a simulação no poro esfério, batendo cabeça para tentar reproduzir os experimentos do artigo do Callaghan 1994. Aparentemente, o erro que eu estava tendo para reproduzir os valores e obter o padrão de difração da fig.1 estava no fato de aqui, por algum motivo, o autor adotar o wavenumber q que é igual ao k do artigo do Mitra, mas dessa vez dividido por 2pi (fico me perguntando se o Mitra queria que usasse esse 2pi mesmo ou se foi erro conceitual do pessoal do lab). Enfim, adequando isso tudo, reproduzi o experimento de medir a magnetização normalizada para walkers/spins dentro de um poro esferico isolado. O poro adotado possui raio a = 10.0 um. Esse valor é determinante para escolher outros parâmetros do experimento. Por exemplo, como o eixo das abscissas é igual aos valores de q*a e, no artigo, varia de 0 a 2, o valor de 'q' implica que:
+
+q = (1/2pi) * gamma * pulse_width * gradient
+
+como gamma e pulse_width tão fixados (43,576 e 0,1 respectivamente), o valor do gradient deve ser:
+
+gradient --> 0 até 30000.
+
+Obs .: esse valor mudaria se eu adotasse outro raio (a) para a esfera ou se assumisse um pulse_width maior (o que seria mais realístico).
+
+No artigo, o autor utiliza 4 amostras para o tempo entre pulsos, correspondendo a múltiplos do tempo característico para inspecionar um comprimento a, dado por a²/D0. O autor usa os multipos 0.2, 0.5, 1.0, 2.0. 
+Utilizando os valores adotados, isso dá em milisegundos o equivalente a:
+
+t_a = 0.2 * a²/D0 = 8.0 ms 
+t_b = 0.5 * a²/D0 = 20.0 ms 
+t_c = 1.0 * a²/D0 = 40.0 ms 
+t_d = 2.0 * a²/D0 = 80.0 ms
+
+
+Resolvi utilizar a recomendação do artigo do Bergman e adotar uma resolução que correspondesse a um tamanho de passo que preserva a relação a/100, i.e, o passo de um walker é um centésimo do comprimento característico da minha geometria. Para tal, utilizei uma imagem sintética com um poro esférico de raio igual a 100 voxels e resolução de 0.1 um/voxel. Repeti o experimento para amostras com 100k, 500k e 1M de walkers. 
+
+Observou-se que quanto maior a amostra, mais o gráfico gerado pela simulação se aproxima dos padrões de difração mostrados no artigo. 
+
+Resolvi testar o mesmo princípio numa imagem/resolução "inferior". Para tal, representei o mesmo poro de a=10um numa resolução de 1um/voxel. Ou seja, utilizei dessa vez uma imagem sintética com um poro esférico de apenas 10 voxels. Note que, neste caso, a relação entre o passo de um walker e o comprimento característico da geometria caiu para a/10. Nesse contexto, cada walker da simulação precisa de menos passos para difundir pelo mesmo tempo entre pulsos, o que pode representar um ganho interessante em termos de performance computacional. 
+Feitas as simulações, aparentemente os gráficos resultantes não são tão diferentes como poderia se esperar. Por outro lado, o aumento no tamanho do passo permite inserir mais walkers na simulação sem comprometer a performance, o que parece melhorar ainda mais a conformidade com o resultado do artigo. Os resultados para amostras de 100k, 1M e 10M de walkers mostra que a resolução tem papel menos influente do que o numero de walkers. Pela tendência observada, colocando mais walkers, chegaríamos nos padrões de difração que ele apresenta.
+
+
+*--*--*--*--*--*--
+23/09/2020
+*--*--*--*--*--*--
+Realizei o mesmo procedimento que descrevi acima, mas agora a geometria utilizada foram duas barreiras paralelas e planas interrompendo o espaço poroso. A região entre essas barreiras corresponde (fisicamente) à 2a = 20 um. Estou reproduzindo os valores testados no artigo de referência do Callaghan. As observações e reflexões feitas acima para o caso de esferas isoladas continuam válidas: os padrões de difração da solução analítica aparecem mais nitidamente com o aumento do número de walkers. Nesse caso, suponho que a resolução tem ainda menos influência uma vez que ambas as paredes são planas e, portanto, resoluções mais refinadas não representam a geometria, ou ainda, a relação superfície/volume de maneira mais fidedigna. 
+
+Falta somente o experimento em cilindros. Andei quebrando a cabeça esses dias para conseguir "desenhar" poros cilíndricos e ainda não consegui finalizar essa tarefa. De fato, agora estou pensando se vale a pena também mudar o código do pfgse que está limitado ao caso de k_z quando na realidade o mais indicado seria calcular em termos vetoriais.
+
+
+*--*--*--*--*--*--
+24/09/2020
+*--*--*--*--*--*--
+A implementação citada acima que permite aplicar o gradiente de maneira espacial, não mais se limitando somente à aplicação na direção z, parece estar funcionando bem e me permitiu ver um calculo redundante que estava sendo realizado na gpu. Corrigido isso, me atentei para mais um fato "importante": apesar do ganho com a utilização da gpu, eu não estou aproveitando totalmente o paralelismo latente uma vez que somente uma pequena parte dos dados está indo para a gpu por vez. Num teste com 20M de walkers, a GPU não usa mais do que 30 Megabytes! Eu sei que não posso aumentar muito pois corro o risco de estourar a memŕia do sistema por conta dos buffers que preciso montar para escrever os dados alinhados a serem enviados para a gpu. No entanto, sinto que ainda existe bastante espaço para manobra sem que esse fator limitante ocorra. Portanto, vou rodar algumas simulações e monitorar os recursos do sistema nesse processo.
+
+Uma simulação RW simples com 1M de walkers e configuração de gpu
+blocks 512, threads 256, echoes 16, reduce TRUE, max_rwsteps 65536
+
+running PFGSE simulation:
+PFGSE exposure time: 8 ms (120 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 0.429176
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 2.63612
+threshold is 0.00317652
+adjusting samples 0 to 8
+Dnew (s&t) = 1.53655
+Dnew (msd) = 1.84578	(mean displacement): 9.41261 um
+S/V ~= 0.233361
+
+running PFGSE simulation:
+PFGSE exposure time: 20 ms (300 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 0.840561
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 3.30336
+threshold is 0.00796124
+adjusting samples 0 to 8
+Dnew (s&t) = 1.0182
+Dnew (msd) = 1.4998	(mean displacement): 13.4155 um
+S/V ~= 0.225641
+
+running PFGSE simulation:
+PFGSE exposure time: 40 ms (600 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 1.58723
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 3.85243
+threshold is 0.0159358
+adjusting samples 0 to 8
+Dnew (s&t) = 0.606064
+Dnew (msd) = 1.22121	(mean displacement): 17.1199 um
+S/V ~= 0.203994
+
+running PFGSE simulation:
+PFGSE exposure time: 80 ms (1200 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 2.9198
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 5.02013
+threshold is 0.0318849
+adjusting samples 0 to 8
+Dnew (s&t) = 0.313945
+Dnew (msd) = 1.02215	(mean displacement): 22.1502 um
+S/V ~= 0.166699
+NMR_simulation object destroyed.
+
+Em termos de recursos, o sistema consome 40% da memoria disponível 
+A GPU utiliza apenas 28MB
+
+Agora, rodando a mesma simulação dobrando o numero de walkers
+blocks 1024, threads 256, echoes 16, reduce TRUE, max_rwsteps 65536)
+
+PFGSE exposure time: 8 ms (120 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 0.468608
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 2.31924
+threshold is 0.00317652
+adjusting samples 0 to 8
+Dnew (s&t) = 1.53757
+Dnew (msd) = 1.85083	(mean displacement): 9.4255 um
+S/V ~= 0.231558
+
+running PFGSE simulation:
+PFGSE exposure time: 20 ms (300 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 0.868518
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 2.95939
+threshold is 0.00796124
+adjusting samples 0 to 8
+Dnew (s&t) = 1.01903
+Dnew (msd) = 1.50177	(mean displacement): 13.4243 um
+S/V ~= 0.225198
+
+running PFGSE simulation:
+PFGSE exposure time: 40 ms (600 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 1.569
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 3.35813
+threshold is 0.0159358
+adjusting samples 0 to 8
+Dnew (s&t) = 0.605628
+Dnew (msd) = 1.22204	(mean displacement): 17.1257 um
+S/V ~= 0.203861
+
+running PFGSE simulation:
+PFGSE exposure time: 80 ms (1200 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 2.90004
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 4.68959
+threshold is 0.0318849
+adjusting samples 0 to 8
+Dnew (s&t) = 0.313673
+Dnew (msd) = 1.02305	(mean displacement): 22.16 um
+S/V ~= 0.166598
+
+
+A simulação aparentemente ligeiramente mais rápida e a GPU passou a utilizar 35MB, ligeiramente mais memória. 
+O que me indica que talvez eu possa aumentar ainda mais esses valores, talvez aumentando o numero de threads.
+Mas antes, vou fazer o experimento com 10M de walkers
+
+512 blocks:
+running PFGSE simulation:
+PFGSE exposure time: 8 ms (120 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 4.43155
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 25.9074
+threshold is 0.00317652
+adjusting samples 0 to 8
+Dnew (s&t) = 1.53902
+Dnew (msd) = 1.84955	(mean displacement): 9.42222 um
+S/V ~= 0.232017
+
+running PFGSE simulation:
+PFGSE exposure time: 20 ms (300 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 8.55499
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 29.6341
+threshold is 0.00796124
+adjusting samples 0 to 8
+Dnew (s&t) = 1.01847
+Dnew (msd) = 1.5015	(mean displacement): 13.4231 um
+S/V ~= 0.225258
+
+running PFGSE simulation:
+PFGSE exposure time: 40 ms (600 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 15.479
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 36.6706
+threshold is 0.0159358
+adjusting samples 0 to 8
+Dnew (s&t) = 0.60605
+Dnew (msd) = 1.22267	(mean displacement): 17.1301 um
+S/V ~= 0.203761
+
+running PFGSE simulation:
+PFGSE exposure time: 80 ms (1200 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 29.2923
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 49.9113
+threshold is 0.0318849
+adjusting samples 0 to 8
+Dnew (s&t) = 0.314099
+Dnew (msd) = 1.02268	(mean displacement): 22.1559 um
+S/V ~= 0.166639
+
+
+
+1024 blocks:
+PFGSE exposure time: 8 ms (120 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 4.36634
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 22.5968
+threshold is 0.00317652
+adjusting samples 0 to 8
+Dnew (s&t) = 1.53835
+Dnew (msd) = 1.84897	(mean displacement): 9.42076 um
+S/V ~= 0.232221
+
+running PFGSE simulation:
+PFGSE exposure time: 20 ms (300 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 8.52975
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 27.0227
+threshold is 0.00796124
+adjusting samples 0 to 8
+Dnew (s&t) = 1.01774
+Dnew (msd) = 1.50124	(mean displacement): 13.422 um
+S/V ~= 0.225316
+
+running PFGSE simulation:
+PFGSE exposure time: 40 ms (600 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 15.3728
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 33.3613
+threshold is 0.0159358
+adjusting samples 0 to 8
+Dnew (s&t) = 0.605652
+Dnew (msd) = 1.22283	(mean displacement): 17.1312 um
+S/V ~= 0.203735
+
+running PFGSE simulation:
+PFGSE exposure time: 80 ms (1200 RW-steps)
+initializing mapping simulation 3D in GPU... Completed.	elapsed time: 29.1875
+initializing RW-PFG NMR simulation in GPU... Completed.	elapsed time: 46.4767
+threshold is 0.0318849
+adjusting samples 0 to 8
+Dnew (s&t) = 0.314147
+Dnew (msd) = 1.02356	(mean displacement): 22.1655 um
+S/V ~= 0.16654
+
+Mais testes expandindo o numero de threads por bloco e blocos por grid me deixaram cético com relação a "estourar" a memória da gpu. Mesmo com 2048 blocos e 512 threads, a memória chegou no máximo a 170 Mb (no método walk() que é mais pesado do que os pfg())
+
+
+*--*--*--*--*--*--
+01/10/2020
+*--*--*--*--*--*--
+Estou construindo o programa que computa os resultados análiticos do sinal pfg em poros de geometrias simples (ref. Callaghan). Minha ideia foi criar classes para cada geometria (talvez usar herança poderia ser interessante aqui, mas por enquanto ainda não o fiz). Além disso, criei uma classe para um encontrador de raiz de funções reais que utiliza do método da bisessão, newton-raphson e secante. Essa classe já foi criada e aparentemente funciona bem.
+
+Quanto as classes dos poros, ainda preciso organizar na cabeça tudo o que preciso para calcular direitinho
+O poro tem como entrada:
+- o seu comprimento caracteristico: a
+- a relaxatividade superficil: rho
+- o coeficiente de difusão livre do fluido: D0
+
+Com esses valores, cada geometria me permite gerar uma lista de raízes para as funções transcedentais. Então a classe precisa gerar essa lista de raízes
+- uma lista de raízes para as equações transcedentais: roots[]
+
+Com essa lista em mãos, eu posso gerar o sinal E(q,t) recebendo como entrada os parâmtros q_max e obs_time
+
+...
+
+Depois de algumas horas quebrando a cabeça, a classe de poros planos paralelos parece estar quase 100%. O único erro aparente acontece quando eu uso uma relaxatividade zero e o solver encontra a raiz 0. Esse valor é problemático no cálculo da atenuação e preciso tratá-lo. Muito embora, mesmo assim, o plot gerado parece muito de acordo com o obtido pelo Callaghan. 
+
+
+
+*--*--*--*--*--*--
+02/10/2020
+*--*--*--*--*--*--
+Na verdade problema que estava acontecendo era no dividendo da equação de atenuação zerar para valores em que o kernel e a raíz são muito proximos. Tratando isso, o poro plano paralelo parece funcionar bem. Posso fazer alguns testes inserindo relaxatividade e ver se fica de acordo.
+
+Após, comecei a escrever a classe de poros cilindricos. Reaproveitei boa parte do código dos poros planos (preciso usar herança de uma classe base "analyticalPore"!). Após quebrar bastante a cabeça para calcular as raízes da equação transcendental, finalmente acho que consegui encontrar um esquema que funciona. O calculo das raízes segue os passos:
+
+- os passos são repetidos para cada ordem das funções de Bessel
+-> Primeiro encontro as raízes da função de Bessel, pois sei que a equação transcedental sempre tem uma raíz entre duas raízes consecutivas da função de bessel (a unica exceção é no primeiro intervalo pois a eq. transcendental tem um formato parabolico ali. Depois assume uma feição parecida com a tangente, sendo mais facil prever que vai ter raíz.
+-> Com as raízes da função de bessel eu monto uma lista de intervalos consecutivos para rodar o metodo numérico para encontrar as raizes. As raízes acima de um determinado limite (aqui usei 20 como o autor do artigo) não são incluídas
+-> Para o método numérico não caducar nos pontos da raíz da função de bessel (nesse pontos a eq. transcendental diverge), eu acrescento e subtraio uma perturbação no primeiro e último ponto do intervalo. É uma gambiarra que parece funcionar. Uma observação: o método mescla duas abordagens: primeiro eu rodo o método da biseção com uma precisão baixa (1.e-3) para ficar mais proximo da raiz; depois eu rodo o método da secante no intervalo gerado pelo metodo da biseção, agora utilizando uma precisão alta (1.e-12). 
+-> No final, para cada ordem, eu fico com uma lista de raízes que é acrescentada a lista 'roots' do objeto. 
+
+Com as raízes em mãos, eu posso calcular o sinal a partir da expressão fornecida pelo artigo.
+No entanto, estou enfrentando mais um problema inesperado. O programa dá erro quando eu tento normalizar o sinal  pois o primeiro valor está nulo (todos os outros parecem estar bem de acordo com o esperado). Curiosamente, no caso do plano paralelo esse problema não acontecia e estou tentando entender o porquê.
+
+obs: acabei de implementar a questão da herença. tudo parece funcionar como antes. 
+
+Olhando para o terceiro termo da equação, vejo que caso rho=0, quando q=0 o sinal é zerado. Isso não faz mt sentido... Será que é um erro na expressão?
+
+
+
+*--*--*--*--*--*--
+04/10/2020
+*--*--*--*--*--*--
+Dos testes de implementação voxelizada para o experimento de difusão (Callaghan) em geometrias simples ficaram faltando os seguintes testes:
+
+- planos paralelos:
+- res=0.1, w=10M
+
+- cilindro isolado
+- res=0.1, w=100k
+- res=0.1, w=1M
+- res=0.1, w=10M
+
+
+
+*--*--*--*--*--*--
+20/10/2020
+*--*--*--*--*--*--
+
+Consegui obter os resultados analíticos para o caso de geometria plana e cilinidrica. O caso esferico está me dando uma dor de cabeça, não consigo identificar onde está o erro no método e acabei deixando isso levemente de lado por um tempo.
+
+Agora, estou me concentrando em obter formas de plotar/visualizar os dados gerados pela simulação NMR. A primeira ideia é de visualizar em 3d os posições iniciais e finais dos walkers. Implementei e parece estar funcionando, mas uma limitação é a limitação da minha máquina. Se ploto 10k walkers, o plot já fica todo travado, tornando a utilização e visualização pouco prática 
+
+Outra ideia foi plotar um histograma com os deslocamentos dos walkers em cada direção coordenada 
+
+
+
+*--*--*--*--*--*--
+23/10/2020
+*--*--*--*--*--*--
+- fazer teste com cilindro de raio menor
+- inserir ranhuras/rugosidades nos planos (fazer experimento variando as diferenças)
+
+validações até agora:
+- difusão livre, plano, cilindrico, esferico(?), periódico(?).
+
+
+
+*--*--*--*--*--*--
+26/10/2020
+*--*--*--*--*--*--
+Vou fazer os testes com as mesmas geometrias simples, mas com tamanhos diferentes de a=10um.
+
+minha ideia seria fazer 
+- a = 20 um
+- a = 5 um
+- a = 2.5um
+- a = 1 um
+
+
+
+*--*--*--*--*--*--
+27/10/2020
+*--*--*--*--*--*--
+
+Consegui gerar os gráficos para as geometrias plana e cilindrica. 
+
+Os gráficos gerados consistem na comparação do resultado analitico (ref. Callaghan) e simulado via random-walk para o plot E(q,t) vs. qa onde:
+
+'E' é o nível de magnetização em fase (normalizada) de toda a amostra
+'t' é o tempo de observação
+'q' é o "vetor de onda" proporcional a magnitude do gradiente aplicado
+'a' é o comprimento característico da geometria
+
+obs: 
+q = (1/2pi) * gyromagnetic_ratio * pulse_width * gradient_magnitude 
+
+Os tempos de observação utilizados foram os mesmos da referência bibliográfica citada acima, i.e, múltiplos de um valor do tempo característico do fenômeno de difusão t_dif (tempo que as molélucas levam na média para inspecionar a geometria), sendo esses múltiplos:
+
+- t = 0.2 * t_dif
+- t = 0.5 * t_dif
+- t = 1.0 * t_dif
+- t = 2.0 * t_dif
+
+Obs: t_dif = a²/D 	onde D é o coeficiente de difusão livre (Bulk)
+
+Foram geradas imagens digitalizadas/voxelizadas com resolução de 1um³/voxel de poros planos/chapas e cilindros com dimensão características de:
+- a = 1 um
+- a = 2.5um
+- a = 5 um
+- a = 10 um
+- a = 20 um
+
+Veja que para cada imagem/geometria/comprimento, um novo conjunto de tempos é necessário, uma vez que o tempo característico muda de maneira proporcional ao comprimento ao quadrado. 
+
+Outro ponto importante é que o valor máximo de gradiente também varia de acordo com a geometria adotada. O objetivo aqui é que o eixo x (qa) varie de 0 a 2 unidades como acontece na referência bibliográfica. Como 'a' está variando, é necessário variar 'q' para acomodar essa variação. Em outras palavras, caso 'a' diminua, é necessário que o vetor de onda 'q' aumente de maneira proporcional. Logo, a magnitude do gradiente deve aumentar nesse caso hipotético. Note que a largura do pulso e a constante giromagnética são estáveis para todos os experimentos. 
+
+Essa observação é tremendamente importante pois permite que o gráfico gerado seja um gráfico "adimensional" no sentido que independente do valor de 'a'. Deste modo, todos gráficos em teoria deveriam convergir/colapsar para a solução analítica. 
+
+No entanto, existem limitações que não podem ser ignoradas. Mesmo se a simulação estiver corretamente implementada, o esperado na análise entre os pontos da simulação vs. analítico seria observar "erros" relacionados a digitalização e má representação da geometria 'verdadeira para poros com o comprimento 'a' menor. Seguindo o mesmo raciocínio, para comprimentos 'a' maiores, o efeito da digitalização da imagem seria cada vez mais suavizado e as curvas se aproximariam da solução analítica. 
+
+Um outro ponto a ser levantado nesse tópico é que quanto menor a geometria do poro, menor o tempo característico. Como a resolução da imagem não se altera, o número de caminhadas na simulação também diminui. Um menor número de passos pode prejudicar o caráter aleatorio da simulação. Ademais, em casos críticos (a<2.5um), acontecem aberrações como 7.5 ou 1.2 caminhadas. O tratamento adotado foi sempre arredondar para baixo, mas isso provavelmente causa uma piora na qualidade da solução que não é mensurada. 
+
+(Mostrar resultados analíticos)
+
+Para facilitar a visualização e comparação, o experimento para cada um dos valores de 't' foram plotados separadamente. Uma outra análise cabível aqui seria verificar se ela converge para a solução com t=infinito com o aumento do tempo de observação. Essa análise é bastante útil, porém não foi feita ainda. Em suma, até aqui, estou analisando somente se para cada tempo especifico, a solução simulada se assemelha à solução analítica. 
+
+- Número de 'walkers'
+A solução analítica da equaçao diferencial de difusão restrita envolve/depende diretamente (d)a descoberta da expressão para o propagador de difusão P(r|r, t). Este, por sua vez, nada mais é do que a distribuição (contínua) de probabilidade condicional para que um spin originalmente na posição r' esteja em r no tempo t, válida para todos as possíveis posições inicial e final r' e r. Logo, é razoavel supor que na análise discreta/finita de uma simulação rw seja muito provável que uma maior quantidade de walkers seja capaz de representar melhor o quasi-infinito número de possíveis trajetórias que um walker inicialmente em r' pode assumir para terminar em uma outra posição r. 
+
+Por esse motivo, um outro parâmetro que está sendo avaliado nesses experimentos é a influência do tamanho da amostra de partículas/walkers na qualidade da solução obtida. Pode-se fazer essa análise de maneira tanto qualitativa (uma avaliação do nível e tendência de ajuste entre curvas) ou quantitativa (medindo o erro absoluto ou relativo em cada valor de 'qa' computado). Para promover tal análise, cada simulação foi realizada em amostras de 10⁴, 10⁵, 10⁶ e 10⁷ de walkers (w). Ou seja, o tamanho da amostra varia em 3 ordens de magnitude indo de dez mil à dez milhões.
+
+
+ANÁLISE QUALITATIVA:
+
+'qa' em [0, 2]
+
+-GEOMETRIAS MAIORES -> MELHORES AJUSTES (UNIVERSAL):
+a partir de a=5um, na realidade, as curvas já tendem a ajustar e a diferença torna-se pouco perceptiva. Mas para valores menores de 'a', quanto mais próximo de a=5um, mais os pontos se aproximam da solução analítica. 
+
+- AMOSTRA MAIOR -> MELHORES AJUSTES EM TODOS OS TEMPOS:
+Isto pode ser observado principalmente para valores de 'qa' maiores em geometrias maiores. Os pontos da simulação tendem a se ajustar, encontrando os minimos do efeito de difração e corrigindo 'descontinuidades' pela falta de representação. 
+
+- MAGNITUDE DO GRADIENTE MAIOR -> PIORES AJUSTES:
+Observa-se que o desvio entre os dados de simulação e os dados da solução analítica tende a aumentar ao longo do eixo horizontal. Isso implica que esse erro é influenciado pelo aumento da magnitude do gradiente. 
+
+- TEMPOS MAIORES -> PIORES AJUSTES RELATIVOS:
+O desvio observado entre dados analiticos e simulados (mais facilmente observado em valores altos de 'qa') permanece praticamente constante para todos os tempos de observação. No entanto, é importante perceber que para tempos de observação maiores, os valores de magnetização computados são cada vez menores. Logo, como o desvio absoluto permanece o mesmo, o erro relativo nessas medidas é cada vez maior.
+
+- TEMPOS MAIORES -> PADRÕES OBSERVÁVEIS EM POROS MENORES:
+Note que quando a=2.5um, a curva para o tempo mais curto aparentemente diverge bastante da curva analitica; para tempos maiores, porém, percebe-se algum acerto na forma da curva gerada. Apesar dos valores equivocados, pode-se argumentar que a curva captura a 'essência' da variação na curva analítica. Isso pode se mostrar bastante útil, pois talvez torne possível aplicar fatores de correção relativamente simples e razoavelmente eficazes.  
+
+Com base na terceira observação, os dados gerados foram analisados para valores mais baixos de 'qa':
+
+'qa' em [0, 0.5]
+
+- BOM AJUSTE PARA QUALQUER TAMANHO DE PORO, EXCETO a=1um:
+Para valores de 'qa' menores, ou seja, menores magnitudes do campo magnético, observa-se que os pontos obtidos via simulação apresentam bom ajuste com a curva analítica. A única exceção é novamente o caso mais crítico em que 'a' vale 1um que foi discutido acima. Por outro lado, o caso a=2.5um apresenta resultados muito semelhantes aos obtidos para a>2.5um.
+
+- BOM AJUSTE EM TODOS OS TEMPOS, TENDÊNCIA DE QUEDA NO CILINDRO:
+Outra característica observada foi que o ajuste dos resultados simulados com o análitico não aparenta muita relação com o tempo de observação no caso plano (novamente, isso se observa nos pontos coletados para todas as geometrias exceto a=1um). Por outro lado, no caso cilindrico, observa-se uma tendência interessante: para tempos curtos, a simulação parece 'superestimar' levemente o nível de magnetização. Esse 'desvio' reduz paulatinamente até praticamente inexistir quando t=a²/D. A partir daí, a simulação 'subestima' o nível de magnetização. Em outras palavras: para o caso cilindrico, o valor absoluto do desvio do nível de magnetização da amostra em relação à curva analítica tende a diminuir se o tempo de observação aumenta. 
+
+Pode ser interessante investigar se isso acontece indefinidamente ou se possui um limite, i.e, o que acontece se repetirmos o experimento para valores maiores de t? A magnetização da amostra continua sendo 'subestimada' ou encontrará um valor a partir do qual o desvio em relação ao resultado analítico não mais varia? Outra boa pergunta é se isso também seria observado no caso esférico.     
+  
+- DEPENDÊNCIA FRACA EM RELAÇÃO AO TAMANHO DA AMOSTRA
+O desvio entre dados simulados e analíticos não apresenta uma relação tão forte com o tamanho da amostra/número de walkers como o observado para valores maiores de 'qa'. 
+
+- OBS:
+'qa' até 0.5 já representa valores bastante altos para a magnitude do gradiente considerando pulse_width=0.1ms. Para geometrias menores, esses valores são altíssimos. 
+
+  
+*--*--*--*--*--*--
+02/11/2020
+*--*--*--*--*--*--
+Estou tentando construir a solução analítica para poros esféricos. Montei um programa que computa o E(q,t) para um autovalor para tentar entender melhor intuitivamente o que acontece. Como suspeitava, a formula dada pelo artigo do Callaghan parece conter algum erro pois o valor para q=0 e rho=0 no autovalor mais baixo não está dando 1.0 ou próximo disso, mas algo por volta de 0.6. Nos casos plano e cilindrico isso fica bem evidente.
+
+Quis fazer esse programa justamente para investigar essa minha suspeita. O termo para q=0 depende quase que unicamente desse primeiro autovalor. Investigando mais a formula, percebi que para tempo maiores, esse autovalor vira determinante em praticamente todo o gráfico.
+
+Preciso investigar alguma forma de compensar isso... já percebi que se multiplico por 1.5, consigo fazer o gráfico tender a 1.0 para q=0, mas o gráfico não fica muito parecido para valores altos de qa. Além disso, os gráficos para rho!=0 não ficam similares aos do artigo, aparentemete com os minimos de difração deslocando de maneira muito menos sensível à relaxatividade... 
+
+Tive a ideia de só aplicar o fator de 1.5 para o autovalor mais baixo e ver o que acontece no sinal. Amanhã vai ser a primeira coisa que eu vou testar.
+
+
+*--*--*--*--*--*--
+06/11/2020
+*--*--*--*--*--*--
+- Testar com rho menores e realístico
+- Coeficiente de difusão pela Stejskal e por Eistein
+- Ver o teste de difusão, tortuosidade (ver método do artigo);
+- Montar apresentação com resultados
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 

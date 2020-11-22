@@ -1,0 +1,14 @@
+// the configured options and settings
+#define NMR_RW_simulation_VERSION_MAJOR @NMR_RW_simulation_VERSION_MAJOR @
+#define NMR_RW_simulation_VERSION_MINOR @NMR_RW_simulation_VERSION_MINOR @
+
+#cmakedefine USE_NMR_SIMULATION
+#cmakedefine USE_WALKER
+#cmakedefine USE_BITBLOCK
+#cmakedefine USE_RNG
+#cmakedefine USE_LAPLACE
+#cmakedefine USE_GA
+#cmakedefine USE_FILEHANDLER
+#cmakedefine USE_CONSOLEINPUT
+#cmakedefine USE_MATH
+#cmakedefine USE_UTILS

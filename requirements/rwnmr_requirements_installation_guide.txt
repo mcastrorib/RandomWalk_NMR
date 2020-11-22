@@ -1,0 +1,57 @@
+This is a step-by-step ubuntu installation of RWNMR program dependencies. 
+Alternatively, you can install it by running the scrip "install_rwnmr_requirements_ubuntu.sh" located at "ubuntu_installation" directory. If that is your option, please, read the file "readme.txt" before for clarifications on how to configure the installation for your distro.
+
+Updating repositories:
+$ sudo apt update
+$ sudo apt upgrade
+
+-- CMAKE 3.17 or greater (project build)
+- if an older version of cmake is already installed via apt, first uninstall it 
+$ sudo apt --purge autoremove cmake
+- reinstall it via snap 
+$ sudo snap install cmake --classic
+
+-- OpenMPI (message protocol for multi process applications) 
+$ sudo apt-get install libopenmpi-dev
+$ sudo apt-get install openmpi-bin
+
+-- EIGEN (linear algebra and matrix operations) 
+$ sudo apt install libeigen3-dev
+obs: apt package manager installs lib eigen3 at '/usr/include/eigen3'
+
+-- OpenCV (image manipulation)
+$ sudo apt install libopencv-dev python3-opencv
+
+-- CUDA (nvidia toolkit for gpu acceleration)
+- for ubuntu 20.04:
+$ version=2004
+$ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${version}/x86_64/cuda-ubuntu2004.pin
+$ sudo mv cuda-ubuntu${version}.pin /etc/apt/preferences.d/cuda-repository-pin-600
+$ wget https://developer.download.nvidia.com/compute/cuda/11.1.1/local_installers/cuda-repo-ubuntu${version}-11-1-local_11.1.1-455.32.00-1_amd64.deb
+$ sudo dpkg -i cuda-repo-ubuntu${version}-11-1-local_11.1.1-455.32.00-1_amd64.deb
+$ sudo apt-key add /var/cuda-repo-ubuntu${version}-11-1-local/7fa2af80.pub
+$ sudo apt-get update
+$ sudo apt-get -y install cuda
+
+- for other distros, check the step-by-step at nvidia developers page:
+https://developer.nvidia.com/CUDA-toolkit
+
+- now to compile/run CUDA files, CUDA paths must be added to 
+- the enviroment variables everytime a new terminal window is open: 
+$ export PATH=$PATH:/usr/local/cuda/bin
+$ export CUDADIR=/usr/local/cuda
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+
+- this procedure can be automatic, by creating a file named 'cuda.sh' in /etc/profile.d/ 
+$ nano /etc/profile.d/cuda.sh
+
+- with the following commands
+export PATH=$PATH:/usr/local/cuda/bin
+export CUDADIR=/usr/local/cuda
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+
+
+
+
+
+
