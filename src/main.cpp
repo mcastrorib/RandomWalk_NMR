@@ -19,6 +19,7 @@
 
 // include CMake Configuration file
 #include "NMR_RWConfig.h"
+#include "rwnmr_config.h"
 
 // include project files
 #include "NMR_Simulation.h"
@@ -37,6 +38,7 @@ using namespace std;
 using namespace cv;
 
 // Interface fuctions
+int pfgse_old();
 ConsoleInput input(string _name);
 NMR_Simulation setNMR(ConsoleInput _input);
 void GA_NMR_T2(NMR_Simulation &NMR, int myRank, int mpi_processes);
@@ -44,6 +46,15 @@ void save_GA_solution_data(vector<double> &sigmoid, NMR_Simulation &NMR);
 
 // Main Program
 int main(int argc, char *argv[])
+{    
+     cout << "new main function." << endl;
+     string config_path = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/rwnmr.config";
+     rwnmr_config config(config_path); 
+     cout << "config file read" << endl;
+     return 0;
+}
+
+int pfgse_old()
 {    
      // Parameters
      int myRank = 0;

@@ -20,6 +20,7 @@ option(USE_LAPLACE "Use provided Tikhonov solver for Laplace inverse transform" 
 option(USE_GA "Use provided Genetic Algorithm implementation for optimization" ON)
 option(USE_FILEHANDLER "Use provided implementation for handling external files" ON)
 option(USE_CONSOLEINPUT "Use provided implementation for reading user's console input" ON)
+option(USE_CONFIGFILES "Use provided implementation for reading configuration files" ON)
 option(USE_MATH "Use provided implementation for math and linear algebra computations" ON)
 option(USE_UTILS "Use provided implementation for system utils" ON)
 
@@ -93,6 +94,11 @@ endif()
 if(USE_CONSOLEINPUT)
   add_subdirectory(ConsoleInput)
   list(APPEND EXTRA_LIBS ConsoleInput)
+endif()
+
+if(USE_CONFIGFILES)
+  add_subdirectory(ConfigFiles)
+  list(APPEND EXTRA_LIBS ConfigFiles)
 endif()
 
 if(USE_MATH)

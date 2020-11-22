@@ -34,6 +34,7 @@ void fileHandler::writeInFile(NMR_Simulation _inputData)
     fileObject.write((char *)&_inputData, sizeof(_inputData));
 
     cout << "Ok" << endl;
+    fileObject.close();
 }
 
 void fileHandler::readFromFile(NMR_Simulation _outputData)
@@ -46,6 +47,7 @@ void fileHandler::readFromFile(NMR_Simulation _outputData)
     fileObject.read((char *)&_outputData, sizeof(_outputData));
 
     cout << "Ok" << endl;
+    fileObject.close();
 }
 
 void fileHandler::writeImageInfo(string _imagePath, int _imageColumns, int _imageRows, int _imageDepth, double _imageResolution)
@@ -173,8 +175,6 @@ void fileHandler::writeBitBlockObject2D(int _numberOfBlocks,
         fileObject << index << ", ";
         fileObject << _blocks[index] << endl;
     }
-
-    fileObject.close();
 
     fileObject.close();
 }
