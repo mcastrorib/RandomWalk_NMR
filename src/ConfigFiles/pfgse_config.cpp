@@ -23,7 +23,39 @@ pfgse_config::pfgse_config(const string configFile)
 
 //copy constructors
 pfgse_config::pfgse_config(const pfgse_config &otherConfig)
-{}
+{
+    this->config_filepath = otherConfig.config_filepath;
+    // --- Physical attributes.
+    this->GIROMAGNETIC_RATIO = otherConfig.GIROMAGNETIC_RATIO;
+    this->D0 = otherConfig.D0;
+    this->PULSE_WIDTH = otherConfig.PULSE_WIDTH;
+    this->MAX_GRADIENT = otherConfig.MAX_GRADIENT;
+    this->GRADIENT_SAMPLES = otherConfig.GRADIENT_SAMPLES;
+
+    // --- Time sequence 
+    this->TIME_SEQ = otherConfig.TIME_SEQ;
+    this->TIME_SAMPLES = otherConfig.TIME_SAMPLES;
+    this->TIME_VALUES = otherConfig.TIME_VALUES;
+    this->TIME_MIN = otherConfig.TIME_MIN;
+    this->TIME_MAX = otherConfig.TIME_MAX;
+    bool APPLY_SCALE_FACTOR = otherConfig.APPLY_SCALE_FACTOR;
+    this->INSPECTION_LENGTH = otherConfig.INSPECTION_LENGTH;
+
+    // --- Threshold application for D(t) recovering.
+    this->THRESHOLD_TYPE = otherConfig.THRESHOLD_TYPE;
+    this->THRESHOLD_VALUE = otherConfig.THRESHOLD_VALUE;
+
+    // --- Wave-vector 'k' computation.
+    this->USE_WAVEVECTOR_TWOPI = otherConfig.USE_WAVEVECTOR_TWOPI;
+
+    // --- PFGSE SAVE. 
+    this->SAVE_MODE = otherConfig.SAVE_MODE;
+    this->SAVE_PFGSE = otherConfig.SAVE_PFGSE;
+    this->SAVE_COLLISIONS = otherConfig.SAVE_COLLISIONS;
+    this->SAVE_DECAY = otherConfig.SAVE_DECAY;
+    this->SAVE_HISTOGRAM = otherConfig.SAVE_HISTOGRAM;
+    this->SAVE_HISTOGRAM_LIST = otherConfig.SAVE_HISTOGRAM_LIST;
+}
 
 // read config file
 void pfgse_config::readConfigFile(const string configFile)
@@ -100,7 +132,33 @@ void pfgse_config::readPulseWidth(string s)
 
 void pfgse_config::readMaxGradient(string s)
 {
-    this->MAX_GRADIENT = std::stod(s);
+    vector<double> buffer;
+    if(s.compare(0, 1, "{") == 0 and s.compare(s.length() - 1, 1, "}") == 0)
+    {
+        string strvec = s.substr(1, s.length() - 2);
+        string delimiter = ",";
+        size_t pos = 0;
+        string token, content;
+        while ((pos = strvec.find(delimiter)) != std::string::npos) 
+        {
+            token = strvec.substr(0, pos);
+            content = strvec.substr(pos + delimiter.length(), strvec.length());
+            strvec.erase(0, pos + delimiter.length());
+
+            // add value to RHO attribute
+            buffer.push_back(std::stod(token));
+        }
+        // add value to RHO attribute
+        buffer.push_back(std::stod(strvec));
+    }
+
+    if(buffer.size() >= 3)
+    {
+        this->MAX_GRADIENT.setX(buffer[0]);
+        this->MAX_GRADIENT.setY(buffer[1]);
+        this->MAX_GRADIENT.setZ(buffer[2]);
+        this->MAX_GRADIENT.setNorm();
+    }
 }
 
 void pfgse_config::readGradientSamples(string s)

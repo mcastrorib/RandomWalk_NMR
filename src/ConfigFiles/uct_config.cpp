@@ -11,14 +11,24 @@
 using namespace std;
 
 // default constructors
-uct_config::uct_config(const string configFile)
+uct_config::uct_config(const string configFile) : config_filepath(configFile)
 {
 	(*this).readConfigFile(configFile);
 }
 
 //copy constructors
 uct_config::uct_config(const uct_config &otherConfig)
-{}
+{
+	this->config_filepath = otherConfig.config_filepath;
+    this->DIR_PATH = otherConfig.DIR_PATH;
+    this->FILENAME = otherConfig.FILENAME;
+    this->FIRST_IDX = otherConfig.FIRST_IDX;
+    this->DIGITS = otherConfig.DIGITS;
+    this->EXTENSION = otherConfig.EXTENSION;
+    this->SLICES = otherConfig.SLICES;
+    this->RESOLUTION = otherConfig.RESOLUTION;
+    this->VOXEL_DIVISION = otherConfig.VOXEL_DIVISION;
+}
 
 // read config file
 void uct_config::readConfigFile(const string configFile)

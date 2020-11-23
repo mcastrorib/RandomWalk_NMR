@@ -10,6 +10,7 @@ using namespace std;
 class uct_config
 {
 public:
+    string config_filepath;
     string DIR_PATH;
     string FILENAME;
     uint FIRST_IDX;
@@ -22,6 +23,7 @@ public:
 
 
     // default constructors
+    uct_config(){};
     uct_config(const string configFile);
 
     //copy constructors
@@ -35,7 +37,7 @@ public:
 
     void readConfigFile(const string configFile);
     
-    // -- 
+    // -- Read methods
     void readDirPath(string s);
     void readFilename(string s);
     void readFirstIdx(string s);
@@ -44,6 +46,17 @@ public:
     void readSlices(string s); 
     void readResolution(string s);
     void readVoxelDivision(string s);
+
+    // -- Read methods
+    string getConfigFilepath() {return this->config_filepath; }
+    string getDirPath(){ return this->DIR_PATH;}
+    string getFilename(){ return this->FILENAME;}
+    uint getFirstIdx(){ return this->FIRST_IDX;}
+    uint getDigits(){ return this->DIGITS;}
+    string getExtension(){ return this->EXTENSION;}
+    uint getSlices(){ return this->SLICES;} 
+    double getResolution(){ return this->RESOLUTION;}
+    uint getVoxelDivision(){ return this->VOXEL_DIVISION;}
 };
 
 #endif

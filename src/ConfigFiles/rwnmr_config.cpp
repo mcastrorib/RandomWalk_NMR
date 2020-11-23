@@ -12,7 +12,7 @@
 using namespace std;
 
 // default constructors
-rwnmr_config::rwnmr_config(const string configFile)
+rwnmr_config::rwnmr_config(const string configFile) : config_filepath(configFile)
 {
 	vector<double> RHO();
 	(*this).readConfigFile(configFile);
@@ -20,7 +20,50 @@ rwnmr_config::rwnmr_config(const string configFile)
 
 //copy constructors
 rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
-{}
+{
+	this->config_filepath = otherConfig.config_filepath;
+    this->NAME = otherConfig.NAME;
+    this->DB_PATH = otherConfig.DB_PATH;
+    this->WALKERS = otherConfig.WALKERS;
+    this->WALKERS_PLACEMENT = otherConfig.WALKERS_PLACEMENT;
+    this->PLACEMENT_DEVIATION = otherConfig.PLACEMENT_DEVIATION;
+    this->RHO_TYPE = otherConfig.RHO_TYPE;
+    this->RHO = otherConfig.RHO;
+    this->D0 = otherConfig.D0; 
+    this->STEPS_PER_ECHO = otherConfig.STEPS_PER_ECHO;
+    this->SEED = otherConfig.SEED;
+
+    // SAVE MODE
+    this->SAVE_IMG_INFO = otherConfig.SAVE_IMG_INFO;
+    this->SAVE_BINIMG = otherConfig.SAVE_BINIMG;
+
+    // HISTOGRAM SIZE
+    this->HISTOGRAMS = otherConfig.HISTOGRAMS;  
+    this->HISTOGRAM_SIZE = otherConfig.HISTOGRAM_SIZE;
+
+    // -- OPENMP MODE
+    this->OPENMP_USAGE = otherConfig.OPENMP_USAGE;
+    this->OPENMP_THREADS = otherConfig.OPENMP_THREADS;
+
+    // -- CUDA/GPU PARAMETERS
+    this->GPU_USAGE = otherConfig.GPU_USAGE;
+    this->BLOCKS = otherConfig.BLOCKS;
+    this->THREADSPERBLOCK = otherConfig.THREADSPERBLOCK;
+    this->ECHOESPERKERNEL = otherConfig.ECHOESPERKERNEL;
+    this->MAX_RWSTEPS = otherConfig.MAX_RWSTEPS;
+    this->REDUCE_IN_GPU = otherConfig.REDUCE_IN_GPU;
+    
+
+    // -- MPI COMMUNICATION
+    this->BITBLOCKS_BATCHES_SIZE = otherConfig.BITBLOCKS_BATCHES_SIZE;
+    this->BITBLOCK_PROP_SIZE = otherConfig.BITBLOCK_PROP_SIZE;
+    this->NMR_T2_SIZE = otherConfig.NMR_T2_SIZE;
+    this->NMR_START_TAG = otherConfig.NMR_START_TAG;
+    this->NMR_BITBLOCK_TAG = otherConfig.NMR_BITBLOCK_TAG;
+    this->NMR_BATCH_TAG = otherConfig.NMR_BATCH_TAG;
+    this->NMR_T2_TAG = otherConfig.NMR_T2_TAG;
+    this->NMR_END_TAG = otherConfig.NMR_END_TAG;
+}
 
 // read config file
 void rwnmr_config::readConfigFile(const string configFile)
@@ -54,6 +97,8 @@ void rwnmr_config::readConfigFile(const string configFile)
 			if(token == "NAME")	(*this).readName(content);
 			else if(token == "DB_PATH") (*this).readDBPath(content);
 			else if(token == "WALKERS") (*this).readWalkers(content);
+			else if(token == "WALKERS_PLACEMENT") (*this).readWalkersPlacement(content);
+			else if(token == "PLACEMENT_DEVIATION") (*this).readPlacementDeviation(content);
 			else if(token == "RHO_TYPE") (*this).readRhoType(content);
 			else if(token == "RHO") (*this).readRho(content);
 			else if(token == "STEPS_PER_ECHO") (*this).readStepsPerEcho(content);
@@ -101,21 +146,25 @@ void rwnmr_config::readWalkers(string s)
 	this->WALKERS = std::stoi(s);
 }
 
+void rwnmr_config::readWalkersPlacement(string s)
+{
+	this->WALKERS_PLACEMENT = s;
+}
+
+void rwnmr_config::readPlacementDeviation(string s)
+{
+	this->PLACEMENT_DEVIATION = std::stoi(s);
+}
+
 void rwnmr_config::readRhoType(string s)
 {
-	if(s == "'uniform'") this->RHO_TYPE = "uniform";
-	else if(s == "'sigmoid'") this->RHO_TYPE = "sigmoid";
+	if(s == "uniform") this->RHO_TYPE = "uniform";
+	else if(s == "sigmoid") this->RHO_TYPE = "sigmoid";
 	else this->RHO_TYPE = "undefined";
 }
 
 void rwnmr_config::readRho(string s) // vector?
 {
-	if(this->RHO_TYPE == "uniform")
-	{
-		this->RHO.push_back(std::stod(s)); 
-	} else 
-	if(this->RHO_TYPE == "sigmoid")
-	{
 		// parse vector
 		if(s.compare(0, 1, "{") == 0 and s.compare(s.length() - 1, 1, "}") == 0)
 		{
@@ -134,8 +183,10 @@ void rwnmr_config::readRho(string s) // vector?
 			}
 			// add value to RHO attribute
 			this->RHO.push_back(std::stod(strvec));
-		}
-	}
+		} else
+		{
+			this->RHO.push_back(std::stod(s));
+		}		
 }
 
 void rwnmr_config::readD0(string s)

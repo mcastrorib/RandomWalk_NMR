@@ -17,6 +17,10 @@
 // include OpenMP for multicore implementation
 #include <omp.h>
 
+// include configuration file classes
+#include "../ConfigFiles/rwnmr_config.h"
+#include "../ConfigFiles/uct_config.h"
+
 #include "NMR_defs.h"
 #include "CollisionHistogram.h"
 #include "../ConsoleInput/consoleInput.h"
@@ -30,6 +34,9 @@ class NMR_Simulation
 {
 public:
     // Class attributes:
+    // Config attributes
+    rwnmr_config rwNMR_config;
+    uct_config uCT_config;
 
     // RW simulation parameters
     string simulationName;
@@ -85,7 +92,8 @@ public:
 
     // NMR_3D methods:
     // default constructors
-    NMR_Simulation(string _name = "NMR_simulation");
+    NMR_Simulation(string _Name){};
+    NMR_Simulation(rwnmr_config _rwNMR_config, uct_config _uCT_config);
 
     //copy constructors
     NMR_Simulation(const NMR_Simulation &_otherImage);
@@ -172,7 +180,7 @@ public:
     void setSimulation(double occupancy, uint64_t seed, bool use_GPU);
     void setGPU(bool _useGPU);
     void setImageOccupancy(double _occupancy);
-    void setInitialSeed(uint64_t _seed);
+    void setInitialSeed(uint64_t _seed, bool _flag=false);
     void setFreeDiffusionCoefficient(double _bulk);
     void setImageResolution(double _resolution);
     void setImageVoxelResolution();
@@ -183,9 +191,10 @@ public:
     void setNumberOfStepsFromTime(double time);
     void setTimeFramework(uint _steps);
     void setTimeFramework(double _time);
-    void setWalkers(Point3D _point, uint _numberOfWalkers = 0);
-    void setWalkers(Point3D _point1, Point3D _point2, uint _numberOfWalkers = 0);
-    void setWalkers(uint _numberOfWalkers = 0, bool _randomInsertion = false);
+    void setWalkers(void);
+    void setWalkers(Point3D _point, uint _numberOfWalkers);
+    void setWalkers(Point3D _point1, Point3D _point2, uint _numberOfWalkers);
+    void setWalkers(uint _numberOfWalkers, bool _randomInsertion = false);
     void countPoresInBinaryMap();
     void countPoresInBitBlock();
     void countPoresInCubicSpace(Point3D _vertex1, Point3D _vertex2);
@@ -241,13 +250,13 @@ private:
     void mapSimulation_CUDA_3D_histograms();
     void walkSimulation_CUDA_3D();
 
-    double diffusionSimulation_CUDA(double gradientMagnitude = DEFAULT_GRADIENT, 
-                                  double tinyDelta = PFGSE_TINY_DELTA, 
-                                  double giromagneticRatio = GIROMAGNETIC_RATIO);
+    double diffusionSimulation_CUDA(double gradientMagnitude, 
+                                  double tinyDelta, 
+                                  double giromagneticRatio);
 
-    double diffusionSimulation_OMP(double gradientMagnitude = DEFAULT_GRADIENT, 
-                                 double tinyDdelta = PFGSE_TINY_DELTA, 
-                                 double giromagneticRatio = GIROMAGNETIC_RATIO);
+    double diffusionSimulation_OMP(double gradientMagnitude, 
+                                 double tinyDdelta, 
+                                 double giromagneticRatio);
 
 public:
     void mapSimulation(void)
@@ -263,9 +272,9 @@ public:
     void associateWalkSimulation();
 
     // PFG NMR simulation
-    double PFG(double gradientMagnitude = DEFAULT_GRADIENT, 
-             double tinyDelta = PFGSE_TINY_DELTA, 
-             double giromagneticRatio = GIROMAGNETIC_RATIO)
+    double PFG(double gradientMagnitude, 
+             double tinyDelta, 
+             double giromagneticRatio)
     { 
         if(this->gpu_use)
             return (*this).diffusionSimulation_CUDA(gradientMagnitude, tinyDelta, giromagneticRatio);
@@ -274,13 +283,13 @@ public:
 
     }
     double compute_pfgse_k_value(double gradientMagnitude, 
-                                 double tiny_delta = PFGSE_TINY_DELTA, 
-                                 double giromagneticRatio = GIROMAGNETIC_RATIO);
+                                 double tiny_delta, 
+                                 double giromagneticRatio);
 
     void fastSimulation();
     void histSimulation();
     void createPenaltiesVector(vector<double> &_sigmoid);
-    void createPenaltiesVector(double rho = DEFAULT_RELAXATIVITY);
+    void createPenaltiesVector(double rho);
 
     // Class supermethod:
     void saveInfo();
@@ -352,6 +361,7 @@ public:
         this->inputT2File = inputT2_filename;
     }
     void readInputT2();
+    void assemblyImagePath();
 };
 
 #endif

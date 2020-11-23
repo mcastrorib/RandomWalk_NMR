@@ -236,7 +236,7 @@ void NMR_PFGSE::simulation_cuda_old()
     double gradientMagnitude = 0;
     double pulseWidth = this->pulseWidth;
     double giromagneticRatio = this->giromagneticRatio;
-    if(!PFGSE_USE_TWOPI) giromagneticRatio /= TWO_PI;
+    if(!this->PFGSE_config.getUseWaveVectorTwoPi()) giromagneticRatio /= TWO_PI;
     uint gradientPoints = this->gradientPoints;
 
 
@@ -267,7 +267,7 @@ void NMR_PFGSE::simulation_cuda_old()
     uint numberOfSteps = this->NMR.simulationSteps;
 
     // create a steps bucket
-    uint stepsLimit = MAX_RWSTEPS;
+    uint stepsLimit = this->NMR.rwNMR_config.getMaxRWSteps();
     uint stepsSize = numberOfSteps/stepsLimit;
     vector<uint> steps;
     for(uint idx = 0; idx < stepsSize; idx++)
@@ -287,8 +287,8 @@ void NMR_PFGSE::simulation_cuda_old()
     // uint kernelCalls = (uint)ceil((double)numberOfEchoes / (double)echoesPerKernel);
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    uint threadsPerBlock = THREADSPERBLOCK;
-    uint blocksPerKernel = BLOCKS;
+    uint threadsPerBlock = this->NMR.rwNMR_config.getThreadsPerBlock();
+    uint blocksPerKernel = this->NMR.rwNMR_config.getBlocks();
     uint walkersPerKernel = threadsPerBlock * blocksPerKernel;
 
     // treat case when only one kernel is needed
@@ -510,7 +510,7 @@ void NMR_PFGSE::simulation_cuda_old()
                                                                     giromagneticRatio);
             cudaDeviceSynchronize();
 
-            if(REDUCE_IN_GPU)
+            if(this->NMR.rwNMR_config.getReduceInGPU())
             {
                 // Kernel call to reduce walker final phases
                 PFG_reduce<<<blocksPerKernel/2, 
@@ -662,7 +662,7 @@ void NMR_PFGSE::simulation_cuda_old()
 
             cudaDeviceSynchronize();
 
-            if(REDUCE_IN_GPU)
+            if(this->NMR.rwNMR_config.getReduceInGPU())
             {
                 // Kernel call to reduce walker final phases
                 PFG_reduce<<<blocksPerKernel/2, 
@@ -798,12 +798,12 @@ void NMR_PFGSE::simulation_cuda()
     double gradientMagnitude = 0;
     double pulseWidth = this->pulseWidth;
     double giromagneticRatio = this->giromagneticRatio;
-    if(!PFGSE_USE_TWOPI) giromagneticRatio /= TWO_PI;
+    if(!this->PFGSE_config.getUseWaveVectorTwoPi()) giromagneticRatio /= TWO_PI;
     uint gradientPoints = this->gradientPoints;
 
 
     // reset walker's initial state with omp parallel for
-    if(NMR_OPENMP)
+    if(this->NMR.rwNMR_config.getOpenMPUsage())
     {
         // set omp variables for parallel loop throughout walker list
         const int num_cpu_threads = omp_get_max_threads();
@@ -861,7 +861,7 @@ void NMR_PFGSE::simulation_cuda()
     uint numberOfSteps = this->NMR.simulationSteps;
 
     // create a steps bucket
-    uint stepsLimit = MAX_RWSTEPS;
+    uint stepsLimit = this->NMR.rwNMR_config.getMaxRWSteps();
     uint stepsSize = numberOfSteps/stepsLimit;
     vector<uint> steps;
     for(uint idx = 0; idx < stepsSize; idx++)
@@ -881,8 +881,8 @@ void NMR_PFGSE::simulation_cuda()
     // uint kernelCalls = (uint)ceil((double)numberOfEchoes / (double)echoesPerKernel);
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    uint threadsPerBlock = THREADSPERBLOCK;
-    uint blocksPerKernel = BLOCKS;
+    uint threadsPerBlock = this->NMR.rwNMR_config.getThreadsPerBlock();
+    uint blocksPerKernel = this->NMR.rwNMR_config.getBlocks();
     uint walkersPerKernel = threadsPerBlock * blocksPerKernel;
 
     // treat case when only one kernel is needed
@@ -1020,7 +1020,7 @@ void NMR_PFGSE::simulation_cuda()
         // Host data copy
         // copy original walkers' data to temporary host arrays
         // #pragma omp parallel for
-        if(NMR_OPENMP)
+        if(this->NMR.rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
             const int num_cpu_threads = omp_get_max_threads();
@@ -1106,7 +1106,7 @@ void NMR_PFGSE::simulation_cuda()
         cudaMemcpy(h_walker_px, d_walker_px, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_walker_py, d_walker_py, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_walker_pz, d_walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);      
-        if(NMR_OPENMP)
+        if(this->NMR.rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
             const int num_cpu_threads = omp_get_max_threads();
@@ -1160,7 +1160,7 @@ void NMR_PFGSE::simulation_cuda()
                                                                 k_Z);
             cudaDeviceSynchronize();
 
-            if(REDUCE_IN_GPU)
+            if(this->NMR.rwNMR_config.getReduceInGPU())
             {
                 // Kernel call to reduce walker final phases
                 PFG_reduce<<<blocksPerKernel/2, 
@@ -1220,7 +1220,7 @@ void NMR_PFGSE::simulation_cuda()
 
         // Host data copy
         // copy original walkers' data to temporary host arrays
-        if(NMR_OPENMP)
+        if(this->NMR.rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
             const int num_cpu_threads = omp_get_max_threads();
@@ -1315,7 +1315,7 @@ void NMR_PFGSE::simulation_cuda()
         cudaMemcpy(h_walker_px, d_walker_px, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_walker_py, d_walker_py, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_walker_pz, d_walker_pz, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
-        if(NMR_OPENMP)
+        if(this->NMR.rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
             const int num_cpu_threads = omp_get_max_threads();
@@ -1371,7 +1371,7 @@ void NMR_PFGSE::simulation_cuda()
 
             cudaDeviceSynchronize();
 
-            if(REDUCE_IN_GPU)
+            if(this->NMR.rwNMR_config.getReduceInGPU())
             {
                 // Kernel call to reduce walker final phases
                 PFG_reduce<<<blocksPerKernel/2, 

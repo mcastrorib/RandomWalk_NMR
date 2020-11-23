@@ -306,7 +306,7 @@ void NMR_Simulation::mapSimulation_CUDA_2D()
 
     // Launch kernel for GPU computation
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    int threadsPerBlock = THREADSPERBLOCK;
+    int threadsPerBlock = this->rwNMR_config.getThreadsPerBlock();
     int blocksPerKernel = (int)ceil(double(numberOfWalkers) / double(threadsPerBlock));
 
     // kernel "map" launch
@@ -399,7 +399,7 @@ void NMR_Simulation::mapSimulation_CUDA_2D_histograms()
 
     // Launch kernel for GPU computation
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    int threadsPerBlock = THREADSPERBLOCK;
+    int threadsPerBlock = this->rwNMR_config.getThreadsPerBlock();
     int blocksPerKernel = (int)ceil(double(numberOfWalkers) / double(threadsPerBlock));
 
     // Copy bitBlock2D data from host to device (only once)
@@ -582,11 +582,11 @@ void NMR_Simulation::walkSimulation_CUDA_2D()
     uint shiftConverter = log2(this->voxelDivision);
 
     // number of echos that each walker in kernel call will perform
-    int echoesPerKernel = ECHOESPERKERNEL;
+    int echoesPerKernel = this->rwNMR_config.getEchoesPerKernel();
     int kernelCalls = (int)ceil((double)numberOfEchoes / (double)echoesPerKernel);
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    int threadsPerBlock = THREADSPERBLOCK;
+    int threadsPerBlock = this->rwNMR_config.getThreadsPerBlock();
     int blocksPerKernel = (int)ceil(double(numberOfWalkers) / double(threadsPerBlock));
 
     if (blocksPerKernel % 2 == 1)

@@ -11,9 +11,12 @@ using namespace std;
 class rwnmr_config
 {
 public:
+    string config_filepath;
     string NAME;
     string DB_PATH;
     uint WALKERS;
+    string WALKERS_PLACEMENT;
+    uint PLACEMENT_DEVIATION;
     string RHO_TYPE;
     vector<double> RHO;
     double D0; 
@@ -52,10 +55,11 @@ public:
     uint NMR_END_TAG;
 
     // default constructors
+    rwnmr_config(){};
     rwnmr_config(const string configFile);
 
     //copy constructors
-    rwnmr_config(const rwnmr_config &otherConfig);
+    rwnmr_config(const rwnmr_config &otherConfig);    
 
     // default destructor
     virtual ~rwnmr_config()
@@ -65,10 +69,13 @@ public:
 
     void readConfigFile(const string configFile);
     
+    // Read methods
     // -- RW Params
     void readName(string s);
     void readDBPath(string s);
     void readWalkers(string s);
+    void readWalkersPlacement(string s);
+    void readPlacementDeviation(string s);
     void readRhoType(string s);
     void readRho(string s); // vector?
     void readD0(string s); 
@@ -104,6 +111,50 @@ public:
     void readBatchTag(string s);
     void readT2Tag(string s);
     void readEndTag(string s);
+
+    // Get methods
+    // -- RW Params
+    string getConfigFilepath() {return this->config_filepath; }
+    string getName(){ return this->NAME;}
+    string getDBPath(){ return this->DB_PATH;}
+    uint getWalkers(){ return this->WALKERS;}
+    string getWalkersPlacement(){ return this->WALKERS_PLACEMENT;}
+    uint getPlacementDeviation(){ return this->PLACEMENT_DEVIATION;}
+    string getRhoType(){ return this->RHO_TYPE;}
+    vector<double> getRho(){ return this->RHO;}
+    double getD0(){ return this->D0;}
+    uint getStepsPerEcho(){ return this->STEPS_PER_ECHO;}
+    uint64_t getSeed(){ return  this->SEED;}
+
+    // -- Saving
+    bool getSaveImgInfo(){ return this->SAVE_IMG_INFO;}
+    bool getSaveBinImg(){ return this->SAVE_BINIMG;}
+
+    // Histograms
+    uint getHistograms(){ return this->HISTOGRAMS;}
+    uint getHistogramSize(){ return this->HISTOGRAM_SIZE;}
+
+    // -- OpenMP
+    bool getOpenMPUsage(){ return this->OPENMP_USAGE;}
+    uint getOpenMPThreads(){ return this->OPENMP_THREADS;}
+
+    // -- CUDA/GPU Params
+    bool getGPUUsage(){ return this->GPU_USAGE;}
+    uint getBlocks(){ return this->BLOCKS;}
+    uint getThreadsPerBlock(){ return this->THREADSPERBLOCK;}
+    uint getEchoesPerKernel(){ return this->ECHOESPERKERNEL;}
+    uint getMaxRWSteps(){ return this->MAX_RWSTEPS;}
+    bool getReduceInGPU(){ return this->REDUCE_IN_GPU;}
+    
+    // -- MPI Params
+    uint getBitBlockBatchesSize(){ return this->BITBLOCKS_BATCHES_SIZE;}
+    uint getBitBlockPropertiesSize(){ return this->BITBLOCK_PROP_SIZE;}
+    uint getNMRT2Size(){ return this->NMR_T2_SIZE;}
+    uint getStartTag(){ return this->NMR_START_TAG;}
+    uint getBitBlockTag(){ return this->NMR_BITBLOCK_TAG;}
+    uint getBatchTag(){ return this->NMR_BATCH_TAG;}
+    uint getT2Tag(){ return this->NMR_T2_TAG;}
+    uint getEndTag(){ return this->NMR_END_TAG;}
 };
 
 #endif

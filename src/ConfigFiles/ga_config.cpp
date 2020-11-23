@@ -20,7 +20,45 @@ ga_config::ga_config(const string configFile)
 
 //copy constructors
 ga_config::ga_config(const ga_config &otherConfig)
-{}
+{
+    this->config_filepath = otherConfig.config_filepath;
+    // -- T2 REFERENCE CURVE
+    this->T2_PATH = otherConfig.T2_PATH;    
+
+    // -- GENOTYPE
+    this->GENOTYPE_SIZE = otherConfig.GENOTYPE_SIZE;
+    this->GENOTYPE_MAX = otherConfig.GENOTYPE_MAX;
+    this->GENOTYPE_MIN = otherConfig.GENOTYPE_MIN;
+
+    // -- GA ESSENTIALS
+    this->TOLERANCE = otherConfig.TOLERANCE;
+    this->POPULATION_SIZE = otherConfig.POPULATION_SIZE;
+    this->OFFSPRING_PROPORTION = otherConfig.OFFSPRING_PROPORTION;
+    this->GAMMA = otherConfig.GAMMA;
+    this->MUTATION_RATIO = otherConfig.MUTATION_RATIO;
+    this->MUTATION_DEVIATION = otherConfig.MUTATION_DEVIATION;
+    this->MUTATION_PER_RESET = otherConfig.MUTATION_PER_RESET;
+    this->RESET_PROPORTION = otherConfig.RESET_PROPORTION;
+    this->ELITE_SIZE = otherConfig.ELITE_SIZE;
+    this->BETA = otherConfig.BETA;
+    this->DIVERSITY = otherConfig.DIVERSITY;
+    this->MEAN_DEVIATION = otherConfig.MEAN_DEVIATION;
+    this->RESET_POPULATION = otherConfig.RESET_POPULATION;
+    
+    // -- MIGRATION & MPI 
+    this->GEN_PER_MIGRATION = otherConfig.GEN_PER_MIGRATION;
+    this->MIGRATION_RATE = otherConfig.MIGRATION_RATE;
+    this->MIGRATION_IMPROVEMENT = otherConfig.MIGRATION_IMPROVEMENT;
+    this->MIGRATION_START_TAG = otherConfig.MIGRATION_START_TAG;
+    this->MIGRATION_READY_TAG = otherConfig.MIGRATION_READY_TAG;
+    this->MIGRATION_END_TAG = otherConfig.MIGRATION_END_TAG;
+    this->ASYNC_READY_TAG = otherConfig.ASYNC_READY_TAG;
+    this->ASYNC_DONE_TAG = otherConfig.ASYNC_DONE_TAG;    
+    this->SOLUTION_FOUND_TAG = otherConfig.SOLUTION_FOUND_TAG;
+        
+    // --- GA SAVE. 
+    this->SAVE_GA = otherConfig.SAVE_GA;  
+}
 
 // read config file
 void ga_config::readConfigFile(const string configFile)

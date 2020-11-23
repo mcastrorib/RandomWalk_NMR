@@ -23,31 +23,36 @@
 using namespace cv;
 using namespace std;
 
-
 NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,  
-				     double _GF,
-				     int _GPoints,
-				  	 double _bigDelta,
-				  	 double _pulseWidth, 
-				  	 double _giromagneticRatio, 
-				  	 int _mpi_rank, 
-				  	 int _mpi_processes) : NMR(_NMR),
-										   gradient_max(_GF),
-										   gradientPoints(_GPoints),
-										   exposureTime(_bigDelta),
-										   pulseWidth(_pulseWidth),
-										   giromagneticRatio(_giromagneticRatio),
-										   diffusionCoefficient(0.0),
+				     pfgse_config _pfgseConfig,
+					 uint time_sample,
+					 int _mpi_rank,
+					 int _mpi_processes) : NMR(_NMR),
+										   PFGSE_config(_pfgseConfig),
 										   M0(0.0),
 										   mpi_rank(_mpi_rank),
 										   mpi_processes(_mpi_processes)
 {
+	// vectors object init
 	vector<double> gradient();
 	vector<double> LHS();
 	vector<double> RHS();
 	vector<Vector3D> vecGradient();
+
+	// read config file
+	Vector3D gradient_max = this->PFGSE_config.getMaxGradient();
+	this->gradient_X = gradient_max.getX();
+	this->gradient_Y = gradient_max.getY();
+	this->gradient_Z = gradient_max.getZ();	
+	this->gradientPoints = this->PFGSE_config.getGradientSamples();
+	this->exposureTime = this->PFGSE_config.getTimeValues()[time_sample];
+	this->pulseWidth = this->PFGSE_config.getPulseWidth();
+	this->giromagneticRatio = this->PFGSE_config.getGiromagneticRatio();
+	this->diffusionCoefficient = this->PFGSE_config.getD0();
+
+
 	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
-	(*this).set_old();
+	(*this).set();
 }
 
 NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,  
@@ -107,7 +112,7 @@ void NMR_PFGSE::setName()
 
 void NMR_PFGSE::createDirectoryForData()
 {
-	string path = DATA_PATH;
+	string path = this->NMR.rwNMR_config.getDBPath();
     createDirectory(path, this->NMR.simulationName + "/" + this->name);
     this->dir = (path + this->NMR.simulationName + "/" + this->name);
 }
@@ -239,7 +244,7 @@ void NMR_PFGSE::setThresholdFromFraction(double _fraction)
 double NMR_PFGSE::computeRHS(double _Gvalue)
 {
 	double gamma = this->giromagneticRatio;
-	if(PFGSE_USE_TWOPI) gamma *= TWO_PI;
+	if(this->PFGSE_config.getUseWaveVectorTwoPi()) gamma *= TWO_PI;
 	
 	return (-1.0e-10) * (gamma * this->pulseWidth) * (gamma * this->pulseWidth) 
 			* (this->exposureTime - ((this->pulseWidth) / 3.0)) 

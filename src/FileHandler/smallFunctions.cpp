@@ -3,26 +3,17 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// include OpenCV core functions
-#include <opencv2/core.hpp>
-#include <opencv2/core/utility.hpp>
-#include "opencv2/imgcodecs.hpp"
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
 // include C++ standard libraries
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <random>
 #include <vector>
+#include <cstring>
 #include <string>
 #include <stdint.h>
 
-#include "../Walker/walker.h"
-#include "../NMR_Simulation/NMR_Simulation.h"
-
-#include "fileHandler.h"
+using namespace std;
 
 // small function to print int64_t in bits
 void showbits(uint64_t x)

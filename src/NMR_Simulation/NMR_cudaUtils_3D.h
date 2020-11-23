@@ -133,6 +133,6 @@ __device__ bool checkIfBlockBitIsWall_3D(uint64_t currentBlock, int currentBit);
 __device__ uint64_t xorShift64_3D(struct xorshift64_state *state);
 __device__ uint64_t mod6_3D(uint64_t a);
 
-__device__ double compute_pfgse_k_value(double gradientMagnitude, double tiny_delta = PFGSE_TINY_DELTA, double giromagneticRatio = GIROMAGNETIC_RATIO);
+__device__ double compute_pfgse_k_value(double gradientMagnitude, double tiny_delta, double giromagneticRatio);
 __device__ int convertLocalToGlobal_3D(int _localPos, uint _shiftConverter);
 #endif

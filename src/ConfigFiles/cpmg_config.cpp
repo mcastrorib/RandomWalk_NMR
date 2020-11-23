@@ -20,7 +20,20 @@ cpmg_config::cpmg_config(const string configFile)
 
 //copy constructors
 cpmg_config::cpmg_config(const cpmg_config &otherConfig)
-{}
+{
+    this->config_filepath = otherConfig.config_filepath;
+    // --- Physical attributes.
+    this->D0 = otherConfig.D0;
+    this->OBS_TIME = otherConfig.OBS_TIME;
+
+    // --- cpmg SAVE. 
+    this->SAVE_MODE = otherConfig.SAVE_MODE;
+    this->SAVE_T2 = otherConfig.SAVE_T2;
+    this->SAVE_COLLISIONS = otherConfig.SAVE_COLLISIONS;
+    this->SAVE_DECAY = otherConfig.SAVE_DECAY;
+    this->SAVE_HISTOGRAM = otherConfig.SAVE_HISTOGRAM;
+    this->SAVE_HISTOGRAM_LIST = otherConfig.SAVE_HISTOGRAM_LIST;
+}
 
 // read config file
 void cpmg_config::readConfigFile(const string configFile)

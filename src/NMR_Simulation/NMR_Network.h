@@ -29,7 +29,7 @@ struct mpi_bitblock_properties
 
 struct mpi_nmr_T2
 {
-	double value[NMR_T2_SIZE];
+	double value[MPI_NMR_T2_SIZE];
 };
 
 class NMR_Network

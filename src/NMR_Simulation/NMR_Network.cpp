@@ -25,10 +25,10 @@ NMR_Network::NMR_Network(NMR_Simulation &_NMR,
 								 		 	   transfer_time(0.0)
 {
 	// commit mpi static datatypes
-	MPI_Type_contiguous(BITBLOCK_PROP_SIZE, MPI_INT, &MPI_BITBLOCK_PROPERTIES);
+	MPI_Type_contiguous(this->NMR.rwNMR_config.getBitBlockPropertiesSize(), MPI_INT, &MPI_BITBLOCK_PROPERTIES);
 	MPI_Type_commit(&MPI_BITBLOCK_PROPERTIES);
 
-	MPI_Type_contiguous(NMR_T2_SIZE, MPI_DOUBLE, &MPI_NMRT2);
+	MPI_Type_contiguous(this->NMR.rwNMR_config.getNMRT2Size(), MPI_DOUBLE, &MPI_NMRT2);
 	MPI_Type_commit(&MPI_NMRT2);
 }
 
@@ -37,18 +37,18 @@ void NMR_Network::transfer()
 	double time = omp_get_wtime();
 
 	cout << "[" << this->mpi_rank << "]" << " ~ starting mpi communication..." << endl;
-	(*this).notifyState(NMR_START_TAG);   
+	(*this).notifyState(this->NMR.rwNMR_config.getStartTag());   
 
 	cout << "[" << this->mpi_rank << "]" << " ~ sending/receiving bitblocks..." << endl;
-	(*this).notifyState(NMR_BITBLOCK_TAG);
+	(*this).notifyState(this->NMR.rwNMR_config.getBitBlockTag());
 	(*this).exchangeBitBlock();
 
 	cout << "[" << this->mpi_rank << "]" << " ~ sending/receiving NMR-T2..." << endl;
-	(*this).notifyState(NMR_T2_TAG); 
+	(*this).notifyState(this->NMR.rwNMR_config.getT2Tag()); 
 	(*this).exchange_NMRT2();
 
 	cout << "[" << this->mpi_rank << "]" << " ~ data exchange is finished..." << endl;
-	(*this).notifyState(NMR_END_TAG);
+	(*this).notifyState(this->NMR.rwNMR_config.getEndTag());
 	
 	cout << "[" << this->mpi_rank << "]" << " ~ closing mpi communication..." << endl;
 	this->transfer_time += omp_get_wtime() - time;
@@ -137,7 +137,7 @@ void NMR_Network::receiveBitBlockProperties()
 
 void NMR_Network::sendBitBlock()
 {
-	uint batches = (uint) ceil(this->NMR.bitBlock.numberOfBlocks / (double) BITBLOCKS_BATCHES_SIZE);	
+	uint batches = (uint) ceil(this->NMR.bitBlock.numberOfBlocks / (double) this->NMR.rwNMR_config.getBitBlockBatchesSize());	
 	cout << "[" << this->mpi_rank << "]" << " ~ batches = " << batches << endl;
 
 
@@ -169,7 +169,7 @@ void NMR_Network::sendBitBlock()
 void NMR_Network::sendBitBlockInBatches()
 {
 	// set number of batches
-	uint batches = (uint) ceil(this->NMR.bitBlock.numberOfBlocks / (double) BITBLOCKS_BATCHES_SIZE);	
+	uint batches = (uint) ceil(this->NMR.bitBlock.numberOfBlocks / (double) this->NMR.rwNMR_config.getBitBlockBatchesSize());	
 
 	for(uint batch = 0; batch < batches; batch++)
 	{
@@ -181,12 +181,12 @@ void NMR_Network::sendBitBlockInBatches()
 void NMR_Network::sendBatch(uint _batch)
 {
 	// set offset in data access
-	uint batch_offset = _batch * BITBLOCKS_BATCHES_SIZE;
+	uint batch_offset = _batch * this->NMR.rwNMR_config.getBitBlockBatchesSize();
 
 	// wrap 'BitBlocks' data
-	uint64_t data[BITBLOCKS_BATCHES_SIZE];
+	uint64_t data[this->NMR.rwNMR_config.getBitBlockBatchesSize()];
 	uint dataIndex; 
-	for(uint id = 0; id < BITBLOCKS_BATCHES_SIZE; id++)
+	for(uint id = 0; id < this->NMR.rwNMR_config.getBitBlockBatchesSize(); id++)
 	{
 		dataIndex = id + batch_offset;
 		if(dataIndex < this->NMR.bitBlock.numberOfBlocks) 
@@ -207,7 +207,7 @@ void NMR_Network::sendBatch(uint _batch)
 	        // MPI send
 	        int destination = proc;
 	        int tag = 200 + _batch; 
-	        int data_size = BITBLOCKS_BATCHES_SIZE;
+	        int data_size = this->NMR.rwNMR_config.getBitBlockBatchesSize();
 	        MPI_Send(&data,
 	                 data_size,
 	                 MPI_UINT64_T,
@@ -218,7 +218,7 @@ void NMR_Network::sendBatch(uint _batch)
 	}
 
 	// Notify other processes that batch was sent
-	(*this).notifyState(NMR_BATCH_TAG);
+	(*this).notifyState(this->NMR.rwNMR_config.getBatchTag());
 
 }
 
@@ -228,7 +228,7 @@ void NMR_Network::receiveBitBlockInBatches()
 	NMR.bitBlock.blocks = new uint64_t[this->NMR.bitBlock.numberOfBlocks];
 
 	// set number of batches based on batch size
-	uint batches = (uint) ceil(this->NMR.bitBlock.numberOfBlocks / (double) BITBLOCKS_BATCHES_SIZE);
+	uint batches = (uint) ceil(this->NMR.bitBlock.numberOfBlocks / (double) this->NMR.rwNMR_config.getBitBlockBatchesSize());
 
 	for(uint batch = 0; batch < batches; batch++)
 	{
@@ -251,7 +251,7 @@ void NMR_Network::receiveBatch(uint _batch)
 
 
 	// Receive the message
-	uint64_t data[BITBLOCKS_BATCHES_SIZE];
+	uint64_t data[this->NMR.rwNMR_config.getBitBlockBatchesSize()];
 	MPI_Recv(&data, 
 			 data_size, 
 			 MPI_UINT64_T, 
@@ -262,7 +262,7 @@ void NMR_Network::receiveBatch(uint _batch)
 
 	// unwrap 'BitBlock' data		
 	// set offset in data access
-	uint batch_offset = _batch * BITBLOCKS_BATCHES_SIZE;
+	uint batch_offset = _batch * this->NMR.rwNMR_config.getBitBlockBatchesSize();
 	uint dataIndex;
 	for(uint id = 0; id < data_size; id++)
 	{
@@ -274,7 +274,7 @@ void NMR_Network::receiveBatch(uint _batch)
 	}
 
 	// Notify others that batch was received
-	(*this).notifyState(NMR_BATCH_TAG);
+	(*this).notifyState(this->NMR.rwNMR_config.getBatchTag());
 }
 
 
@@ -282,7 +282,7 @@ void NMR_Network::receiveBatch(uint _batch)
 
 void NMR_Network::receiveBitBlock()
 {
-	uint batches = (uint) ceil(this->NMR.bitBlock.numberOfBlocks / (double) BITBLOCKS_BATCHES_SIZE);
+	uint batches = (uint) ceil(this->NMR.bitBlock.numberOfBlocks / (double) this->NMR.rwNMR_config.getBitBlockBatchesSize());
 	cout << "[" << this->mpi_rank << "]" << " ~blocks = " << this->NMR.bitBlock.numberOfBlocks << endl;	
 	cout << "[" << this->mpi_rank << "]" << " ~ batches = " << batches << endl;
 
@@ -333,7 +333,7 @@ void NMR_Network::send_NMRT2()
 {
 	// wrap 'NMR T2' data
 	mpi_nmr_T2 NMR_T2;
-	for(uint i = 0; i < NMR_T2_SIZE; i++)
+	for(uint i = 0; i < this->NMR.rwNMR_config.getNMRT2Size(); i++)
 	{
 		NMR_T2.value[i] = NMR.T2_input[i];
 	}
@@ -378,7 +378,7 @@ void NMR_Network::receive_NMRT2()
 		NMR.T2_input.clear();
 
 	// unwrap 'NMR T2' data
-	for(uint id = 0; id < NMR_T2_SIZE; id++)
+	for(uint id = 0; id < this->NMR.rwNMR_config.getNMRT2Size(); id++)
 	{
 		NMR.T2_input.push_back(NMR_T2.value[id]);
 	}

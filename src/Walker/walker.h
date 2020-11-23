@@ -36,7 +36,6 @@ class Pore
 public:
     // Class attributes:
     uint position_x, position_y, position_z;
-    //double surfaceRelaxivity;
 };
 
 class Point3D

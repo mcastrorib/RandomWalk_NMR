@@ -29,7 +29,7 @@
 // include project files
 #include "NMR_Simulation.h"
 #include "walker.h"
-#include "rng.h"
+#include "myRNG.h"
 #include "NMR_Network.h"
 #include "NMR_pfgse.h"
 #include "fileHandler.h"
@@ -57,25 +57,29 @@ int main(int argc, char *argv[])
      
      // -- rwnmr config
      string rw_config_path = config_root + "rwnmr.config";
-     rwnmr_config rwConfig(rw_config_path); 
+     rwnmr_config rwNMR_Config(rw_config_path); 
      
      // -- uct image config
      string uct_config_path = config_root + "uct.config";
-     uct_config uctConfig(uct_config_path); 
-     
-     // -- pfgse config
-     string pfgse_config_path = config_root + "pfgse.config";
-     pfgse_config pfgseConfig(pfgse_config_path);
-
-     // -- cpmg config
-     string cpmg_config_path = config_root + "cpmg.config";
-     cpmg_config cpmgConfig(cpmg_config_path);
-
-     // -- ga config
-     string ga_config_path = config_root + "ga.config";
-     ga_config gaConfig(ga_config_path);
-
+     uct_config uCT_Config(uct_config_path); 
      cout << "config files read" << endl;
+
+
+     cout << "creating RWNMR object" << endl;
+     NMR_Simulation NMR(rwNMR_Config, uCT_Config);
+     cout << "RWNMR object created succesfully." << endl;
+
+     cout << "reading uCT-image" << endl;
+     NMR.readImage();
+     cout << "uCT-image read succesfully." << endl;
+     
+     cout << "saving uCT-image info" << endl;
+     NMR.save();
+     cout << "saved succesfully." << endl;
+
+     cout << "setting walkers" << endl;
+     NMR.setWalkers();
+     cout << "walkers set." << endl;
      return 0;
 }
 
@@ -199,7 +203,7 @@ ConsoleInput input(string _name)
      input.steps = 40000;
      input.occupancy = 1.0;
      input.numberOfImages = 200;
-     input.seed = RNG_uint64();
+     input.seed = myRNG::RNG_uint64();
      input.imagePath.path = "/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/Synthetic/free_media/free_space/imgs/";
      input.imagePath.filename = "free_media_";
      input.imagePath.fileID = 0;

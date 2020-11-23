@@ -16,8 +16,13 @@
 // include OpenMP for multicore implementation
 #include <omp.h>
 
+// include configuration file classes
+#include "../ConfigFiles/rwnmr_config.h"
+#include "../ConfigFiles/uct_config.h"
+
 //include
 #include "../Walker/walker.h"
+#include "../RNG/myRNG.h"
 #include "../BitBlock/bitBlock.h"
 #include "../RNG/xorshift.h"
 #include "../FileHandler/fileHandler.h"
@@ -28,6 +33,7 @@
 // #include "CollisionHistogram.h"
 #include "../Utils/OMPLoopEnabler.h"
 
+
 using namespace cv;
 using namespace std;
 
@@ -35,21 +41,54 @@ using namespace std;
 
 // Class methods:
 //defaul constructor
-NMR_Simulation::NMR_Simulation(string _name) : numberOfPores(0),
-                                               porosity(0.0),
-                                               walkerOccupancy(0.0),
-                                               numberOfWalkers(0),
-                                               diffusionCoefficient(DIFFUSION_COEFFICIENT),
-                                               imageResolution(IMAGE_RESOLUTION),
-                                               stepsPerEcho(STEPS_PER_ECHO),
-                                               voxelDivision(VOXEL_DIVISIONS),
-                                               voxelDivisionApplied(false),
-                                               penalties(NULL),
-                                               initialSeed(INITIAL_SEED),
-                                               gpu_use(false),
-                                               seedFlag(false)
+// NMR_Simulation::NMR_Simulation(string _name) : numberOfPores(0),
+//                                                porosity(0.0),
+//                                                walkerOccupancy(0.0),
+//                                                numberOfWalkers(0),
+//                                                diffusionCoefficient(DIFFUSION_COEFFICIENT),
+//                                                imageResolution(IMAGE_RESOLUTION),
+//                                                stepsPerEcho(STEPS_PER_ECHO),
+//                                                voxelDivision(VOXEL_DIVISIONS),
+//                                                voxelDivisionApplied(false),
+//                                                penalties(NULL),
+//                                                initialSeed(INITIAL_SEED),
+//                                                gpu_use(false),
+//                                                seedFlag(false),
+//                                                rwNMR_config(NULL),
+//                                                uCT_config(NULL)
 
+// {
+//     // init vector objects
+//     vector<Mat> binaryMap();
+//     vector<Pore> pores();
+//     vector<uint> walkersIDList();
+//     vector<Walker> walkers();
+//     vector<double> globalEnergy();
+//     vector<double> decayTimes();
+//     vector<double> T2_bins();
+//     vector<double> T2_input();
+//     vector<double> T2_simulated();
+//     vector<CollisionHistogram> histogramList();
+
+//     // set simulation name and directory to save results
+//     this->simulationName = _name;
+//     this->simulationDirectory = createDirectoryForResults();
+
+//     // set default time step measurement
+//     (*this).setImageVoxelResolution();
+//     (*this).setTimeInterval();    
+// }
+
+NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config, 
+                               uct_config _uCT_config) : rwNMR_config(_rwNMR_config),
+                                                         uCT_config(_uCT_config),
+                                                         numberOfPores(0),
+                                                         porosity(-1.0),
+                                                         walkerOccupancy(-1.0),
+                                                         voxelDivisionApplied(false),
+                                                         penalties(NULL)
 {
+    // init vector objects
     vector<Mat> binaryMap();
     vector<Pore> pores();
     vector<uint> walkersIDList();
@@ -62,18 +101,36 @@ NMR_Simulation::NMR_Simulation(string _name) : numberOfPores(0),
     vector<CollisionHistogram> histogramList();
 
     // set simulation name and directory to save results
-    this->simulationName = _name;
-    this->simulationDirectory = createDirectoryForResults();
+    this->simulationName = this->rwNMR_config.getName();
+    this->simulationDirectory = (*this).createDirectoryForResults();
+
+    // assign attributes from rwnmr config files
+    (*this).setNumberOfWalkers(this->rwNMR_config.getWalkers());
+    (*this).setFreeDiffusionCoefficient(this->rwNMR_config.getD0());
+    (*this).setNumberOfStepsPerEcho(this->rwNMR_config.getStepsPerEcho());
+    (*this).setGPU(this->rwNMR_config.getGPUUsage());
+    if(this->rwNMR_config.getSeed() == 0)
+    {
+        (*this).setInitialSeed(myRNG::RNG_uint64(), true);
+    } else
+    {
+        (*this).setInitialSeed(this->rwNMR_config.getSeed());
+    }   
+
+    // assign attributes from uct config files
+    (*this).setImageResolution(this->uCT_config.getResolution());
+    (*this).setVoxelDivision(this->uCT_config.getVoxelDivision());
 
     // set default time step measurement
     (*this).setImageVoxelResolution();
-    (*this).setTimeInterval();    
-};
+    (*this).setTimeInterval(); 
+}
 
 // copy constructor
 NMR_Simulation::NMR_Simulation(const NMR_Simulation &_otherSimulation)
 {
-
+    this->rwNMR_config = _otherSimulation.rwNMR_config;
+    this->uCT_config = _otherSimulation.uCT_config;
     this->simulationName = _otherSimulation.simulationName;
     this->simulationDirectory = _otherSimulation.simulationDirectory;
     this->simulationSteps = _otherSimulation.simulationSteps;
@@ -124,8 +181,6 @@ NMR_Simulation::NMR_Simulation(const NMR_Simulation &_otherSimulation)
 
 void NMR_Simulation::setImage(ImagePath _path, uint _images)
 {
-    cout << endl
-         << "SETTING UP RANDOM WALK NMR SIMULATION:" << endl;
     this->imagePath = _path;
     this->numberOfImages = _images;
     this->depth = this->numberOfImages;
@@ -136,7 +191,7 @@ void NMR_Simulation::setSimulation(double _occupancy, uint64_t _seed, bool _use_
     this->gpu_use = _use_GPU;
     this->walkerOccupancy = _occupancy;
     this->initialSeed = _seed; 
-    if (this->initialSeed != DEFAULT_SEED)
+    if (this->initialSeed != this->rwNMR_config.getSeed())
     {
         this->seedFlag = true;
     }
@@ -156,11 +211,10 @@ void NMR_Simulation::setImageOccupancy(double _occupancy)
     this->walkerOccupancy = _occupancy;
 }
 
-void NMR_Simulation::setInitialSeed(uint64_t _seed)
+void NMR_Simulation::setInitialSeed(uint64_t _seed, bool _flag)
 {
     this->initialSeed = _seed; 
-    if (this->initialSeed != DEFAULT_SEED) this->seedFlag = true;
-    else this->seedFlag = false;
+    this->seedFlag = _flag;
 }
 
 void NMR_Simulation::setFreeDiffusionCoefficient(double _bulk)
@@ -292,6 +346,7 @@ void NMR_Simulation::setTimeFramework(double _time)
 
 void NMR_Simulation::readImage()
 {
+    (*this).assemblyImagePath();
     (*this).loadRockImage();
     (*this).createBitBlockMap();
     (*this).countPoresInBitBlock();
@@ -310,6 +365,44 @@ void NMR_Simulation::readImage()
 //     (*this).associateMapSimulation();
 //     (*this).associateWalkSimulation();    
 // }
+
+void NMR_Simulation::setWalkers(void)
+{
+    if(this->bitBlock.getNumberOfBlocks() > 0) // only set walkers, if image was loaded
+    {
+        if(this->rwNMR_config.getWalkersPlacement() == "point")
+        { 
+            // define coords of central point
+            int center_x = (int) (*this).getImageWidth()/2;
+            int center_y = (int) (*this).getImageHeight()/2;
+            int center_z = (int) (*this).getImageDepth()/2;
+            Point3D center(center_x, center_y, center_z);
+
+            // now set walkers
+            (*this).setWalkers(center, this->rwNMR_config.getWalkers());
+        } else 
+        if (this->rwNMR_config.getWalkersPlacement() == "cubic")
+        {   
+            // define restriction points
+            int center_x = (int) (*this).getImageWidth()/2;
+            int center_y = (int) (*this).getImageHeight()/2;
+            int center_z = (int) (*this).getImageDepth()/2;
+            int deviation = (int) this->rwNMR_config.getPlacementDeviation();
+            Point3D point1(center_x - deviation, center_y - deviation, center_z - deviation);
+            Point3D point2(center_x + deviation, center_y + deviation, center_z + deviation);
+
+            // now set walkers 
+            (*this).setWalkers(point1, point2, this->rwNMR_config.getWalkers());
+        } else
+        {
+            (*this).setWalkers(this->rwNMR_config.getWalkers());
+        }  
+    } else
+    {
+        cout << "error: image was not loaded yet" << endl;
+    }
+    
+}
 
 void NMR_Simulation::setWalkers(uint _numberOfWalkers, bool _randomInsertion)
 {    
@@ -363,10 +456,7 @@ void NMR_Simulation::setWalkers(Point3D _point1, Point3D _point2, uint _numberOf
 // save results
 void NMR_Simulation::saveInfo()
 {
-    if(NMR_SAVE_IMAGE_INFO)
-    {   
-        (*this).saveImageInfo(this->simulationDirectory);
-    }    
+    
 }
 
 void NMR_Simulation::save()
@@ -374,32 +464,12 @@ void NMR_Simulation::save()
     double time = omp_get_wtime();
     cout << "saving results...";
 
-    if(NMR_SAVE_DECAY) 
-    {
-        (*this).saveEnergyDecay(this->simulationDirectory);
-    }
-    
-    if(NMR_SAVE_COLLISIONS)
-    {
-        (*this).saveWalkerCollisions(this->simulationDirectory);
-    }
+    if(this->rwNMR_config.getSaveImgInfo())
+    {   
+        (*this).saveImageInfo(this->simulationDirectory);
+    } 
 
-    if(NMR_SAVE_T2)
-    {
-        (*this).saveNMRT2(this->simulationDirectory);
-    }    
-
-    if(NMR_SAVE_HISTOGRAM)
-    {
-        (*this).saveHistogram(this->simulationDirectory);
-    }    
-
-    if(NMR_SAVE_HISTOGRAM_LIST)
-    {
-        (*this).saveHistogramList(this->simulationDirectory);
-    }
-
-    if(NMR_SAVE_BINIMAGE)
+    if(this->rwNMR_config.getSaveBinImg())
     {   
         (*this).saveBitBlock(this->simulationDirectory);
     }
@@ -414,37 +484,37 @@ void NMR_Simulation::save(string _otherDir)
     double time = omp_get_wtime();
     cout << "saving results...";
     
-    if(NMR_SAVE_IMAGE_INFO)
+    if(this->rwNMR_config.getSaveImgInfo())
     {   
         (*this).saveImageInfo(_otherDir);
     }
 
-    if(NMR_SAVE_DECAY) 
+    if(this->rwNMR_config.getSaveImgInfo()) 
     {
         (*this).saveEnergyDecay(_otherDir);
     }
     
-    if(NMR_SAVE_COLLISIONS)
+    if(this->rwNMR_config.getSaveImgInfo())
     {
         (*this).saveWalkerCollisions(_otherDir);
     }
 
-    if(NMR_SAVE_T2)
+    if(this->rwNMR_config.getSaveImgInfo())
     {
         (*this).saveNMRT2(_otherDir);
     }    
 
-    if(NMR_SAVE_HISTOGRAM)
+    if(this->rwNMR_config.getSaveImgInfo())
     {
         (*this).saveHistogram(_otherDir);
     }    
 
-    if(NMR_SAVE_HISTOGRAM_LIST)
+    if(this->rwNMR_config.getSaveImgInfo())
     {
         (*this).saveHistogramList(_otherDir);
     }
 
-    if(NMR_SAVE_BINIMAGE)
+    if(this->rwNMR_config.getSaveImgInfo())
     {   
         (*this).saveBitBlock(_otherDir);
     }
@@ -869,16 +939,7 @@ void NMR_Simulation::createPoreList(Point3D _vertex1, Point3D _vertex2)
 
 void NMR_Simulation::setNumberOfWalkers(uint _numberOfWalkers)
 {   
-    if(_numberOfWalkers)
-    {   
-        if(this->numberOfPores == 0) (*this).countPoresInBitBlock();
-        this->numberOfWalkers = _numberOfWalkers;
-    }
-    else
-    {
-        if(this->numberOfPores == 0) (*this).countPoresInBitBlock();
-        this->numberOfWalkers = (uint)(walkerOccupancy * numberOfPores);
-    }
+    this->numberOfWalkers = _numberOfWalkers;
 }
 
 void NMR_Simulation::updateWalkerOccupancy()
@@ -1012,11 +1073,14 @@ void NMR_Simulation::createWalkers()
     uint64_t tempSeed = this->initialSeed + 1;
 
     // create walkers
+    vector<double> rho;
+    rho = this->rwNMR_config.getRho();
     for (uint idx = 0; idx < this->numberOfWalkers; idx++)
     {
         Walker temporaryWalker(dim3);
         this->walkers.push_back(temporaryWalker);
-        this->walkers[idx].setSurfaceRelaxivity(DEFAULT_RELAXATIVITY);
+        if(this->rwNMR_config.getRhoType() == "uniform") this->walkers[idx].setSurfaceRelaxivity(rho[0]);
+        else if(this->rwNMR_config.getRhoType() == "sigmoid") this->walkers[idx].setSurfaceRelaxivity(rho);
         this->walkers[idx].computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
         
         // set initial seed
@@ -1285,7 +1349,7 @@ void NMR_Simulation::placeWalkersInCubicSpace(Point3D _vertex1, Point3D _vertex2
 
 void NMR_Simulation::initHistogramList()
 {   
-    int numberOfHistograms = NMR_HISTOGRAMS;
+    int numberOfHistograms = this->rwNMR_config.getHistograms();
 
     // check for really small simulations
     if(this->numberOfEchoes < numberOfHistograms) 
@@ -1313,7 +1377,7 @@ void NMR_Simulation::createHistogram()
     // CollisionHistogram newHistogram(NMR_HISTOGRAM_SIZE);
     // newHistogram.fillHistogram(this->walkers, this->simulationSteps);
     // this->histogram = newHistogram;
-    this->histogram.createBlankHistogram(NMR_HISTOGRAM_SIZE);
+    this->histogram.createBlankHistogram(this->rwNMR_config.getHistogramSize());
     int steps = this->histogramList.back().lastEcho * this->stepsPerEcho;
     this->histogram.fillHistogram(this->walkers, steps);       
 }
@@ -1325,7 +1389,7 @@ void NMR_Simulation::createHistogram(uint histID, uint _steps)
     // this->histogramList[histID].amps.assign(newHistogram.amps.begin(), newHistogram.amps.end());
     // this->histogramList[histID].bins.assign(newHistogram.bins.begin(), newHistogram.bins.end()); 
 
-    this->histogramList[histID].createBlankHistogram(NMR_HISTOGRAM_SIZE);
+    this->histogramList[histID].createBlankHistogram(this->rwNMR_config.getHistogramSize());
     this->histogramList[histID].fillHistogram(this->walkers, _steps);       
 }
 
@@ -1482,7 +1546,7 @@ void NMR_Simulation::associateWalkSimulation()
 uint NMR_Simulation::pickRandomIndex(uint _maxValue)
 {
     int CPUfactor = 1;
-    if(NMR_OPENMP) CPUfactor += omp_get_thread_num();
+    if(this->rwNMR_config.getOpenMPUsage()) CPUfactor += omp_get_thread_num();
     std::random_device dev;
     std::mt19937 rng(dev()* CPUfactor * CPUfactor);
     std::uniform_int_distribution<std::mt19937::result_type> dist(1, _maxValue); 
@@ -1507,4 +1571,19 @@ uint NMR_Simulation::removeRandomIndexFromPool(vector<uint> &_pool, uint _random
     std::swap(_pool[_randomIndex], _pool.back());
     _pool.pop_back();
     return element;
+}
+
+void NMR_Simulation::assemblyImagePath()
+{
+    // User Input
+     ConsoleInput input;
+     input.numberOfImages = this->uCT_config.getSlices();
+     input.imagePath.path = this->uCT_config.getDirPath();
+     input.imagePath.filename = this->uCT_config.getFilename();
+     input.imagePath.fileID = this->uCT_config.getFirstIdx();
+     input.imagePath.digits = this->uCT_config.getDigits();
+     input.imagePath.extension = this->uCT_config.getExtension();
+     input.updateCompletePath();
+
+     (*this).setImage(input.imagePath, input.numberOfImages);
 }

@@ -450,7 +450,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D()
     uint shiftConverter = log2(this->voxelDivision);
 
     // create a steps bucket
-    uint stepsLimit = MAX_RWSTEPS;
+    uint stepsLimit =this->rwNMR_config.getMaxRWSteps();
     uint stepsSize = numberOfSteps/stepsLimit;
     vector<uint> stepsList;
     for(uint idx = 0; idx < stepsSize; idx++)
@@ -465,8 +465,8 @@ void NMR_Simulation::mapSimulation_CUDA_3D()
     }
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    uint threadsPerBlock = THREADSPERBLOCK;
-    uint blocksPerKernel = BLOCKS;
+    uint threadsPerBlock = this->rwNMR_config.getThreadsPerBlock();
+    uint blocksPerKernel = this->rwNMR_config.getBlocks();
     uint walkersPerKernel = threadsPerBlock * blocksPerKernel;
     if (numberOfWalkers < walkersPerKernel)
     {
@@ -686,7 +686,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
 {
     cout << "initializing mapping simulation 3D in GPU... ";
     // reset walkers
-    if(NMR_OPENMP)
+    if(this->rwNMR_config.getOpenMPUsage())
     {
         // set omp variables for parallel loop throughout walker list
         const int num_cpu_threads = omp_get_max_threads();
@@ -736,8 +736,8 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
     uint shiftConverter = log2(this->voxelDivision);
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    uint threadsPerBlock = THREADSPERBLOCK;
-    uint blocksPerKernel = BLOCKS;
+    uint threadsPerBlock = this->rwNMR_config.getThreadsPerBlock();
+    uint blocksPerKernel = this->rwNMR_config.getBlocks();
     uint walkersPerKernel = threadsPerBlock * blocksPerKernel;
     if (numberOfWalkers < walkersPerKernel)
     {
@@ -792,7 +792,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
         uint steps = this->stepsPerEcho * (eEnd - eBegin);
 
         // create a steps bucket
-        uint stepsLimit = MAX_RWSTEPS;
+        uint stepsLimit = this->rwNMR_config.getMaxRWSteps();
         uint stepsSize = steps/stepsLimit;
         vector<uint> stepsList;
         for(uint idx = 0; idx < stepsSize; idx++)
@@ -813,7 +813,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
     
             // Host data copy
             // copy original walkers' data to temporary host arrays
-            if(NMR_OPENMP)
+            if(this->rwNMR_config.getOpenMPUsage())
             {
                 // set omp variables for parallel loop throughout walker list
                 const int num_cpu_threads = omp_get_max_threads();
@@ -887,7 +887,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
             cudaMemcpy(seed, d_seed, walkersPerKernel * sizeof(uint64_t), cudaMemcpyDeviceToHost);
             
             // copy collisions host data to class members
-            if(NMR_OPENMP)
+            if(this->rwNMR_config.getOpenMPUsage())
             {
                 // set omp variables for parallel loop throughout walker list
                 const int num_cpu_threads = omp_get_max_threads();
@@ -934,7 +934,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
     
             // Host data copy
             // copy original walkers' data to temporary host arrays
-            if(NMR_OPENMP)
+            if(this->rwNMR_config.getOpenMPUsage())
             {
                 // set omp variables for parallel loop throughout walker list
                 const int num_cpu_threads = omp_get_max_threads();
@@ -1009,7 +1009,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
             
     
             // copy collisions host data to class members
-            if(NMR_OPENMP)
+            if(this->rwNMR_config.getOpenMPUsage())
             {
                 // set omp variables for parallel loop throughout walker list
                 const int num_cpu_threads = omp_get_max_threads();
@@ -1050,7 +1050,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
         (*this).createHistogram(hst_ID, steps);
 
         // reset collision count, but keep summation in alternative count
-        if(NMR_OPENMP)
+        if(this->rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
             const int num_cpu_threads = omp_get_max_threads();
@@ -1082,7 +1082,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
     // histogram loop is finished
 
     // recover walkers collisions from total sum and create a global histogram
-    if(NMR_OPENMP)
+    if(this->rwNMR_config.getOpenMPUsage())
     {
         // set omp variables for parallel loop throughout walker list
         const int num_cpu_threads = omp_get_max_threads();
@@ -1152,7 +1152,7 @@ void NMR_Simulation::walkSimulation_CUDA_3D()
 {
     cout << "initializing RW-NMR simulation in GPU... ";
 
-    if(NMR_OPENMP)
+    if(this->rwNMR_config.getOpenMPUsage())
     {
         // set omp variables for parallel loop throughout walker list
         const int num_cpu_threads = omp_get_max_threads();
@@ -1212,13 +1212,13 @@ void NMR_Simulation::walkSimulation_CUDA_3D()
     uint stepsPerEcho = this->stepsPerEcho;
 
     // number of echos that each walker in kernel call will perform
-    uint echoesPerKernel = ECHOESPERKERNEL;
+    uint echoesPerKernel = this->rwNMR_config.getEchoesPerKernel();
     uint kernelCalls = (uint) ceil(numberOfEchoes / (double) echoesPerKernel);
     // uint lastEchoTail = numberOfEchoes - (kernelCalls * echoesPerKernel);
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    uint threadsPerBlock = THREADSPERBLOCK;
-    uint blocksPerKernel = BLOCKS;
+    uint threadsPerBlock = this->rwNMR_config.getThreadsPerBlock();
+    uint blocksPerKernel = this->rwNMR_config.getBlocks();
     uint walkersPerKernel = threadsPerBlock * blocksPerKernel;
 
     // treat case when only one kernel is needed
@@ -1304,7 +1304,7 @@ void NMR_Simulation::walkSimulation_CUDA_3D()
 
         // Host data copy
         // copy original walkers' data to temporary host arrays
-        if(NMR_OPENMP)
+        if(this->rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
             const int num_cpu_threads = omp_get_max_threads();
@@ -1412,7 +1412,7 @@ void NMR_Simulation::walkSimulation_CUDA_3D()
 
         // Host data copy
         // copy original walkers' data to temporary host arrays
-        if(NMR_OPENMP)
+        if(this->rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
             const int num_cpu_threads = omp_get_max_threads();
@@ -1614,8 +1614,8 @@ double NMR_Simulation::diffusionSimulation_CUDA(double gradientMagnitude, double
     // uint kernelCalls = (uint)ceil((double)numberOfEchoes / (double)echoesPerKernel);
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
-    uint threadsPerBlock = THREADSPERBLOCK;
-    uint blocksPerKernel = BLOCKS;
+    uint threadsPerBlock = this->rwNMR_config.getThreadsPerBlock();
+    uint blocksPerKernel = this->rwNMR_config.getBlocks();
     uint walkersPerKernel = threadsPerBlock * blocksPerKernel;
 
     // treat case when only one kernel is needed
@@ -1820,7 +1820,7 @@ double NMR_Simulation::diffusionSimulation_CUDA(double gradientMagnitude, double
                                                            giromagneticRatio);
         cudaDeviceSynchronize();
 
-        if(REDUCE_IN_GPU)
+        if(this->rwNMR_config.getReduceInGPU())
         {
             // Kernel call to reduce walker final phases
             reduce_PFG<<<blocksPerKernel/2, 
@@ -1954,7 +1954,7 @@ double NMR_Simulation::diffusionSimulation_CUDA(double gradientMagnitude, double
 
         cudaDeviceSynchronize();
 
-        if(REDUCE_IN_GPU)
+        if(this->rwNMR_config.getReduceInGPU())
         {
             // Kernel call to reduce walker final phases
             reduce_PFG<<<blocksPerKernel/2, 

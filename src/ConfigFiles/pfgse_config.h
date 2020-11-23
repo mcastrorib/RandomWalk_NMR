@@ -6,16 +6,19 @@
 #include <string>
 #include <vector>
 
+#include "../Math/Vector3D.h"
+
 using namespace std;
 
 class pfgse_config
 {
 public:
+    string config_filepath;
     // --- Physical attributes.
     double GIROMAGNETIC_RATIO;
     double D0;
     double PULSE_WIDTH;
-    double MAX_GRADIENT;
+    Vector3D MAX_GRADIENT;
     uint GRADIENT_SAMPLES;
 
     // --- Time sequence 
@@ -44,6 +47,7 @@ public:
 
 
     // default constructors
+    pfgse_config(){};
     pfgse_config(const string configFile);
 
     //copy constructors
@@ -58,7 +62,7 @@ public:
     void readConfigFile(const string configFile);
     void createTimeSamples();
     
-    // -- 
+    // -- Read methods
     void readGiromagneticRatio(string s);
     void readD0(string s);
     void readPulseWidth(string s);
@@ -79,7 +83,31 @@ public:
     void readSaveCollisions(string s);
     void readSaveDecay(string s);
     void readSaveHistogram(string s);
-    void readSaveHistogramList(string s);   
+    void readSaveHistogramList(string s);  
+
+    // -- Get methods
+    string getConfigFilepath() {return this->config_filepath; } 
+    double getGiromagneticRatio() { return this->GIROMAGNETIC_RATIO ; }
+    double getD0() { return this->D0 ; }
+    double getPulseWidth() { return this->PULSE_WIDTH ; }
+    Vector3D getMaxGradient() { return this->MAX_GRADIENT ; }
+    uint getGradientSamples() { return this->GRADIENT_SAMPLES ; }
+    string getTimeSequence() { return this->TIME_SEQ ; }
+    uint getTimeSamples() { return this->TIME_SAMPLES ; } 
+    vector<double> getTimeValues() { return this->TIME_VALUES ; }
+    double getTimeMin() { return this->TIME_MIN; }
+    double getTimeMax() { return this->TIME_MAX; }
+    bool getApplyScaleFactor() { return this->APPLY_SCALE_FACTOR; }
+    double getInspectionLength() { return this->INSPECTION_LENGTH; }
+    string getThresholdType() { return this->THRESHOLD_TYPE; }
+    double getThresholdValue() { return this->THRESHOLD_VALUE; }
+    bool getUseWaveVectorTwoPi() { return this->USE_WAVEVECTOR_TWOPI; }
+    bool getSaveMode() { return this->SAVE_MODE; }
+    bool getSavePFGSE() { return this->SAVE_PFGSE; }
+    bool getSaveCollisions() { return this->SAVE_COLLISIONS; }
+    bool getSaveDecay() { return this->SAVE_DECAY; }
+    bool getSaveHistogram() { return this->SAVE_HISTOGRAM; }
+    bool getSaveHistogramList() { return this->SAVE_HISTOGRAM_LIST; }  
 
 private:
     // Returns a vector<double> linearly space from @start to @end with @points

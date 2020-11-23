@@ -11,6 +11,7 @@ using namespace std;
 class ga_config
 {
 public:
+    string config_filepath;
     // -- T2 REFERENCE CURVE
     string T2_PATH;
 
@@ -49,6 +50,7 @@ public:
     bool SAVE_GA;  
 
     // default constructors
+    ga_config(){};
     ga_config(const string configFile);
 
     //copy constructors
@@ -62,7 +64,7 @@ public:
 
     void readConfigFile(const string configFile);
     
-    // -- 
+    // -- Read methods
     void readT2Path(string s);
     // -- 
     void readGenotypeSize(string s);
@@ -94,6 +96,40 @@ public:
     void readSolutionFoundTag(string s);
     // --  
     void readSaveGA(string s);  
+
+    // -- Get methods
+    string getConfigFilepath() {return this->config_filepath; }
+    string getT2Path() { return this->T2_PATH; }
+    // -- 
+    uint getGenotypeSize() { return this->GENOTYPE_SIZE ; }
+    vector<double> getGenotypeMax() { return this->GENOTYPE_MAX ; }
+    vector<double> getGenotypeMin() { return this->GENOTYPE_MIN ; }
+    // --
+    double getTolerance() { return this->TOLERANCE ; }
+    uint getPopulationSize() { return this->POPULATION_SIZE ; }
+    double getOffspringProportion() { return this->OFFSPRING_PROPORTION ; }
+    double getGamma() { return this->GAMMA ; }
+    double getMutationRatio() { return this->MUTATION_RATIO ; }
+    double getMutatioDeviation() { return this->MUTATION_DEVIATION ; }
+    uint getMutatioPerReset() { return this->MUTATION_PER_RESET ; }
+    double getResetProportion() { return this->RESET_PROPORTION ; }
+    double getEliteSize() { return this->ELITE_SIZE ; }
+    double getBeta() { return this->BETA ; }
+    double getDiversity() { return this->DIVERSITY ; }
+    double getMeanDeviation() { return this->MEAN_DEVIATION ; }
+    bool getResetPopulation() { return this->RESET_POPULATION ; }
+    // --
+    uint getGenPerMigration() { return this->GEN_PER_MIGRATION ; }
+    double getMigrationRate() { return this->MIGRATION_RATE ; }
+    double getMigrationImprovement() { return this->MIGRATION_IMPROVEMENT ; }
+    uint getMigrationStartTag() { return this->MIGRATION_START_TAG ; }
+    uint getMigrationReadyTag() { return this->MIGRATION_READY_TAG ; }
+    uint getMigrationEndTag() { return this->MIGRATION_END_TAG ; }
+    uint getAsyncReadyTag() { return this->ASYNC_READY_TAG ; }
+    uint getAsyncDoneTag() { return this->ASYNC_DONE_TAG ; }
+    uint getSolutionFoundTag() { return this->SOLUTION_FOUND_TAG ; }
+    // --  
+    bool getSaveGA() { return this->SAVE_GA ; }  
 };
 
 #endif

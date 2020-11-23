@@ -28,7 +28,7 @@ using namespace cv;
 
 string NMR_Simulation::createDirectoryForResults()
 {
-    string path = DATA_PATH;
+    string path = this->rwNMR_config.getDBPath();
     createDirectory(path, this->simulationName);
     return (path + this->simulationName);
 }
@@ -88,7 +88,7 @@ void NMR_Simulation::saveHistogramList(string filePath)
 {
     string filename = filePath + "/NMR_histogramEvolution.txt";
     fileHandler hfile(filename);
-    if(NMR_HISTOGRAMS > 0)
+    if(this->rwNMR_config.getHistograms() > 0)
     {
         for(int hst_ID = 0; hst_ID < this->histogramList.size(); hst_ID++)
         {
@@ -126,7 +126,7 @@ void NMR_Simulation::printInputDetails()
     cout << "------------------------------------------------------" << endl;
     cout << ">>> NMR SIMULATION 3D PARAMETERS: " << this->simulationName << endl;
     cout << "------------------------------------------------------" << endl;
-    cout << "Data path: " << DATA_PATH + this->simulationName << endl;
+    cout << "Data path: " << this->rwNMR_config.getDBPath() + this->simulationName << endl;
     cout << "Image path: " << this->imagePath.completePath << endl;
     cout << "Image resolution (um/voxel): " << this->imageVoxelResolution << endl;
     cout << "Diffusion coefficient (um^2/ms): " << this->diffusionCoefficient << endl;
@@ -137,7 +137,7 @@ void NMR_Simulation::printInputDetails()
     cout << "Input T2 path: " << this->inputT2File << endl;
 
     cout << "Initial seed: ";
-    if (seedFlag)
+    if (this->seedFlag)
     {
         cout << this->initialSeed << endl;
     }
@@ -147,7 +147,7 @@ void NMR_Simulation::printInputDetails()
     }
 
     cout << "GPU usage: ";
-    if (gpu_use)
+    if (this->gpu_use)
     {
         cout << "ON" << endl;
     }

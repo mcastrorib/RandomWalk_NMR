@@ -4,6 +4,9 @@
 #include <vector>
 #include <string>
 
+// include configuration file classes
+#include "../ConfigFiles/pfgse_config.h"
+
 #include "NMR_defs.h"
 #include "NMR_Simulation.h"
 #include "../Walker/walker.h"
@@ -15,7 +18,8 @@ using namespace std;
 class NMR_PFGSE
 {
 public:
-	NMR_Simulation &NMR;	
+	NMR_Simulation &NMR;
+	pfgse_config PFGSE_config;
 	string name;
 	string dir;
 	vector<double> gradient;
@@ -38,21 +42,18 @@ public:
 	double RHS_threshold;
 	double diffusionCoefficient;
 
-	NMR_PFGSE(NMR_Simulation &_NMR,  
-			  double gradient_max,
-			  int gradientPoints = 32,
-			  double _bigDelta = PFGSE_BIG_DELTA,
-			  double _pulseWidth = PFGSE_TINY_DELTA, 
-			  double _giromagneticRatio = GIROMAGNETIC_RATIO, 
+	NMR_PFGSE(NMR_Simulation &_NMR, 
+			  pfgse_config _pfgseConfig,
+			  uint time_sample, 
 			  int _mpi_rank = 0, 
 			  int _mpi_processes = 0);	
 
 	NMR_PFGSE(NMR_Simulation &_NMR,  
 			  Vector3D gradient_max,
-			  int gradientPoints = 32,
-			  double _bigDelta = PFGSE_BIG_DELTA,
-			  double _pulseWidth = PFGSE_TINY_DELTA, 
-			  double _giromagneticRatio = GIROMAGNETIC_RATIO, 
+			  int gradientPoints,
+			  double _bigDelta,
+			  double _pulseWidth , 
+			  double _giromagneticRatio, 
 			  int _mpi_rank = 0, 
 			  int _mpi_processes = 0);
 	
