@@ -23,6 +23,8 @@
 #include "uct_config.h"
 #include "pfgse_config.h"
 #include "cpmg_config.h"
+#include "ga_config.h"
+
 
 // include project files
 #include "NMR_Simulation.h"
@@ -65,9 +67,13 @@ int main(int argc, char *argv[])
      string pfgse_config_path = config_root + "pfgse.config";
      pfgse_config pfgseConfig(pfgse_config_path);
 
-     // -- pfgse config
+     // -- cpmg config
      string cpmg_config_path = config_root + "cpmg.config";
      cpmg_config cpmgConfig(cpmg_config_path);
+
+     // -- ga config
+     string ga_config_path = config_root + "ga.config";
+     ga_config gaConfig(ga_config_path);
 
      cout << "config files read" << endl;
      return 0;
