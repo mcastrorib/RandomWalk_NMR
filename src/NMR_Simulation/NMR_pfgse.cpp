@@ -40,6 +40,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	vector<double> gradient();
 	vector<double> LHS();
 	vector<double> RHS();
+	vector<double> Mkt();
 	vector<Vector3D> vecGradient();
 
 	// read config file
@@ -56,6 +57,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 
 	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
 	(*this).setGradientVector();
+	(*this).setVectorMkt();
 
 }
 
@@ -84,9 +86,11 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	vector<double> gradient();
 	vector<double> LHS();
 	vector<double> RHS();
+	vector<double> Mkt();
 	vector<Vector3D> vecGradient();
 	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
 	(*this).setGradientVector();
+	(*this).setVectorMkt();
 	(*this).set();
 }
 
@@ -99,13 +103,13 @@ void NMR_PFGSE::set()
 	(*this).setVectorRHS();
 }
 
-void NMR_PFGSE::run_sequence()
+void NMR_PFGSE::run()
 {
 	for(uint timeSample = 0; timeSample < this->exposureTimes.size(); timeSample++)
 	{
 		(*this).setExposureTime((*this).getExposureTime(timeSample));
 		(*this).set();
-		(*this).run();
+		(*this).run_sequence();
 
 		// apply threshold for D(t) extraction
 		string threshold_type = this->PFGSE_config.getThresholdType();
@@ -128,15 +132,6 @@ void NMR_PFGSE::run_sequence()
 }
 
 
-
-void NMR_PFGSE::set_old()
-{
-	(*this).setNMRTimeFramework();
-	(*this).setGradientVector_old();
-	(*this).setVectorLHS();
-	(*this).setVectorRHS();
-}
-
 void NMR_PFGSE::setName()
 {
 	string big_delta = std::to_string((int) this->exposureTime) + "-" 
@@ -158,6 +153,12 @@ void NMR_PFGSE::setGradientVector(double _GF, int _GPoints)
 	this->gradient_max = _GF;
 	this->gradientPoints = _GPoints;
 	(*this).setGradientVector();
+}
+
+void NMR_PFGSE::setVectorMkt()
+{
+	if(this->Mkt.size() > 0) this->Mkt.clear();
+	this->Mkt.reserve(this->gradientPoints);
 }
 
 void NMR_PFGSE::setGradientVector()
@@ -186,22 +187,6 @@ void NMR_PFGSE::setGradientVector()
 		gvalueZ += gapZ;
 	}
 }
-
-
-void NMR_PFGSE::setGradientVector_old()
-{
-	if(this->gradient.size() > 0) this->gradient.clear();
-	this->gradient.reserve(this->gradientPoints);
-	
-	double gap = (this->gradient_max) / (this->gradientPoints - 1);
-	double gvalue = 0.0;
-	for(uint index = 0; index < this->gradientPoints; index++)
-	{
-		gradient.push_back(gvalue);
-		gvalue += gap;
-	}
-}
-
 
 void NMR_PFGSE::setNMRTimeFramework()
 {
@@ -299,8 +284,13 @@ double NMR_PFGSE::computeLHS(double _Mg, double _M0)
 	return log(fabs(_Mg/_M0));
 }
 
+double NMR_PFGSE::computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio)
+{
+    return (pulse_width * 1.0e-03) * (TWO_PI * giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
+}
 
-void NMR_PFGSE::run()
+
+void NMR_PFGSE::run_sequence()
 {
 	// run pfgse experiment
 	(*this).simulation();
@@ -308,17 +298,29 @@ void NMR_PFGSE::run()
 	// get M0 (reference value)
 	int idx_begin = 0;
 	int idx_end = this->gradientPoints;
-	if(this->vecGradient[idx_begin].getNorm() == 0.0) 
-	{	
-		this->M0 = this->LHS[0];
-		this->LHS[0] = (*this).computeLHS(M0, M0);
-		idx_begin++;
-	}	
-	else 
+	
+	// ------------ Deprecated ---------------------------
+	// if(this->vecGradient[idx_begin].getNorm() == 0.0) 
+	// {	
+	// 	this->M0 = this->LHS[0];
+	// 	this->LHS[0] = (*this).computeLHS(M0, M0);
+	// 	idx_begin++;
+	// }	
+	// else 
+	// {
+	// 	// it is necessary to run simulation for g = 0
+	// 	this->M0 = this->NMR.PFG(0.0, this->pulseWidth, this->giromagneticRatio);
+	// }
+
+	// copy vector LHS to Mkt
+	for(uint idx = 0; idx < this->gradientPoints; idx++)
 	{
-		// it is necessary to run simulation for g = 0
-		this->M0 = this->NMR.PFG(0.0, this->pulseWidth, this->giromagneticRatio);
+		this->Mkt.push_back(this->LHS[idx]);
 	}
+
+	this->M0 = this->Mkt[0];
+	this->LHS[0] = (*this).computeLHS(M0, M0);
+	idx_begin++;
 
 	// run diffusion measurement for different G
 	for(uint point = idx_begin; point < idx_end; point++)
@@ -340,47 +342,6 @@ void NMR_PFGSE::simulation()
 		(*this).simulation_omp();
 	}
 }
-
-
-void NMR_PFGSE::run_old()
-{
-	// run pfgse experiment
-	(*this).simulation_old();
-
-	// get M0 (reference value)
-	int idx_begin = 0;
-	int idx_end = this->gradientPoints;
-	if(this->gradient[idx_begin] == 0.0) 
-	{	
-		this->M0 = this->LHS[0];
-		this->LHS[0] = (*this).computeLHS(M0, M0);
-		idx_begin++;
-	}	
-	else 
-	{
-		// it is necessary to run simulation for g = 0
-		this->M0 = this->NMR.PFG(0.0, this->pulseWidth, this->giromagneticRatio);
-	}
-
-	// run diffusion measurement for different G
-	for(uint point = idx_begin; point < idx_end; point++)
-	{
-		this->LHS[point] = (*this).computeLHS(this->LHS[point], M0);
-	}
-}
-
-void NMR_PFGSE::simulation_old()
-{
-	if(this->NMR.gpu_use == true)
-	{
-		(*this).simulation_cuda();
-	}
-	else
-	{
-		(*this).simulation_omp();
-	}
-}
-
 
 void NMR_PFGSE::recoverD(string _method)
 {
@@ -594,5 +555,55 @@ void NMR_PFGSE::writeResults()
 
 void NMR_PFGSE::simulation_omp()
 {
-	cout << "omp pfgse simulation not implemented yet. try again later :)" << endl;
+	double begin_time = omp_get_wtime();
+
+    cout << "initializing RW-PFGSE-NMR simulation... ";
+
+    // reset walker's initial state with omp parallel for
+// #pragma if(NMR_OPENMP) omp parallel for private(id) shared(walkers)
+    for (uint id = 0; id < this->NMR.walkers.size(); id++)
+    {
+        this->NMR.walkers[id].resetPosition();
+        this->NMR.walkers[id].resetSeed();
+        this->NMR.walkers[id].resetEnergy();
+    }
+    this->NMR.globalEnergy.clear();  // reset vector to store NMR decay
+
+    // compute k value
+    double K_value = 0.0;
+
+    // set derivables 
+    double globalPhase = 0.0;
+    double globalSignal = 0.0;
+    double walkerPhase;
+    double walkerSignal;
+
+    // main loop 
+    for (uint id = 0; id < this->NMR.walkers.size(); id++)
+    {  
+        // make walkers walk througout image
+        // #pragma omp parallel for if(NMR_OPENMP) private(id, step) shared(walkers, bitBlock, simulationSteps)
+        for (uint step = 0; step < this->NMR.simulationSteps; step++)
+        {
+            this->NMR.walkers[id].walk(this->NMR.bitBlock);     
+        }
+
+        // get final individual signal
+        walkerSignal = this->NMR.walkers[id].energy;
+
+        // get final individual phase
+        double z0 = (double) this->NMR.walkers[id].initialPosition.z;
+        double zF = (double) this->NMR.walkers[id].position_z;
+        double deltaZ = (zF - z0);
+        double realMag = K_value * deltaZ * this->NMR.imageVoxelResolution;
+        walkerPhase = walkerSignal * cos(realMag);
+
+        // add contribution to global sum
+        globalPhase += walkerPhase;
+        globalSignal += walkerSignal;
+    }
+
+    double finish_time = omp_get_wtime();
+    cout << "Completed."; printElapsedTime(begin_time, finish_time);
+    return;
 }

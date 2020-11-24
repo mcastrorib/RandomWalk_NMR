@@ -38,6 +38,7 @@ public:
 
 	vector<double> LHS;
 	vector<double> RHS;
+	vector<double> Mkt;
 	double M0;
 	double RHS_threshold;
 	double D_sat;
@@ -62,8 +63,8 @@ public:
 
 	void setNMRTimeFramework();
 	void setGradientVector(double _GF, int _GPoints);
-	void setGradientVector_old();
 	void setGradientVector();
+	void setVectorMkt();
 	void setVectorRHS();
 	void setThresholdFromRHSValue(double _value);
     void setThresholdFromLHSValue(double _value);
@@ -72,12 +73,10 @@ public:
 	double computeRHS(double _Gvalue);
 	void setVectorLHS();
 	double computeLHS(double _Mg, double _M0);
-	void set_old();
+	double computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio);
 	void set();
-	void run_old();
 	void run();
 	void run_sequence();
-	void simulation_old();
 	void simulation();
 	void recoverD(string _method = "sat");
 	void recoverD_sat();
@@ -111,7 +110,6 @@ private:
 	int mpi_rank;
 	int mpi_processes;
 
-	void simulation_cuda_old();
 	void simulation_cuda();
 	void simulation_omp();
 };

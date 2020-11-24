@@ -25,6 +25,7 @@ cpmg_config::cpmg_config(const cpmg_config &otherConfig)
     // --- Physical attributes.
     this->D0 = otherConfig.D0;
     this->OBS_TIME = otherConfig.OBS_TIME;
+    this->METHOD = otherConfig.METHOD;
 
     // --- cpmg SAVE. 
     this->SAVE_MODE = otherConfig.SAVE_MODE;
@@ -65,7 +66,8 @@ void cpmg_config::readConfigFile(const string configFile)
 			s.erase(0, pos + delimiter.length());
 
 			if(token == "D0") (*this).readD0(content);
-			else if(token == "OBS_TIME") (*this).readObservationTime(content);            
+			else if(token == "OBS_TIME") (*this).readObservationTime(content);  
+            else if(token == "METHOD") (*this).readMethod(content);          
             else if(token == "SAVE_MODE") (*this).readSaveMode(content);
             else if(token == "SAVE_T2") (*this).readSaveT2(content);
             else if(token == "SAVE_COLLISIONS") (*this).readSaveCollisions(content);
@@ -88,6 +90,11 @@ void cpmg_config::readD0(string s)
 void cpmg_config::readObservationTime(string s)
 {
     this->OBS_TIME = std::stod(s);
+}
+
+void cpmg_config::readMethod(string s)
+{
+    this->METHOD = s;
 }
 
 void cpmg_config::readSaveMode(string s)

@@ -152,8 +152,6 @@ NMR_Simulation::NMR_Simulation(const NMR_Simulation &_otherSimulation)
     this->walkers = _otherSimulation.walkers;
     this->globalEnergy = _otherSimulation.globalEnergy;
     this->decayTimes = _otherSimulation.decayTimes;
-    this->T2_input = _otherSimulation.T2_input;
-    this->T2_simulated = _otherSimulation.T2_simulated;
 
     this->timeInterval = _otherSimulation.timeInterval;
     this->diffusionCoefficient = _otherSimulation.diffusionCoefficient;
@@ -176,7 +174,6 @@ NMR_Simulation::NMR_Simulation(const NMR_Simulation &_otherSimulation)
 
     // pointers-to-method
     this->mapSimulationPointer = _otherSimulation.mapSimulationPointer;
-    this->walkSimulationPointer = _otherSimulation.walkSimulationPointer;
 }
 
 void NMR_Simulation::setImage(ImagePath _path, uint _images)
@@ -352,20 +349,6 @@ void NMR_Simulation::readImage()
     (*this).countPoresInBitBlock();
 }
 
-// void NMR_Simulation::setWalkers(uint _numberOfWalkers)
-// {    
-//     (*this).setNumberOfWalkers(_numberOfWalkers);
-//     (*this).updateWalkerOccupancy();
-//     (*this),createPoreList();
-//     (*this).createWalkersIDList();
-//     (*this).createWalkers();
-//     (*this).placeWalkersUniformly();
-
-//     // associate rw simulation methods
-//     (*this).associateMapSimulation();
-//     (*this).associateWalkSimulation();    
-// }
-
 void NMR_Simulation::setWalkers(void)
 {
     if(this->bitBlock.getNumberOfBlocks() > 0) // only set walkers, if image was loaded
@@ -422,8 +405,7 @@ void NMR_Simulation::setWalkers(uint _numberOfWalkers, bool _randomInsertion)
     }
 
     // associate rw simulation methods
-    (*this).associateMapSimulation();
-    (*this).associateWalkSimulation();    
+    (*this).associateMapSimulation(); 
 }
 
 void NMR_Simulation::setWalkers(Point3D _point, uint _numberOfWalkers)
@@ -435,8 +417,7 @@ void NMR_Simulation::setWalkers(Point3D _point, uint _numberOfWalkers)
     (*this).placeWalkersInSamePoint(_point.x, _point.y, _point.z);
 
     // associate rw simulation methods
-    (*this).associateMapSimulation();
-    (*this).associateWalkSimulation();    
+    (*this).associateMapSimulation(); 
 }
 
 void NMR_Simulation::setWalkers(Point3D _point1, Point3D _point2, uint _numberOfWalkers)
@@ -449,8 +430,7 @@ void NMR_Simulation::setWalkers(Point3D _point1, Point3D _point2, uint _numberOf
     (*this).placeWalkersInCubicSpace(_point1, _point2);
 
     // associate rw simulation methods
-    (*this).associateMapSimulation();
-    (*this).associateWalkSimulation();    
+    (*this).associateMapSimulation();  
 }
 
 // save results
@@ -489,42 +469,13 @@ void NMR_Simulation::save(string _otherDir)
         (*this).saveImageInfo(_otherDir);
     }
 
-    if(this->rwNMR_config.getSaveImgInfo()) 
-    {
-        (*this).saveEnergyDecay(_otherDir);
-    }
-    
-    if(this->rwNMR_config.getSaveImgInfo())
-    {
-        (*this).saveWalkerCollisions(_otherDir);
-    }
-
-    if(this->rwNMR_config.getSaveImgInfo())
-    {
-        (*this).saveNMRT2(_otherDir);
-    }    
-
-    if(this->rwNMR_config.getSaveImgInfo())
-    {
-        (*this).saveHistogram(_otherDir);
-    }    
-
-    if(this->rwNMR_config.getSaveImgInfo())
-    {
-        (*this).saveHistogramList(_otherDir);
+    if(this->rwNMR_config.getSaveBinImg())
+    {   
+        (*this).saveBitBlock(_otherDir);
     }
 
     time = omp_get_wtime() - time;
     cout << "Ok. (" << time << " seconds)." << endl; 
-}
-
-// apply Laplace Inversion to get T2 distribution from energy decay
-void NMR_Simulation::getT2Distribution()
-{
-
-    string filename = "/NMR_decay.txt";
-    laplaceInverse(this->simulationDirectory, filename);
-    readT2fromFile(this->simulationDirectory);
 }
 
 void NMR_Simulation::loadRockImage()
@@ -1414,7 +1365,7 @@ void NMR_Simulation::normalizeEnergyDecay()
     // check if energy decay was done
     if(this->globalEnergy.size() == 0) 
     {
-        cout << "no data available, could not apply inversion." << endl;
+        cout << "no data available, could not apply normalization." << endl;
         return; 
     } 
 
@@ -1424,83 +1375,6 @@ void NMR_Simulation::normalizeEnergyDecay()
     {
         this->globalEnergy[echo] = normalizer * this->globalEnergy[echo]; 
     } 
-}
-
-// apply laplace inversion explicitly
-void NMR_Simulation::applyLaplaceInversion()
-{   
-    // check if energy decay was done
-    if(this->globalEnergy.size() == 0) 
-    {
-        cout << "no data available, could not apply inversion." << endl;
-        return; 
-    }
-
-    // reset T2 distribution from previous simulation
-    (*this).resetT2Distribution();
-
-    NMRInverterConfig nmr_inv_config(0.1, 1e4, true, 128, -4, 2, 512, 512, 0.0);
-
-    NMRInverter nmr_inverter;
-    nmr_inverter.set_config(nmr_inv_config, this->decayTimes);
-    nmr_inverter.find_best_lambda(this->globalEnergy.size(), this->globalEnergy.data());
-    nmr_inverter.invert(this->globalEnergy.size(), this->globalEnergy.data());
-
-    if(this->T2_bins.size() > 0) this->T2_bins.clear();
-    if(this->T2_simulated.size() > 0) this->T2_simulated.clear();
-    for(uint i = 0; i < nmr_inverter.used_t2_bins.size(); i++)
-    {
-        this->T2_bins.push_back(nmr_inverter.used_t2_bins[i]);
-        this->T2_simulated.push_back(nmr_inverter.used_t2_amps[i]);
-    }
-}
-
-
-
-// Correlation between input and simulated T2 distributions using Francisco's formula
-double NMR_Simulation::correlateT2()
-{
-    if(this->T2_input.size() == 0 || this->T2_simulated.size() == 0)
-    {
-        cout << "could not measure correlation without T2 curves" << endl;
-        return 0.0;
-    }
-
-    double correlation = norm(this->T2_simulated) * norm(this->T2_input);
-
-    if (correlation != 0)
-    {
-        correlation = dotProduct(this->T2_simulated, this->T2_input) / correlation;
-        return correlation;
-    }
-
-    return 0.0;
-}
-
-// Correlation between input and simulated T2 distributions using Least Squares Normalization
-double NMR_Simulation::leastSquaresT2()
-{
-    if(this->T2_input.size() == 0 || this->T2_simulated.size() == 0)
-    {
-        cout << "could not measure correlation without T2 curves" << endl;
-        return 0.0;
-    }
-
-    double residual = 0.0;
-    double distance;
-    for(uint i = 0; i < this->T2_input.size(); i++)
-    {
-        distance = this->T2_input[i] - this->T2_simulated[i];
-        residual += (distance * distance);
-    }
-
-    // treating a terrible solution
-    if(residual > 1.0) 
-    {
-        residual = 1.0;
-    }
-
-    return (1.0 - residual);
 }
 
 // associate methods
@@ -1519,23 +1393,6 @@ void NMR_Simulation::associateMapSimulation()
     }
     else
         mapSimulationPointer = &NMR_Simulation::mapSimulation_OMP;
-}
-
-void NMR_Simulation::associateWalkSimulation()
-{
-    if (gpu_use == true)
-    {
-        if (this->numberOfImages == 1)
-        {
-            walkSimulationPointer = &NMR_Simulation::walkSimulation_CUDA_2D;
-        }
-        else
-        {
-            walkSimulationPointer = &NMR_Simulation::walkSimulation_CUDA_3D;
-        }
-    }
-    else
-        walkSimulationPointer = &NMR_Simulation::walkSimulation_OMP;
 }
 
 uint NMR_Simulation::pickRandomIndex(uint _maxValue)
@@ -1581,4 +1438,209 @@ void NMR_Simulation::assemblyImagePath()
      input.updateCompletePath();
 
      (*this).setImage(input.imagePath, input.numberOfImages);
+}
+
+string NMR_Simulation::createDirectoryForResults()
+{
+    string path = this->rwNMR_config.getDBPath();
+    createDirectory(path, this->simulationName);
+    return (path + this->simulationName);
+}
+
+void NMR_Simulation::saveImageInfo(string filedir)
+{
+    string filename = filedir + "/NMR_imageInfo.txt";
+
+    fileHandler external_file(filename);
+    external_file.writeImageInfo(this->imagePath.completePath, 
+                                 this->bitBlock.imageColumns, 
+                                 this->bitBlock.imageRows, 
+                                 this->bitBlock.imageDepth, 
+                                 this->imageVoxelResolution);
+}
+
+void NMR_Simulation::saveEnergyDecay(string filePath)
+{
+
+    string fileName = filePath + "/NMR_decay.txt";
+
+    fileHandler external_file(fileName);
+    external_file.writeEnergyDecay(this->globalEnergy, this->decayTimes);
+}
+
+void NMR_Simulation::saveWalkerCollisions(string filePath)
+{
+
+    string fileName = filePath + "/NMR_collisions.txt";
+
+    fileHandler external_file(fileName);
+    external_file.writeIndividualCollisions(this->walkers, this->simulationSteps);
+}
+
+void NMR_Simulation::saveBitBlock(string filePath)
+{
+
+    string fileName = filePath + "/NMR_binImage.txt";
+    this->bitBlock.saveBitBlockArray(fileName);
+}
+
+void NMR_Simulation::saveHistogram(string filePath)
+{
+    string filename = filePath + "/NMR_histogram.txt";
+    fileHandler external_file(filename);
+    external_file.writeHistogram(this->histogram.bins, this->histogram.amps);
+}
+
+void NMR_Simulation::saveHistogramList(string filePath)
+{
+    string filename = filePath + "/NMR_histogramEvolution.txt";
+    fileHandler hfile(filename);
+    if(this->rwNMR_config.getHistograms() > 0)
+    {
+        for(int hst_ID = 0; hst_ID < this->histogramList.size(); hst_ID++)
+        {
+            hfile.writeHistogramFromList(this->histogramList[hst_ID].bins, this->histogramList[hst_ID].amps, hst_ID);
+        }
+    }
+}
+
+void NMR_Simulation::info()
+{
+    (*this).printDetails();
+}
+
+void NMR_Simulation::printDetails()
+{ 
+    // print input details
+    cout << "------------------------------------------------------" << endl;
+    cout << ">>> NMR SIMULATION 3D PARAMETERS: " << this->simulationName << endl;
+    cout << "------------------------------------------------------" << endl;
+    cout << "Data path: " << this->rwNMR_config.getDBPath() + this->simulationName << endl;
+    cout << "Image path: " << this->imagePath.completePath << endl;
+    cout << "Image resolution (um/voxel): " << this->imageVoxelResolution << endl;
+    cout << "Diffusion coefficient (um^2/ms): " << this->diffusionCoefficient << endl;
+    cout << "Number of images: " << this->numberOfImages << endl;
+    cout << "Number of steps in simulation: " << this->simulationSteps << endl;
+    cout << "Decay time (ms): " << this->simulationSteps * this->timeInterval << endl;
+    cout << "Walkers pore occupancy in simulation: " << this->walkerOccupancy * 100.0 << "%" << endl;
+    
+
+    cout << "Initial seed: ";
+    if (this->seedFlag)
+    {
+        cout << this->initialSeed << endl;
+    }
+    else
+    {
+        cout << "not defined by user" << endl;
+    }
+
+    cout << "GPU usage: ";
+    if (this->gpu_use)
+    {
+        cout << "ON" << endl;
+    }
+    else
+    {
+        cout << "OFF" << endl;
+    }
+
+    cout << "------------------------------------------------------" << endl;
+    cout << endl;
+}
+
+void NMR_Simulation::createPenaltiesVector(vector<double> &_sigmoid)
+{
+    // initialize penalties array
+    if(this->penalties == NULL)
+        this->penalties = new double[this->histogram.size];
+    
+    Walker toy;
+    double artificial_xirate;
+    double artificial_steps = (double) this->stepsPerEcho;
+    for(int idx = 0; idx < this->histogram.size; idx++)
+    {   
+        artificial_xirate = this->histogram.bins[idx];
+        toy.setXIrate(artificial_xirate);
+        toy.setSurfaceRelaxivity(_sigmoid);
+        toy.computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
+        this->penalties[idx] = pow(toy.getDecreaseFactor(), (artificial_xirate * artificial_steps));
+
+        // debug
+        // cout << "delta[" << artificial_xirate << "] = " << penalties[idx] << endl;
+    }
+}
+
+void NMR_Simulation::createPenaltiesVector(double rho)
+{
+    // initialize penalties array
+    penalties = new double[this->histogram.size];
+    Walker toy;
+    double artificial_xirate;
+    double artificial_steps = (double) this->stepsPerEcho;
+    for(int idx = 0; idx < this->histogram.size; idx++)
+    {   
+        artificial_xirate = this->histogram.bins[idx];
+        toy.setXIrate(artificial_xirate);
+        toy.setSurfaceRelaxivity(rho);
+        toy.computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
+        penalties[idx] = pow(toy.getDecreaseFactor(), (artificial_xirate * artificial_steps));
+
+        // debug
+        // cout << "delta[" << artificial_xirate << "] = " << penalties[idx] << endl;
+    }
+}
+
+// mapping simulation using bitblock data structure
+void NMR_Simulation::mapSimulation_OMP()
+{
+    double begin_time = omp_get_wtime();
+    cout << "initializing mapping simulation... ";
+    for (uint id = 0; id < this->walkers.size(); id++)
+    {
+        this->walkers[id].resetPosition();
+        this->walkers[id].resetSeed();
+        this->walkers[id].resetCollisions();
+        this->walkers[id].resetTCollisions();
+    }
+
+    // initialize list of collision histograms
+    (*this).initHistogramList(); 
+
+    // loop throughout list
+    for(int hst_ID = 0; hst_ID < this->histogramList.size(); hst_ID++)
+    {
+        int eBegin = this->histogramList[hst_ID].firstEcho;
+        int eEnd = this->histogramList[hst_ID].lastEcho;
+        for (uint id = 0; id < this->numberOfWalkers; id++)
+        {
+            for(uint echo = eBegin; echo < eEnd; echo++)
+            {
+                for (uint step = 0; step < this->stepsPerEcho; step++)
+                {
+                    this->walkers[id].map(bitBlock);
+                }
+            }
+        }
+
+        int steps = this->stepsPerEcho * (eEnd - eBegin);
+        (*this).createHistogram(hst_ID, steps);
+
+        for (uint id = 0; id < this->numberOfWalkers; id++)
+        {
+            this->walkers[id].tCollisions += this->walkers[id].collisions;
+            this->walkers[id].resetCollisions();
+        }
+    }
+
+    // recover walkers collisions from total sum and create a global histogram
+    for (uint id = 0; id < this->numberOfWalkers; id++)
+    {
+        this->walkers[id].collisions = this->walkers[id].tCollisions;   
+    }
+    (*this).createHistogram();
+
+    cout << "Completed.";
+    double finish_time = omp_get_wtime();
+    printElapsedTime(begin_time, finish_time);
 }

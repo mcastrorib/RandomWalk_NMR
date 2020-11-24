@@ -25,20 +25,6 @@ __global__ void PFG_walk(int *walker_px,
                          const uint map_depth,
                          const uint shift_convert);
 
-__global__ void PFG_measure_old(int *walker_x0,
-                                int *walker_y0, 
-                                int *walker_z0,
-                                int *walker_xF,
-                                int *walker_yF,
-                                int *walker_zF,
-                                double *energy,
-                                double *phase,
-                                const uint numberOfWalkers,
-                                const double voxelResolution,
-                                const double gradient,
-                                const double pulse_width,
-                                const double giromagneticRatio);
-
 __global__ void PFG_measure(int *walker_x0,
                             int *walker_y0, 
                             int *walker_z0,
@@ -57,20 +43,6 @@ __global__ void PFG_reduce(double *data,
                            double *deposit,
                            const uint data_size,
                            const uint deposit_size);
-
-// Host functions
-int *setIntArray_PFG(uint size);
-uint *setUIntArray_PFG(uint size);
-double *setDoubleArray_PFG(uint size);
-uint64_t *setUInt64Array_PFG(uint size);
-
-void copyVectorBtoA_PFG(int a[], int b[], uint size);
-void copyVectorBtoA_PFG(double a[], double b[], uint size);
-void copyVectorBtoA_PFG(uint64_t a[], uint64_t b[], uint size);
-
-void vectorElementSwap_PFG(int *vector, uint index1, uint index2);
-void vectorElementSwap_PFG(double *vector, uint index1, uint index2);
-void vectorElementSwap_PFG(uint64_t *vector, uint index1, uint index2);
 
 // Device functions for 3D simulation
 __device__ direction computeNextDirection_PFG(uint64_t &seed);

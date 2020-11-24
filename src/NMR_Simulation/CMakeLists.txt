@@ -3,13 +3,11 @@ find_package(CUDAToolkit)
 
 # Add library to main program
 add_library(NMR_Simulation 
-			NMR_setup.cpp 
-			NMR_simulations.cpp
+			NMR_Simulation.cpp 
+			NMR_Simulation_cuda.cpp 
 			CollisionHistogram.cpp 
-			NMR_CUDA_3D.cpp 
-			NMR_CUDA_2D.cpp
-			NMR_output.cpp 
-			NMR_Network.cpp
+			NMR_cpmg.cpp
+			NMR_cpmg_cuda.cpp
 			NMR_pfgse.cpp
 			NMR_pfgse_cuda.cpp)
 
@@ -28,10 +26,10 @@ target_compile_features(NMR_Simulation PUBLIC cxx_std_11)
 # library needs to be built with -dc as the member functions 
 # could be called by other libraries and executables
 set(CMAKE_CUDA_FLAGS "-Xcompiler -fopenmp")
-set_source_files_properties(NMR_cudaUtils_2D.h PROPERTIES LANGUAGE "CUDA")
-set_source_files_properties(NMR_CUDA_2D.cpp PROPERTIES LANGUAGE "CUDA")
-set_source_files_properties(NMR_cudaUtils_3D.h PROPERTIES LANGUAGE "CUDA")
-set_source_files_properties(NMR_CUDA_3D.cpp PROPERTIES LANGUAGE "CUDA")
+set_source_files_properties(NMR_Simulation_cuda.h PROPERTIES LANGUAGE "CUDA")
+set_source_files_properties(NMR_Simulation_cuda.cpp PROPERTIES LANGUAGE "CUDA")
+set_source_files_properties(NMR_cpmg_cuda.h PROPERTIES LANGUAGE "CUDA")
+set_source_files_properties(NMR_cpmg_cuda.cpp PROPERTIES LANGUAGE "CUDA")
 set_source_files_properties(NMR_pfgse_cuda.h PROPERTIES LANGUAGE "CUDA")
 set_source_files_properties(NMR_pfgse_cuda.cpp PROPERTIES LANGUAGE "CUDA")
 
@@ -45,9 +43,9 @@ install(TARGETS NMR_Simulation DESTINATION lib)
 install(FILES 
 		CollisionHistogram.h
 		NMR_Simulation.h 
-		NMR_cudaUtils_2D.h 
-		NMR_cudaUtils_3D.h
-		NMR_Network.h 
+		NMR_Simulation_cuda.h 
+		NMR_cpmg.h
+		NMR_cpmg_cuda.h
 		NMR_pfgse.h
 		NMR_pfgse_cuda.h
 		NMR_defs.h DESTINATION include)

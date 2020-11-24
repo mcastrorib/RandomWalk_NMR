@@ -15,6 +15,7 @@ public:
     // --- Physical attributes.
     double D0;
     double OBS_TIME;
+    string METHOD;
 
     // --- cpmg SAVE. 
     bool SAVE_MODE;
@@ -44,6 +45,7 @@ public:
     // -- Read methods
     void readD0(string s);
     void readObservationTime(string s);
+    void readMethod(string s);
     void readSaveMode(string s);
     void readSaveCollisions(string s);
     void readSaveDecay(string s);
@@ -53,14 +55,15 @@ public:
 
     // -- Get methods
     string getConfigFilepath() {return this->config_filepath; }
-    double getD0(string s){return this->D0; }
-    double getObservationTime(string s){return this->OBS_TIME; }
-    bool getSaveMode(string s){return this->SAVE_MODE; }
-    bool getSaveCollisions(string s){return this->SAVE_COLLISIONS; }
-    bool getSaveDecay(string s) {return this->SAVE_DECAY; }
-    bool getSaveHistogram(string s) {return this->SAVE_HISTOGRAM; }
-    bool getSaveHistogramList(string s) {return this->SAVE_HISTOGRAM_LIST; }  
-    bool getSaveT2(string s) {return this->SAVE_T2; }  
+    double getD0(){return this->D0; }
+    double getObservationTime(){return this->OBS_TIME; }
+    string getMethod() { return this->METHOD; }
+    bool getSaveMode(){return this->SAVE_MODE; }
+    bool getSaveCollisions(){return this->SAVE_COLLISIONS; }
+    bool getSaveDecay() {return this->SAVE_DECAY; }
+    bool getSaveHistogram() {return this->SAVE_HISTOGRAM; }
+    bool getSaveHistogramList() {return this->SAVE_HISTOGRAM_LIST; }  
+    bool getSaveT2() {return this->SAVE_T2; }  
 };
 
 #endif

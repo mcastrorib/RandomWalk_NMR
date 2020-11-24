@@ -60,11 +60,6 @@ public:
     vector<double> globalEnergy;
     vector<double> decayTimes;
 
-    // T2 distribution vectors
-    string inputT2File;
-    vector<double> T2_bins;
-    vector<double> T2_input;
-    vector<double> T2_simulated;
 
     // physical properties
     double timeInterval; // time interval between each walker step
@@ -129,14 +124,6 @@ public:
         }
     }
 
-    void resetT2Distribution()
-    {
-        if (this->T2_simulated.size() > 0)
-        {
-            T2_simulated.clear();
-        }
-    }
-
     void clear()
     {
         // RW simulation parameters
@@ -148,11 +135,6 @@ public:
         this->walkers.clear();
         this->globalEnergy.clear();
         this->decayTimes.clear();
-
-        // T2 distribution vectors
-        this->T2_bins.clear();
-        this->T2_input.clear();
-        this->T2_simulated.clear();
 
         // image attributes
         this->binaryMap.clear();
@@ -219,75 +201,35 @@ public:
     void createHistogram();
     void createHistogram(uint histID, uint _steps);
 
-    // laplace inversion
+    // Global energy normalization
     void normalizeEnergyDecay();
-    void applyLaplaceInversion();
 
     // cost function methods
     void updateWalkersRelaxativity(vector<double> &parameters);
     void updateWalkersRelaxativity(double rho);
-    double correlateT2();
-    double leastSquaresT2();
 
     typedef void (NMR_Simulation::*mapSim_ptr)();
     typedef void (NMR_Simulation::*walkSim_ptr)();
 
 private:
     mapSim_ptr mapSimulationPointer;
-    walkSim_ptr walkSimulationPointer;
 
     // simulations using openMP library for multicore CPU application
-    void mapSimulation_OMP();
-    void walkSimulation_OMP();
-    
+    void mapSimulation_OMP();    
 
     // simulations in CUDA language for GPU application
     void mapSimulation_CUDA_2D();
     void mapSimulation_CUDA_2D_histograms();
-    void walkSimulation_CUDA_2D();
-
     void mapSimulation_CUDA_3D();
     void mapSimulation_CUDA_3D_histograms();
-    void walkSimulation_CUDA_3D();
-
-    double diffusionSimulation_CUDA(double gradientMagnitude, 
-                                  double tinyDelta, 
-                                  double giromagneticRatio);
-
-    double diffusionSimulation_OMP(double gradientMagnitude, 
-                                 double tinyDdelta, 
-                                 double giromagneticRatio);
 
 public:
     void mapSimulation(void)
     {
         (this->*mapSimulationPointer)();
     }
-    void walkSimulation(void)
-    {
-        (this->*walkSimulationPointer)();
-        (*this).normalizeEnergyDecay();
-    }
     void associateMapSimulation();
-    void associateWalkSimulation();
 
-    // PFG NMR simulation
-    double PFG(double gradientMagnitude, 
-             double tinyDelta, 
-             double giromagneticRatio)
-    { 
-        if(this->gpu_use)
-            return (*this).diffusionSimulation_CUDA(gradientMagnitude, tinyDelta, giromagneticRatio);
-        else
-            return (*this).diffusionSimulation_OMP(gradientMagnitude, tinyDelta, giromagneticRatio);
-
-    }
-    double compute_pfgse_k_value(double gradientMagnitude, 
-                                 double tiny_delta, 
-                                 double giromagneticRatio);
-
-    void fastSimulation();
-    void histSimulation();
     void createPenaltiesVector(vector<double> &_sigmoid);
     void createPenaltiesVector(double rho);
 
@@ -295,7 +237,6 @@ public:
     void saveInfo();
     void save();
     void save(string _otherDir);
-    void getT2Distribution();
 
     uint pickRandomIndex(uint _maxValue);
     Pore removeRandomPore(vector<Pore> &_pores, uint _randomIndex);
@@ -311,6 +252,7 @@ public:
     inline uint getNumberOfEchoes() { return this->numberOfEchoes; }
     inline uint64_t getInitialSeed() { return this->initialSeed; }
     inline bool getSeedFlag() { return this->seedFlag; }
+    inline bool getGPU() { return this->gpu_use; }
 
     // pore e walkers
     inline uint getNumberOfPores() { return this->numberOfPores; }
@@ -348,19 +290,9 @@ public:
     void saveEnergyDecay(string filedir);
     void saveWalkerCollisions(string filedir);
     void saveBitBlock(string filedir);
-    void saveNMRT2(string filedir);
     void saveHistogram(string filedir);
     void saveHistogramList(string filedir);
-
-    // read T2 data from file
-    void readT2fromFile(string filename);
-
-    // methods to set and read input T2 file
-    void setInputT2(string inputT2_filename)
-    {
-        this->inputT2File = inputT2_filename;
-    }
-    void readInputT2();
+    
     void assemblyImagePath();
 };
 
