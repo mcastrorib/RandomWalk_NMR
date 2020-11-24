@@ -14,7 +14,7 @@
 using namespace std;
 
 // default constructors
-pfgse_config::pfgse_config(const string configFile)
+pfgse_config::pfgse_config(const string configFile) : config_filepath(configFile)
 {
     vector<double> TIME_VALUES();
 	(*this).readConfigFile(configFile);
@@ -235,6 +235,13 @@ void pfgse_config::createTimeSamples()
              this->TIME_VALUES.end(), 
              [](double const &a, double &b) 
              { return a < b; });
+
+        // apply 'physical' aspect
+        if(this->APPLY_SCALE_FACTOR)
+        {
+            double scale_factor = (this->INSPECTION_LENGTH * this->INSPECTION_LENGTH) / this->D0;
+            for(uint idx = 0; idx < this->TIME_SAMPLES; idx++) this->TIME_VALUES[idx] *= scale_factor;
+        }
     }
     
 }

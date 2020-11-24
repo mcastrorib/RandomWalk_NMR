@@ -300,7 +300,7 @@ public:
     uint pickRandomIndex(uint _maxValue);
     Pore removeRandomPore(vector<Pore> &_pores, uint _randomIndex);
 
-    void printInputDetails();
+    void printDetails();
     void info();
     void dummy(){ cout << "hey, I'm here dude." << endl;}
 

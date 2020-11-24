@@ -12,7 +12,7 @@
 using namespace std;
 
 // default constructors
-ga_config::ga_config(const string configFile)
+ga_config::ga_config(const string configFile) : config_filepath(configFile)
 {
     vector<double> TIME_VALUES();
 	(*this).readConfigFile(configFile);

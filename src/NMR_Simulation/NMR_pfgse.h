@@ -31,7 +31,7 @@ public:
 	vector<Vector3D> vecGradient;
 
 	int gradientPoints;
-
+	vector<double> exposureTimes;
 	double exposureTime;
 	double pulseWidth;
 	double giromagneticRatio;
@@ -40,11 +40,12 @@ public:
 	vector<double> RHS;
 	double M0;
 	double RHS_threshold;
-	double diffusionCoefficient;
+	double D_sat;
+	double D_msd;
+	double SVp;
 
 	NMR_PFGSE(NMR_Simulation &_NMR, 
 			  pfgse_config _pfgseConfig,
-			  uint time_sample, 
 			  int _mpi_rank = 0, 
 			  int _mpi_processes = 0);	
 
@@ -75,11 +76,13 @@ public:
 	void set();
 	void run_old();
 	void run();
+	void run_sequence();
 	void simulation_old();
 	void simulation();
-	void recover_D(string _method = "stejskal");
-	void recover_Stejskal();
-	void recover_meanSquaredDisplacement();
+	void recoverD(string _method = "sat");
+	void recoverD_sat();
+	void recoverD_msd();
+	void recoverSVp(string _method = "sat");
 	void clear();
 	void reset(double _newBigDelta);
 	void reset();
@@ -91,12 +94,18 @@ public:
 	void setExposureTime(double _value){ this->exposureTime = _value; }
 	void setPulseWidth(double _value){ this->pulseWidth = _value; }
 	void setGiromagneticRatio(double _value){ this->giromagneticRatio = _value; }
-	void setDiffusionCoefficient(double _value){ this->diffusionCoefficient = _value; }
+	void setD_sat(double _value) { this->D_sat = _value; }
+	void setD_msd(double _value) { this->D_msd = _value; }
+	void setSVp(double _value) { this->SVp = _value; }
 
 	double getExposureTime() {return this->exposureTime; }
+	double getExposureTime(uint _idx) {return this->exposureTimes[_idx]; }
 	double getPulseWidth() {return this->pulseWidth; }
 	double getGiromagneticRatio() {return this->giromagneticRatio; }
-	double getDiffusionCoefficient() {return this->diffusionCoefficient; }
+	double getD_sat() { return this->D_sat; }
+	double getD_msd() { return this->D_msd; }
+	double getSVp() { return this->SVp; }
+	
 
 private:
 	int mpi_rank;

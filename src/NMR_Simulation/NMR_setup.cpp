@@ -514,11 +514,6 @@ void NMR_Simulation::save(string _otherDir)
         (*this).saveHistogramList(_otherDir);
     }
 
-    if(this->rwNMR_config.getSaveImgInfo())
-    {   
-        (*this).saveBitBlock(_otherDir);
-    }
-
     time = omp_get_wtime() - time;
     cout << "Ok. (" << time << " seconds)." << endl; 
 }

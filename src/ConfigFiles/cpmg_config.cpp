@@ -12,14 +12,14 @@
 using namespace std;
 
 // default constructors
-cpmg_config::cpmg_config(const string configFile)
+cpmg_config::cpmg_config(const string configFile) : config_filepath(configFile)
 {
     vector<double> TIME_VALUES();
 	(*this).readConfigFile(configFile);
 }
 
 //copy constructors
-cpmg_config::cpmg_config(const cpmg_config &otherConfig)
+cpmg_config::cpmg_config(const cpmg_config &otherConfig) 
 {
     this->config_filepath = otherConfig.config_filepath;
     // --- Physical attributes.

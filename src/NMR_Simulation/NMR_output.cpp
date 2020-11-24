@@ -117,10 +117,10 @@ void NMR_Simulation::readInputT2()
 
 void NMR_Simulation::info()
 {
-    (*this).printInputDetails();
+    (*this).printDetails();
 }
 
-void NMR_Simulation::printInputDetails()
+void NMR_Simulation::printDetails()
 { 
     // print input details
     cout << "------------------------------------------------------" << endl;

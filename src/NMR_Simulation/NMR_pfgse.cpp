@@ -25,15 +25,18 @@ using namespace std;
 
 NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,  
 				     pfgse_config _pfgseConfig,
-					 uint time_sample,
 					 int _mpi_rank,
 					 int _mpi_processes) : NMR(_NMR),
 										   PFGSE_config(_pfgseConfig),
 										   M0(0.0),
+										   D_sat(0.0),
+										   D_msd(0.0),
+										   SVp(0.0),
 										   mpi_rank(_mpi_rank),
 										   mpi_processes(_mpi_processes)
 {
 	// vectors object init
+	vector<double> exposureTimes();
 	vector<double> gradient();
 	vector<double> LHS();
 	vector<double> RHS();
@@ -45,14 +48,15 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	this->gradient_Y = gradient_max.getY();
 	this->gradient_Z = gradient_max.getZ();	
 	this->gradientPoints = this->PFGSE_config.getGradientSamples();
-	this->exposureTime = this->PFGSE_config.getTimeValues()[time_sample];
+	this->exposureTimes = this->PFGSE_config.getTimeValues(); 
 	this->pulseWidth = this->PFGSE_config.getPulseWidth();
 	this->giromagneticRatio = this->PFGSE_config.getGiromagneticRatio();
-	this->diffusionCoefficient = this->PFGSE_config.getD0();
+	// this->NMR.setFreeDiffusionCoefficientthis(this->PFGSE_config.getD0());
 
 
 	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
-	(*this).set();
+	(*this).setGradientVector();
+
 }
 
 NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,  
@@ -70,7 +74,9 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   exposureTime(_bigDelta),
 										   pulseWidth(_pulseWidth),
 										   giromagneticRatio(_giromagneticRatio),
-										   diffusionCoefficient(0.0),
+										   D_sat(0.0),
+										   D_msd(0.0),
+										   SVp(0.0),
 										   M0(0.0),
 										   mpi_rank(_mpi_rank),
 										   mpi_processes(_mpi_processes)
@@ -80,6 +86,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	vector<double> RHS();
 	vector<Vector3D> vecGradient();
 	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
+	(*this).setGradientVector();
 	(*this).set();
 }
 
@@ -88,10 +95,39 @@ void NMR_PFGSE::set()
 	(*this).setName();
 	(*this).createDirectoryForData();
 	(*this).setNMRTimeFramework();
-	(*this).setGradientVector();
 	(*this).setVectorLHS();
 	(*this).setVectorRHS();
 }
+
+void NMR_PFGSE::run_sequence()
+{
+	for(uint timeSample = 0; timeSample < this->exposureTimes.size(); timeSample++)
+	{
+		(*this).setExposureTime((*this).getExposureTime(timeSample));
+		(*this).set();
+		(*this).run();
+
+		// apply threshold for D(t) extraction
+		string threshold_type = this->PFGSE_config.getThresholdType();
+		double threshold = this->PFGSE_config.getThresholdValue();
+		if(threshold_type != "none")
+		{
+			if(threshold_type == "lhs") (*this).setThresholdFromLHSValue(threshold);
+			else if(threshold_type == "rhs") (*this).setThresholdFromRHSValue(threshold);
+			else if(threshold_type == "samples") (*this).setThresholdFromSamples(int(threshold));
+		}
+
+		// D(t) extraction
+		(*this).recoverD("sat");
+		(*this).recoverD("msd");
+		(*this).recoverSVp();
+		
+		// save results in disc
+		(*this).save(); 
+	}
+}
+
+
 
 void NMR_PFGSE::set_old()
 {
@@ -169,6 +205,7 @@ void NMR_PFGSE::setGradientVector_old()
 
 void NMR_PFGSE::setNMRTimeFramework()
 {
+	cout << endl << "running PFGSE simulation:" << endl;
 	this->NMR.setTimeFramework(this->exposureTime);
 	cout << "PFGSE exposure time: " << this->exposureTime << " ms";
 	cout << " (" << this->NMR.simulationSteps << " RW-steps)" << endl;
@@ -345,30 +382,30 @@ void NMR_PFGSE::simulation_old()
 }
 
 
-void NMR_PFGSE::recover_D(string _method)
+void NMR_PFGSE::recoverD(string _method)
 {
-	if(_method == "stejskal")
+	if(_method == "sat")
 	{
-		(*this).recover_Stejskal();
+		(*this).recoverD_sat();
 	} else
 	{
 		if(_method == "msd")
 		{
-			(*this).recover_meanSquaredDisplacement();
+			(*this).recoverD_msd();
 		}
 	}
 }
 
-void NMR_PFGSE::recover_Stejskal()
+void NMR_PFGSE::recoverD_sat()
 {
 	LeastSquareAdjust lsa(this->RHS, this->LHS);
 	lsa.setThreshold(this->RHS_threshold);
 	lsa.solve();
-	(*this).setDiffusionCoefficient(lsa.getB());
-	cout << "Dnew (s&t) = " << (*this).getDiffusionCoefficient() << endl;
+	(*this).setD_sat(lsa.getB());
+	cout << "Dnew (s&t) = " << (*this).getD_sat() << endl;
 }
 
-void NMR_PFGSE::recover_meanSquaredDisplacement()
+void NMR_PFGSE::recoverD_msd()
 {
 	double squaredDisplacement = 0.0;
 	double displacementX, displacementY, displacementZ;
@@ -421,10 +458,26 @@ void NMR_PFGSE::recover_meanSquaredDisplacement()
 
 	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
 	squaredDisplacement = squaredDisplacement / aliveWalkerFraction;
-	(*this).setDiffusionCoefficient(squaredDisplacement/(6 * this->exposureTime));
+	(*this).setD_msd(squaredDisplacement/(6 * this->exposureTime));
 	
-	cout << "Dnew (msd) = " << (*this).getDiffusionCoefficient();
+	cout << "Dnew (msd) = " << (*this).getD_msd();
 	cout << "\t(mean displacement): " << sqrt(squaredDisplacement) << " um" << endl;
+}
+
+void NMR_PFGSE::recoverSVp(string method)
+{
+	double Dt;
+	if(method == "sat") Dt = (*this).getD_sat();
+	else Dt = (*this).getD_msd();
+
+	double D0 = this->NMR.getDiffusionCoefficient();
+
+	// recover S/V for short observation times (see ref. Sorland)
+	double Sv;
+	Sv = (1.0 - (Dt / D0));
+	Sv *= 2.25 * sqrt((0.5*TWO_PI) / (D0 * (*this).getExposureTime()));
+	(*this).setSVp(Sv);
+	cout << "S/V ~= " << (*this).getSVp() << endl;
 }
 
 void NMR_PFGSE::reset(double newBigDelta)
@@ -453,8 +506,34 @@ void NMR_PFGSE::clear()
 
 void NMR_PFGSE::save()
 {
-	this->NMR.save(this->dir);
+	double time = omp_get_wtime();
+    cout << "saving results...";
+    
+    if(this->PFGSE_config.getSaveDecay()) 
+    {
+        this->NMR.saveEnergyDecay(this->dir);
+	}
+    
+    if(this->PFGSE_config.getSaveCollisions())
+    {
+        this->NMR.saveWalkerCollisions(this->dir);
+    }
+
+    if(this->PFGSE_config.getSaveHistogram())
+    {
+        this->NMR.saveHistogram(this->dir);
+    }    
+
+    if(this->PFGSE_config.getSaveHistogramList())
+    {
+        this->NMR.saveHistogramList(this->dir);
+    }
+
+    // write pfgse data
 	(*this).writeResults();
+
+	time = omp_get_wtime() - time;
+    cout << "Ok. (" << time << " seconds)." << endl; 
 }
 
 void NMR_PFGSE::writeResults()
@@ -482,13 +561,17 @@ void NMR_PFGSE::writeResults()
     file << "Big Delta, ";
     file << "Tiny Delta, ";
     file << "Giromagnetic Ratio, ";
-    file << "Diffusion Coefficient, ";
+    file << "D_sat, ";
+    file << "D_msd, ";
+	file << "SVp, ";
     file << "RHS Threshold" << endl;
     file << this->gradientPoints << ", ";
     file << this->exposureTime << ", ";
     file << this->pulseWidth << ", ";
     file << this->giromagneticRatio << ", ";
-    file << this->diffusionCoefficient << ", ";
+    file << this->D_sat << ", ";
+    file << this->D_msd << ", ";
+    file << this->SVp << ", ";
     file << threshold << endl << endl;    
 
     file << "Stejskal-Tanner Equation" << endl;

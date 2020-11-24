@@ -52,34 +52,41 @@ void save_GA_solution_data(vector<double> &sigmoid, NMR_Simulation &NMR);
 // Main Program
 int main(int argc, char *argv[])
 {    
+     // -- Read NMR essentials config files
      // -- set path to config files dir
-     string config_root = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/";
-     
+     string config_root = "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/";     
      // -- rwnmr config
      string rw_config_path = config_root + "rwnmr.config";
-     rwnmr_config rwNMR_Config(rw_config_path); 
-     
+     rwnmr_config rwNMR_Config(rw_config_path);      
      // -- uct image config
      string uct_config_path = config_root + "uct.config";
      uct_config uCT_Config(uct_config_path); 
-     cout << "config files read" << endl;
+     cout << "config files read" << endl << endl;
+     // -----
 
-
-     cout << "creating RWNMR object" << endl;
+     // -- Build NMR_Simulation essentials
+     cout << "-- creating RWNMR object" << endl;
      NMR_Simulation NMR(rwNMR_Config, uCT_Config);
-     cout << "RWNMR object created succesfully." << endl;
-
-     cout << "reading uCT-image" << endl;
+     cout << "- RWNMR object created succesfully." << endl;
+     cout << "-- reading uCT-image" << endl;
      NMR.readImage();
-     cout << "uCT-image read succesfully." << endl;
-     
-     cout << "saving uCT-image info" << endl;
-     NMR.save();
-     cout << "saved succesfully." << endl;
-
-     cout << "setting walkers" << endl;
+     cout << "- uCT-image read succesfully." << endl;     
+     cout << "-- setting walkers" << endl;
      NMR.setWalkers();
-     cout << "walkers set." << endl;
+     cout << "- walkers set." << endl;
+     cout << "-- saving uCT-image info" << endl;
+     NMR.save();
+     cout << "- saved succesfully." << endl << endl;
+     NMR.info();
+     // -----
+
+     // -- Read PFGSE routine config files
+     cout << "-- performing pfgse sequence" << endl;
+     pfgse_config pfgse_Config(config_root + "pfgse.config");
+     NMR_PFGSE pfgse(NMR, pfgse_Config);
+     pfgse.run_sequence();
+     cout << "- pfgse sequence performed succesfully" << endl << endl;
+     // -----
      return 0;
 }
 
@@ -175,13 +182,13 @@ int pfgse_old()
                           gamma);
 
           pfgse.run();
-
+     
           pfgse.setThresholdFromLHSValue(threshold);
-          pfgse.recover_D("stejskal");
-          pfgse.recover_D("msd");
+          pfgse.recoverD("stejskal");
+          pfgse.recoverD("msd");
 
           // recover S/V for short observation times (see ref. Sorland)
-          SVrelation = (1.0 - (pfgse.getDiffusionCoefficient() / NMR.getDiffusionCoefficient()));
+          SVrelation = (1.0 - (pfgse.getD_msd() / NMR.getDiffusionCoefficient()));
           SVrelation *= 2.25 * sqrt(pi / (NMR.getDiffusionCoefficient() * exposureTime[run]));
           cout << "S/V ~= " << SVrelation << endl;
           
