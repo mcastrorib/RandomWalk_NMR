@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 SET(CMAKE_C_COMPILER mpicc)
 SET(CMAKE_CXX_COMPILER mpicxx)
 
+option(USE_APP "Use provided implementation for system utils" ON)
 option(USE_NMR_SIMULATION "Use provided RMN_Simulation2D class implementation" ON)
 option(USE_WALKER "Use provided walker class implementation" ON)
 option(USE_BITBLOCK "Use provided blockMap class implementation" ON)
@@ -56,6 +57,11 @@ include_directories(/usr/include/eigen3)
 
 
 # list libraries
+if(USE_APP)
+  add_subdirectory(App)
+  list(APPEND EXTRA_LIBS App)
+endif()
+
 if(USE_NMR_SIMULATION)
   add_subdirectory(NMR_Simulation)
   list(APPEND EXTRA_LIBS NMR_Simulation)
@@ -96,14 +102,14 @@ if(USE_CONSOLEINPUT)
   list(APPEND EXTRA_LIBS ConsoleInput)
 endif()
 
-if(USE_CONFIGFILES)
-  add_subdirectory(ConfigFiles)
-  list(APPEND EXTRA_LIBS ConfigFiles)
-endif()
-
 if(USE_MATH)
   add_subdirectory(Math)
   list(APPEND EXTRA_LIBS Math)
+endif()
+
+if(USE_CONFIGFILES)
+  add_subdirectory(ConfigFiles)
+  list(APPEND EXTRA_LIBS ConfigFiles)
 endif()
 
 if(USE_UTILS)

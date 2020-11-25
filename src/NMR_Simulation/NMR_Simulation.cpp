@@ -82,6 +82,12 @@ using namespace std;
 NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config, 
                                uct_config _uCT_config) : rwNMR_config(_rwNMR_config),
                                                          uCT_config(_uCT_config),
+                                                         simulationSteps(0),
+                                                         numberOfEchoes(0),
+                                                         numberOfImages(0),
+                                                         width(0),
+                                                         height(0),
+                                                         depth(0),
                                                          numberOfPores(0),
                                                          porosity(-1.0),
                                                          walkerOccupancy(-1.0),
@@ -119,7 +125,13 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
 
     // assign attributes from uct config files
     (*this).setImageResolution(this->uCT_config.getResolution());
-    (*this).setVoxelDivision(this->uCT_config.getVoxelDivision());
+
+    if(this->uCT_config.getVoxelDivision() == 0) 
+    {
+        (*this).setVoxelDivision(0);
+        (*this).setImageVoxelResolution();
+    }
+    else (*this).applyVoxelDivision(this->uCT_config.getVoxelDivision());
 
     // set default time step measurement
     (*this).setImageVoxelResolution();
@@ -238,7 +250,7 @@ void NMR_Simulation::setTimeInterval()
 void NMR_Simulation::setVoxelDivision(uint _shifts)
 {
     this->voxelDivision = pow(2,_shifts);
-    if(this->voxelDivision > 0) this->voxelDivisionApplied = true;
+    if(this->voxelDivision > 1) this->voxelDivisionApplied = true;
     else this->voxelDivisionApplied = false;
 }
 
