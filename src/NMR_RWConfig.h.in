@@ -10,7 +10,6 @@
 #cmakedefine USE_LAPLACE
 #cmakedefine USE_GA
 #cmakedefine USE_FILEHANDLER
-#cmakedefine USE_CONSOLEINPUT
 #cmakedefine USE_CONFIGFILES
 #cmakedefine USE_MATH
 #cmakedefine USE_UTILS

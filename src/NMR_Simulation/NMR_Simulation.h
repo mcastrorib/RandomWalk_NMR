@@ -23,7 +23,7 @@
 
 #include "NMR_defs.h"
 #include "CollisionHistogram.h"
-#include "../ConsoleInput/consoleInput.h"
+#include "../Utils/ImagePath.h"
 #include "../BitBlock/bitBlock.h"
 #include "../Walker/walker.h"
 

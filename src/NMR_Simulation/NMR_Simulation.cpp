@@ -26,12 +26,11 @@
 #include "../BitBlock/bitBlock.h"
 #include "../RNG/xorshift.h"
 #include "../FileHandler/fileHandler.h"
-#include "../ConsoleInput/consoleInput.h"
 #include "../Laplace/tikhonov.h"
 #include "../Laplace/include/nmrinv_core.h"
 #include "NMR_Simulation.h"
-// #include "CollisionHistogram.h"
 #include "../Utils/OMPLoopEnabler.h"
+#include "../Utils/ImagePath.h"
 
 
 using namespace cv;
@@ -1440,16 +1439,16 @@ uint NMR_Simulation::removeRandomIndexFromPool(vector<uint> &_pool, uint _random
 void NMR_Simulation::assemblyImagePath()
 {
     // User Input
-     ConsoleInput input;
-     input.numberOfImages = this->uCT_config.getSlices();
-     input.imagePath.path = this->uCT_config.getDirPath();
-     input.imagePath.filename = this->uCT_config.getFilename();
-     input.imagePath.fileID = this->uCT_config.getFirstIdx();
-     input.imagePath.digits = this->uCT_config.getDigits();
-     input.imagePath.extension = this->uCT_config.getExtension();
+     ImagePath input;
+     input.images = this->uCT_config.getSlices();
+     input.path = this->uCT_config.getDirPath();
+     input.filename = this->uCT_config.getFilename();
+     input.fileID = this->uCT_config.getFirstIdx();
+     input.digits = this->uCT_config.getDigits();
+     input.extension = this->uCT_config.getExtension();
      input.updateCompletePath();
 
-     (*this).setImage(input.imagePath, input.numberOfImages);
+     (*this).setImage(input, input.images);
 }
 
 string NMR_Simulation::createDirectoryForResults()
