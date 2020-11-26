@@ -831,19 +831,27 @@ void NMR_PFGSE::simulation_cuda()
         }
     }
 
-    // collect energy data
+    // collect energy data -- REVISE!!!!
     for (uint echo = 0; echo < this->NMR.numberOfEchoes; echo++)
     {
         this->NMR.globalEnergy.push_back(h_globalPhase[echo]);
     }
 
-    // normalize magnitudes
-    if(this->LHS.size() > 0) this->LHS.clear();
-    this->LHS.reserve(this->gradientPoints);
+    // get magnitudes M(k,t) - new
+    if(this->Mkt.size() > 0) this->Mkt.clear();
+    this->Mkt.reserve(this->gradientPoints);
     for(int point = 0; point < this->gradientPoints; point++)
     {
-        this->LHS.push_back((h_globalPhase[point]/h_globalEnergy[point]));
+        this->Mkt.push_back((h_globalPhase[point]/h_globalEnergy[point]));
     }
+
+    // normalize magnitudes - old
+    // if(this->LHS.size() > 0) this->LHS.clear();
+    // this->LHS.reserve(this->gradientPoints);
+    // for(int point = 0; point < this->gradientPoints; point++)
+    // {
+    //     this->LHS.push_back((h_globalPhase[point]/h_globalEnergy[point]));
+    // }
 
     // free pointers in host
     free(h_walker_x0);

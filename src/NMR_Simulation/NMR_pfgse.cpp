@@ -292,7 +292,7 @@ double NMR_PFGSE::computeWaveVectorK(double gradientMagnitude, double pulse_widt
 
 void NMR_PFGSE::run_sequence()
 {
-	// run pfgse experiment
+	// run pfgse experiment -- this method will fill Mkt vector
 	(*this).simulation();
 
 	// get M0 (reference value)
@@ -312,20 +312,25 @@ void NMR_PFGSE::run_sequence()
 	// 	this->M0 = this->NMR.PFG(0.0, this->pulseWidth, this->giromagneticRatio);
 	// }
 
-	// copy vector LHS to Mkt
-	for(uint idx = 0; idx < this->gradientPoints; idx++)
-	{
-		this->Mkt.push_back(this->LHS[idx]);
-	}
+	// copy vector LHS to Mkt - old
+	// for(uint idx = 0; idx < this->gradientPoints; idx++)
+	// {
+	// 	this->Mkt.push_back(this->LHS[idx]);
+	// }
 
 	this->M0 = this->Mkt[0];
 	this->LHS[0] = (*this).computeLHS(M0, M0);
 	idx_begin++;
 
-	// run diffusion measurement for different G
+	// run diffusion measurement for different G - old
+	// for(uint point = idx_begin; point < idx_end; point++)
+	// {
+	// 	this->LHS[point] = (*this).computeLHS(this->LHS[point], M0);
+	// }
+
 	for(uint point = idx_begin; point < idx_end; point++)
 	{
-		this->LHS[point] = (*this).computeLHS(this->LHS[point], M0);
+		this->LHS[point] = (*this).computeLHS(this->Mkt[point], M0);
 	}
 }
 
@@ -411,11 +416,6 @@ void NMR_PFGSE::recoverD_msd()
 		squaredDisplacement += ( particle.energy * (normalizedDisplacement * normalizedDisplacement));
 		aliveWalkerFraction += particle.energy;
 	}
-
-	// debug
-	// cout << "(msd): " << squaredDisplacement;
-	// cout << "\twalkers alive: " << aliveWalkerFraction;
-	// cout << "\tobs time: " << this->exposureTime << " ms" << endl;
 
 	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
 	squaredDisplacement = squaredDisplacement / aliveWalkerFraction;
@@ -536,16 +536,18 @@ void NMR_PFGSE::writeResults()
     file << threshold << endl << endl;    
 
     file << "Stejskal-Tanner Equation" << endl;
-    file << "ID, ";
+    file << "id, ";
     file << "Gradient, ";
+    file << "M(k,t), ";
     file << "LHS, ";
-    file << "RHS, " << endl;
+    file << "RHS" << endl;
 
     uint size = this->gradientPoints;
     for (uint index = 0; index < size; index++)
     {
         file << index << ", ";
         file << this->gradient[index] << ", ";
+        file << this->Mkt[idx] << ", ";
         file << this->LHS[index] << ", ";
         file << this->RHS[index] << endl;
     }
@@ -553,6 +555,7 @@ void NMR_PFGSE::writeResults()
     file.close();
 }
 
+// pfgse simulation cpu-only implementation -- needs revision! 
 void NMR_PFGSE::simulation_omp()
 {
 	double begin_time = omp_get_wtime();

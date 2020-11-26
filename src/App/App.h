@@ -35,6 +35,8 @@ public:
     // default destructor
     virtual ~App()
     {
+        delete NMR;
+        NMR = NULL;
         cout << "Application ended." << endl;
     }
 
