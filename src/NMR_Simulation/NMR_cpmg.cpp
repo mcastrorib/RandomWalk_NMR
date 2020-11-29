@@ -242,14 +242,19 @@ void NMR_cpmg::applyLaplace()
     // reset T2 distribution from previous simulation
     if(this->T2_bins.size() > 0) this->T2_bins.clear();
     if(this->T2_amps.size() > 0) this->T2_amps.clear();
-    
+
+    // remove first elements
+    vector<double> decay = this->NMR.getGlobalEnergy();
+    vector<double> times = this->NMR.getDecayTimes();
+    times.erase(times.begin());
+    decay.erase(decay.begin());     
 
     NMRInverterConfig nmr_inv_config(0.1, 1e4, true, 128, -4, 2, 512, 512, 0.0);
 
     NMRInverter nmr_inverter;
-    nmr_inverter.set_config(nmr_inv_config, this->NMR.decayTimes);
-    nmr_inverter.find_best_lambda(this->NMR.globalEnergy.size(), this->NMR.globalEnergy.data());
-    nmr_inverter.invert(this->NMR.globalEnergy.size(), this->NMR.globalEnergy.data());
+    nmr_inverter.set_config(nmr_inv_config, times);
+    nmr_inverter.find_best_lambda(decay.size(), decay.data());
+    nmr_inverter.invert(decay.size(), decay.data());
     for(uint i = 0; i < nmr_inverter.used_t2_bins.size(); i++)
     {
         this->T2_bins.push_back(nmr_inverter.used_t2_bins[i]);

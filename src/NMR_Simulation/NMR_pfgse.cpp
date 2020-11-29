@@ -547,7 +547,7 @@ void NMR_PFGSE::writeResults()
     {
         file << index << ", ";
         file << this->gradient[index] << ", ";
-        file << this->Mkt[idx] << ", ";
+        file << this->Mkt[index] << ", ";
         file << this->LHS[index] << ", ";
         file << this->RHS[index] << endl;
     }

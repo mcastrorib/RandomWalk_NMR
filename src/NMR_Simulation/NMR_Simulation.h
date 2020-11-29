@@ -261,6 +261,7 @@ public:
     inline vector<Pore> getPores() { return this->pores; }
     inline vector<Walker> getWalkers() { return this->walkers; }
     inline vector<double> getGlobalEnergy() { return this->globalEnergy; }
+    inline vector<double> getDecayTimes() { return this->decayTimes; }
 
     // physical attributes
     inline double getTimeInterval() { return this->timeInterval; }
