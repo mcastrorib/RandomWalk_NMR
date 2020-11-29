@@ -243,13 +243,21 @@ void NMR_cpmg::applyLaplace()
     if(this->T2_bins.size() > 0) this->T2_bins.clear();
     if(this->T2_amps.size() > 0) this->T2_amps.clear();
 
-    // remove first elements
+    // get copy of decay info and remove first elements
     vector<double> decay = this->NMR.getGlobalEnergy();
     vector<double> times = this->NMR.getDecayTimes();
     times.erase(times.begin());
     decay.erase(decay.begin());     
 
-    NMRInverterConfig nmr_inv_config(0.1, 1e4, true, 128, -4, 2, 512, 512, 0.0);
+    NMRInverterConfig nmr_inv_config(this->CPMG_config.getMinT2(), 
+                                     this->CPMG_config.getMaxT2(),
+                                     this->CPMG_config.getUseT2Logspace(),
+                                     this->CPMG_config.getNumT2Bins(),
+                                     this->CPMG_config.getMinLambda(),
+                                     this->CPMG_config.getMaxLambda(),
+                                     this->CPMG_config.getNumLambdas(),
+                                     this->CPMG_config.getPruneNum(),
+                                     this->CPMG_config.getNoiseAmp());
 
     NMRInverter nmr_inverter;
     nmr_inverter.set_config(nmr_inv_config, times);
