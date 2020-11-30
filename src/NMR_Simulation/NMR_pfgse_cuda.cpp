@@ -354,7 +354,8 @@ void NMR_PFGSE::simulation_cuda()
     // double *h_globalEnergy = setDoubleArray_3D(kernelCalls * echoesPerKernel);
     double *h_energy = arrayFactory.getDoubleArray(energyArraySize);
     double *h_energyCollector = arrayFactory.getDoubleArray(energyCollectorSize);
-    double *h_globalEnergy = arrayFactory.getDoubleArray(gradientPoints);
+    // double *h_globalEnergy = arrayFactory.getDoubleArray(gradientPoints);
+    double h_globalEnergy = 0.0;
 
     // magnetization phase
     double *h_phase = arrayFactory.getDoubleArray(phaseArraySize);
@@ -363,7 +364,7 @@ void NMR_PFGSE::simulation_cuda()
 
     for (uint point = 0; point < gradientPoints; point++)
     {
-        h_globalEnergy[point] = 0.0;
+        // h_globalEnergy[point] = 0.0;
         h_globalPhase[point] = 0.0;
     }
 
@@ -579,45 +580,75 @@ void NMR_PFGSE::simulation_cuda()
                 cudaDeviceSynchronize();
 
                 // Kernel call to reduce walker final energies
-                PFG_reduce<<<blocksPerKernel/2, 
-                             threadsPerBlock, 
-                             threadsPerBlock * sizeof(double)>>>(d_energy,
-                                                                 d_energyCollector,
-                                                                 energyArraySize,
-                                                                 energyCollectorSize);     
+                // PFG_reduce<<<blocksPerKernel/2, 
+                //              threadsPerBlock, 
+                //              threadsPerBlock * sizeof(double)>>>(d_energy,
+                //                                                  d_energyCollector,
+                //                                                  energyArraySize,
+                //                                                  energyCollectorSize);     
                 cudaDeviceSynchronize();
 
                 // copy data from gatherer array
                 cudaMemcpy(h_phaseCollector, d_phaseCollector, phaseCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
-                cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
+                // cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
 
                 // collector reductions
                 for(uint idx = 0; idx < phaseCollectorSize; idx++)
                 {
                     h_globalPhase[point] += h_phaseCollector[idx];
                 }
-                for(uint idx = 0; idx < energyCollectorSize; idx++)
-                {
-                    h_globalEnergy[point] += h_energyCollector[idx];
-                }
+                // for(uint idx = 0; idx < energyCollectorSize; idx++)
+                // {
+                //     h_globalEnergy[point] += h_energyCollector[idx];
+                // }
             } 
             else
             {    
 
                 cudaMemcpy(h_phase, d_phase, phaseArraySize * sizeof(double), cudaMemcpyDeviceToHost);
-                cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);            
+                // cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);            
                 for(uint idx = 0; idx < phaseArraySize; idx++)
                 {
                     h_globalPhase[point] += h_phase[idx];
                 }
-                for(uint idx = 0; idx < energyArraySize; idx++)
-                {
-                    h_globalEnergy[point] += h_energy[idx];
-                } 
+                // for(uint idx = 0; idx < energyArraySize; idx++)
+                // {
+                //     h_globalEnergy[point] += h_energy[idx];
+                // } 
             }
         }   
 
-    }
+    
+
+        if(this->NMR.rwNMR_config.getReduceInGPU())
+        {
+            // Kernel call to reduce walker final energies
+            PFG_reduce<<<blocksPerKernel/2, 
+                            threadsPerBlock, 
+                            threadsPerBlock * sizeof(double)>>>(d_energy,
+                                                                d_energyCollector,
+                                                                energyArraySize,
+                                                                energyCollectorSize);     
+            cudaDeviceSynchronize();
+
+            // copy data from gatherer array
+            cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
+
+            // collector reductions
+            for(uint idx = 0; idx < energyCollectorSize; idx++)
+            {
+                h_globalEnergy += h_energyCollector[idx];
+            }
+        } 
+        else
+        {    
+            cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);            
+            for(uint idx = 0; idx < energyArraySize; idx++)
+            {
+                h_globalEnergy += h_energy[idx];
+            } 
+        }
+    } 
 
     if (lastWalkerPackSize > 0)
     {
@@ -790,51 +821,82 @@ void NMR_PFGSE::simulation_cuda()
     
                 cudaDeviceSynchronize();
     
-                // Kernel call to reduce walker final energies
-                PFG_reduce<<<blocksPerKernel/2, 
-                             threadsPerBlock, 
-                             threadsPerBlock * sizeof(double)>>>(d_energy,
-                                                                 d_energyCollector,
-                                                                 energyArraySize,
-                                                                 energyCollectorSize);
+                // // Kernel call to reduce walker final energies
+                // PFG_reduce<<<blocksPerKernel/2, 
+                //              threadsPerBlock, 
+                //              threadsPerBlock * sizeof(double)>>>(d_energy,
+                //                                                  d_energyCollector,
+                //                                                  energyArraySize,
+                //                                                  energyCollectorSize);
     
-                cudaDeviceSynchronize();
+                // cudaDeviceSynchronize();
     
                 // copy data from gatherer array
                 cudaMemcpy(h_phaseCollector, d_phaseCollector, phaseCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
-                cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
+                // cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
     
                 // collector reductions
                 for(uint idx = 0; idx < phaseCollectorSize; idx++)
                 {
                     h_globalPhase[point] += h_phaseCollector[idx];
                 }
-                for(uint idx = 0; idx < energyCollectorSize; idx++)
-                {
-                    h_globalEnergy[point] += h_energyCollector[idx];
-                }
+                // for(uint idx = 0; idx < energyCollectorSize; idx++)
+                // {
+                //     h_globalEnergy[point] += h_energyCollector[idx];
+                // }
             }
             else
             {
                 cudaMemcpy(h_phase, d_phase, phaseArraySize * sizeof(double), cudaMemcpyDeviceToHost);
-                cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);
+                // cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);
                 
                 for(uint idx = 0; idx < phaseArraySize; idx++)
                 {
                     h_globalPhase[point] += h_phase[idx];
                 }
-                for(uint idx = 0; idx < energyArraySize; idx++)
-                {
-                    h_globalEnergy[point] += h_energy[idx];
-                }
+                // for(uint idx = 0; idx < energyArraySize; idx++)
+                // {
+                //     h_globalEnergy[point] += h_energy[idx];
+                // }
             }
         }
+
+        if(this->NMR.rwNMR_config.getReduceInGPU())
+        {
+            // Kernel call to reduce walker final energies
+            PFG_reduce<<<blocksPerKernel/2, 
+                            threadsPerBlock, 
+                            threadsPerBlock * sizeof(double)>>>(d_energy,
+                                                                d_energyCollector,
+                                                                energyArraySize,
+                                                                energyCollectorSize);
+
+            cudaDeviceSynchronize();
+
+            // copy data from gatherer array
+            cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);    
+            // collector reductions
+            for(uint idx = 0; idx < energyCollectorSize; idx++)
+            {
+                h_globalEnergy += h_energyCollector[idx];
+            }
+        }
+        else
+        {
+            cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);                
+            for(uint idx = 0; idx < energyArraySize; idx++)
+            {
+                h_globalEnergy += h_energy[idx];
+            }
+        }
+
+
     }
 
     // collect energy data -- REVISE!!!!
-    for (uint echo = 0; echo < this->NMR.numberOfEchoes; echo++)
+    for (uint point = 0; point < gradientPoints; point++)
     {
-        this->NMR.globalEnergy.push_back(h_globalPhase[echo]);
+        this->NMR.globalEnergy.push_back(h_globalEnergy);
     }
 
     // get magnitudes M(k,t) - new
@@ -842,7 +904,7 @@ void NMR_PFGSE::simulation_cuda()
     this->Mkt.reserve(this->gradientPoints);
     for(int point = 0; point < this->gradientPoints; point++)
     {
-        this->Mkt.push_back((h_globalPhase[point]/h_globalEnergy[point]));
+        this->Mkt.push_back((h_globalPhase[point]/h_globalEnergy));
     }
 
     // normalize magnitudes - old
@@ -866,7 +928,7 @@ void NMR_PFGSE::simulation_cuda()
     free(h_energyCollector);
     free(h_phase);
     free(h_phaseCollector);
-    free(h_globalEnergy);
+    // free(h_globalEnergy);
     free(h_globalPhase);
 
     // and direct them to NULL
@@ -879,7 +941,7 @@ void NMR_PFGSE::simulation_cuda()
     h_seed = NULL;
     h_phase = NULL;
     h_phaseCollector = NULL;
-    h_globalEnergy = NULL;
+    // h_globalEnergy = NULL;
     h_globalPhase = NULL;
 
     // also direct the bitBlock pointer created in this context

@@ -57,8 +57,6 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 
 	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
 	(*this).setGradientVector();
-	(*this).setVectorMkt();
-
 }
 
 NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,  
@@ -99,6 +97,7 @@ void NMR_PFGSE::set()
 	(*this).setName();
 	(*this).createDirectoryForData();
 	(*this).setNMRTimeFramework();
+	(*this).setVectorMkt();
 	(*this).setVectorLHS();
 	(*this).setVectorRHS();
 }
@@ -286,7 +285,7 @@ double NMR_PFGSE::computeLHS(double _Mg, double _M0)
 
 double NMR_PFGSE::computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio)
 {
-    return (pulse_width * 1.0e-03) * (TWO_PI * giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
+    return (pulse_width * 1.0e-03) *  (TWO_PI * giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
 }
 
 
@@ -319,7 +318,7 @@ void NMR_PFGSE::run_sequence()
 	// }
 
 	this->M0 = this->Mkt[0];
-	this->LHS[0] = (*this).computeLHS(M0, M0);
+	this->LHS.push_back((*this).computeLHS(M0, M0));
 	idx_begin++;
 
 	// run diffusion measurement for different G - old
@@ -328,9 +327,11 @@ void NMR_PFGSE::run_sequence()
 	// 	this->LHS[point] = (*this).computeLHS(this->LHS[point], M0);
 	// }
 
+	double lhs_value;
 	for(uint point = idx_begin; point < idx_end; point++)
-	{
-		this->LHS[point] = (*this).computeLHS(this->Mkt[point], M0);
+	{	
+		lhs_value = (*this).computeLHS(this->Mkt[point], M0);
+		this->LHS.push_back(lhs_value);
 	}
 }
 
@@ -570,16 +571,22 @@ void NMR_PFGSE::simulation_omp()
         this->NMR.walkers[id].resetSeed();
         this->NMR.walkers[id].resetEnergy();
     }
-    this->NMR.globalEnergy.clear();  // reset vector to store NMR decay
 
-    // compute k value
-    double K_value = 0.0;
+    // reset vector to store energy decay
+    this->NMR.resetGlobalEnergy();
+    this->NMR.globalEnergy.reserve(this->NMR.numberOfEchoes + 1); // '+1' to accomodate time 0.0
+
+    // get initial energy global state
+    double energySum = ((double) this->NMR.walkers.size()) * this->NMR.walkers[0].getEnergy();
+    this->NMR.globalEnergy.push_back(energySum);
+
 
     // set derivables 
+	double resolution = this->NMR.imageVoxelResolution;
     double globalPhase = 0.0;
-    double globalSignal = 0.0;
+    double globalEnergy = 0.0;
     double walkerPhase;
-    double walkerSignal;
+    double walkerEnergy;
 
     // main loop 
     for (uint id = 0; id < this->NMR.walkers.size(); id++)
@@ -592,18 +599,31 @@ void NMR_PFGSE::simulation_omp()
         }
 
         // get final individual signal
-        walkerSignal = this->NMR.walkers[id].energy;
+        walkerEnergy = this->NMR.walkers[id].energy;
+		globalEnergy += walkerEnergy;
 
-        // get final individual phase
-        double z0 = (double) this->NMR.walkers[id].initialPosition.z;
-        double zF = (double) this->NMR.walkers[id].position_z;
-        double deltaZ = (zF - z0);
-        double realMag = K_value * deltaZ * this->NMR.imageVoxelResolution;
-        walkerPhase = walkerSignal * cos(realMag);
+		// get final individual phase
+		double dX = (double) this->NMR.walkers[id].initialPosition.x - (double) this->NMR.walkers[id].position_x;
+		double dY = (double) this->NMR.walkers[id].initialPosition.y - (double) this->NMR.walkers[id].position_y;
+		double dZ = (double) this->NMR.walkers[id].initialPosition.z - (double) this->NMR.walker;
 
-        // add contribution to global sum
-        globalPhase += walkerPhase;
-        globalSignal += walkerSignal;
+		Vector3D dR(dX,dY,dZ);
+		Vector3D wavevector_k;
+		for(int point = 0; point < this->gradientPoints; point++)
+		{ 
+			double kx = computeWaveVectorK(this->vecGradient[point].getX(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
+			double ky = computeWaveVectorK(this->vecGradient[point].getY(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
+			double kz = computeWaveVectorK(this->vecGradient[point].getZ(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
+			wavevector_k.setX(kx);
+			wavevector_k.setY(ky);
+			wavevector_k.setZ(kz);
+			wavevector_k.setNorm();
+			
+			walkerPhase = walkerEnergy * cos(wavevector_k.dotProduct(dR) * resolution);
+
+			// add contribution to global sum
+			globalPhase += walkerPhase;
+		}
     }
 
     double finish_time = omp_get_wtime();
