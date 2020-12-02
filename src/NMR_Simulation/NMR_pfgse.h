@@ -87,6 +87,8 @@ public:
 	void reset();
 	void save();
 	void writeResults();
+	void writeParameters();
+	void writeEchoes();
 	void setName();
 	void createDirectoryForData();
 

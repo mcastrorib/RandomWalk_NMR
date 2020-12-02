@@ -19,6 +19,8 @@
 #include "../Walker/walker.h"
 #include "../Math/Vector3D.h"
 #include "../FileHandler/fileHandler.h"
+#include "../Utils/OMPLoopEnabler.h"
+#include "../Utils/myAllocator.h"
 
 using namespace cv;
 using namespace std;
@@ -492,19 +494,56 @@ void NMR_PFGSE::save()
     }
 
     // write pfgse data
-	(*this).writeResults();
-
+	if(this->PFGSE_config.getSavePFGSE())
+	{
+		(*this).writeResults();
+	}
+	
 	time = omp_get_wtime() - time;
     cout << "Ok. (" << time << " seconds)." << endl; 
 }
 
 void NMR_PFGSE::writeResults()
 {
-	// string big_delta = std::to_string((int) this->exposureTime) + "-" 
-	// 				   + std::to_string(((int) (this->exposureTime * 100)) % 100);
-	// string tiny_delta = std::to_string((int) this->pulseWidth);
-	// string gamma = std::to_string((int) this->giromagneticRatio);
-	string filename = this->dir + "/PFGSE_echoes.txt";
+	(*this).writeParameters();
+	(*this).writeEchoes();
+}
+
+void NMR_PFGSE::writeEchoes()
+{
+	string filename = this->dir + "/PFGSE_echoess.txt";
+
+	ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    file << "PFGSE - Echoes and Stejskal-Tanner equation terms" << endl;
+    file << "id, ";
+    file << "Gradient, ";
+    file << "M(k,t), ";
+    file << "LHS, ";
+    file << "RHS" << endl;
+
+    uint size = this->gradientPoints;
+    for (uint index = 0; index < size; index++)
+    {
+        file << index << ", ";
+        file << this->gradient[index] << ", ";
+        file << this->Mkt[index] << ", ";
+        file << this->LHS[index] << ", ";
+        file << this->RHS[index] << endl;
+    }
+
+    file.close();
+}
+
+void NMR_PFGSE::writeParameters()
+{
+	string filename = this->dir + "/PFGSE_parameters.txt";
 
 	ofstream file;
     file.open(filename, ios::out);
@@ -523,6 +562,7 @@ void NMR_PFGSE::writeResults()
     file << "Big Delta, ";
     file << "Tiny Delta, ";
     file << "Giromagnetic Ratio, ";
+	file << "D0, ";
     file << "D_sat, ";
     file << "D_msd, ";
 	file << "SVp, ";
@@ -531,27 +571,11 @@ void NMR_PFGSE::writeResults()
     file << this->exposureTime << ", ";
     file << this->pulseWidth << ", ";
     file << this->giromagneticRatio << ", ";
+	file << this->NMR.getDiffusionCoefficient();
     file << this->D_sat << ", ";
     file << this->D_msd << ", ";
     file << this->SVp << ", ";
     file << threshold << endl << endl;    
-
-    file << "Stejskal-Tanner Equation" << endl;
-    file << "id, ";
-    file << "Gradient, ";
-    file << "M(k,t), ";
-    file << "LHS, ";
-    file << "RHS" << endl;
-
-    uint size = this->gradientPoints;
-    for (uint index = 0; index < size; index++)
-    {
-        file << index << ", ";
-        file << this->gradient[index] << ", ";
-        file << this->Mkt[index] << ", ";
-        file << this->LHS[index] << ", ";
-        file << this->RHS[index] << endl;
-    }
 
     file.close();
 }
@@ -581,50 +605,136 @@ void NMR_PFGSE::simulation_omp()
     this->NMR.globalEnergy.push_back(energySum);
 
 
-    // set derivables 
-	double resolution = this->NMR.imageVoxelResolution;
-    double globalPhase = 0.0;
+    // set derivables
+    double gamma = this->giromagneticRatio;
+    if(!this->PFGSE_config.getUseWaveVectorTwoPi()) gamma /= TWO_PI;
+
+	myAllocator arrayFactory; 
+	double *globalPhase = arrayFactory.getDoubleArray(this->gradientPoints);
     double globalEnergy = 0.0;
-    double walkerPhase;
-    double walkerEnergy;
+    double resolution = this->NMR.imageVoxelResolution;
+    
+    // main loop
+	// reset walker's initial state with omp parallel for
+    if(this->NMR.rwNMR_config.getOpenMPUsage())
+    {
+        // set omp variables for parallel loop throughout walker list
+        const int num_cpu_threads = omp_get_max_threads();
+        const int loop_size = this->NMR.walkers.size();
+        int loop_start, loop_finish; 
 
-    // main loop 
-    for (uint id = 0; id < this->NMR.walkers.size(); id++)
-    {  
-        // make walkers walk througout image
-        // #pragma omp parallel for if(NMR_OPENMP) private(id, step) shared(walkers, bitBlock, simulationSteps)
-        for (uint step = 0; step < this->NMR.simulationSteps; step++)
+		#pragma omp parallel shared(gamma, globalPhase, globalEnergy, resolution) private(loop_start, loop_finish) 
         {
-            this->NMR.walkers[id].walk(this->NMR.bitBlock);     
-        }
+            const int thread_id = omp_get_thread_num();
+            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+            loop_start = looper.getStart();
+            loop_finish = looper.getFinish(); 
 
-        // get final individual signal
-        walkerEnergy = this->NMR.walkers[id].energy;
-		globalEnergy += walkerEnergy;
+			double walkerPhase;
+			double walkerEnergy;
 
-		// get final individual phase
-		double dX = (double) this->NMR.walkers[id].initialPosition.x - (double) this->NMR.walkers[id].position_x;
-		double dY = (double) this->NMR.walkers[id].initialPosition.y - (double) this->NMR.walkers[id].position_y;
-		double dZ = (double) this->NMR.walkers[id].initialPosition.z - (double) this->NMR.walker;
+            for(uint id = loop_start; id < loop_finish; id++)
+            {
+				// reset energy
+				this->NMR.walkers[id].resetPosition();
+				this->NMR.walkers[id].resetSeed();
+				this->NMR.walkers[id].resetEnergy();
+				
+				// make walkers walk througout image
+				for (uint step = 0; step < this->NMR.simulationSteps; step++)
+				{
+					this->NMR.walkers[id].walk(this->NMR.bitBlock);     
+				}
 
-		Vector3D dR(dX,dY,dZ);
-		Vector3D wavevector_k;
-		for(int point = 0; point < this->gradientPoints; point++)
-		{ 
-			double kx = computeWaveVectorK(this->vecGradient[point].getX(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
-			double ky = computeWaveVectorK(this->vecGradient[point].getY(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
-			double kz = computeWaveVectorK(this->vecGradient[point].getZ(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
-			wavevector_k.setX(kx);
-			wavevector_k.setY(ky);
-			wavevector_k.setZ(kz);
-			wavevector_k.setNorm();
-			
-			walkerPhase = walkerEnergy * cos(wavevector_k.dotProduct(dR) * resolution);
+				// get final individual signal
+				walkerEnergy = this->NMR.walkers[id].energy;
+				#pragma omp critical
+				{
+					globalEnergy += walkerEnergy;
+				}
 
-			// add contribution to global sum
-			globalPhase += walkerPhase;
+				// get final individual phase
+				double dX = ((double) this->NMR.walkers[id].position_x) - ((double) this->NMR.walkers[id].initialPosition.x);
+				double dY = ((double) this->NMR.walkers[id].position_y) - ((double) this->NMR.walkers[id].initialPosition.y);
+				double dZ = ((double) this->NMR.walkers[id].position_z) - ((double) this->NMR.walkers[id].initialPosition.z);
+
+				Vector3D dR(dX,dY,dZ);
+				Vector3D wavevector_k;
+				for(int point = 0; point < this->gradientPoints; point++)
+				{ 
+					double kx = computeWaveVectorK(this->vecGradient[point].getX(), (*this).getPulseWidth(), gamma);
+					double ky = computeWaveVectorK(this->vecGradient[point].getY(), (*this).getPulseWidth(), gamma);
+					double kz = computeWaveVectorK(this->vecGradient[point].getZ(), (*this).getPulseWidth(), gamma);
+					wavevector_k.setX(kx);
+					wavevector_k.setY(ky);
+					wavevector_k.setZ(kz);
+					wavevector_k.setNorm();
+					
+					walkerPhase = walkerEnergy * cos(wavevector_k.dotProduct(dR) * resolution);
+
+					// add contribution to global sum
+					globalPhase[point] += walkerPhase;
+				}
+			}
 		}
+	} else
+	{
+		double walkerPhase;
+		double walkerEnergy;
+
+		for(uint id = 0; id < this->NMR.walkers.size(); id++)
+		{
+			// reset energy
+			this->NMR.walkers[id].resetPosition();
+			this->NMR.walkers[id].resetSeed();
+			this->NMR.walkers[id].resetEnergy();
+			
+			// make walkers walk througout image
+			for (uint step = 0; step < this->NMR.simulationSteps; step++)
+			{
+				this->NMR.walkers[id].walk(this->NMR.bitBlock);     
+			}
+
+			// get final individual signal
+			walkerEnergy = this->NMR.walkers[id].energy;
+			globalEnergy += walkerEnergy;
+			
+
+			// get final individual phase
+			double dX = ((double) this->NMR.walkers[id].position_x) - ((double) this->NMR.walkers[id].initialPosition.x);
+			double dY = ((double) this->NMR.walkers[id].position_y) - ((double) this->NMR.walkers[id].initialPosition.y);
+			double dZ = ((double) this->NMR.walkers[id].position_z) - ((double) this->NMR.walkers[id].initialPosition.z);
+
+			Vector3D dR(dX,dY,dZ);
+			Vector3D wavevector_k;
+			for(int point = 0; point < this->gradientPoints; point++)
+			{ 
+				double kx = computeWaveVectorK(this->vecGradient[point].getX(), (*this).getPulseWidth(), gamma);
+				double ky = computeWaveVectorK(this->vecGradient[point].getY(), (*this).getPulseWidth(), gamma);
+				double kz = computeWaveVectorK(this->vecGradient[point].getZ(), (*this).getPulseWidth(), gamma);
+				wavevector_k.setX(kx);
+				wavevector_k.setY(ky);
+				wavevector_k.setZ(kz);
+				wavevector_k.setNorm();
+				
+				walkerPhase = walkerEnergy * cos(wavevector_k.dotProduct(dR) * resolution);
+
+				// add contribution to global sum
+				globalPhase[point] += walkerPhase;
+			}
+		}
+	}
+	
+	
+	// get magnitudes M(k,t)
+    for(int point = 0; point < this->gradientPoints; point++)
+    {
+        this->Mkt.push_back((globalPhase[point]/globalEnergy));
     }
+
+	// delete global phase array
+	delete [] globalPhase;
+	globalPhase = NULL;
 
     double finish_time = omp_get_wtime();
     cout << "Completed."; printElapsedTime(begin_time, finish_time);
