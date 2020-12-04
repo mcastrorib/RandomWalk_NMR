@@ -10,6 +10,8 @@ class image_viewer():
         self.parent = _parent
         self.m_widget = _widget
 
+        self.m_widget.setMinimumSize(QtCore.QSize(350, 350))
+
         # a figure instance to plot on
         self.figure = Figure(figsize=(3,4))
 
@@ -21,6 +23,8 @@ class image_viewer():
         self.toolbar = NavigationToolbar2QT(self.canvas, self.parent)
 
         # these are the app widgets connected to their slot methods
+        self.titleLabel = QtWidgets.QLabel('--- IMAGE VIEWER ---')
+        self.titleLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)        
         self.slideBar = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.slideBar.setMinimum(0)
         self.slideBar.setTickPosition(QtWidgets.QSlider.TicksBothSides)
@@ -36,28 +40,32 @@ class image_viewer():
         self.buttonMinus.setMaximumSize(QtCore.QSize(25, 30))
         self.buttonMinus.setEnabled(False) 
         self.buttonMinus.clicked.connect(self.slideMoveDown)        
-        self.buttonPlot = QtWidgets.QPushButton('View Image')
-        self.buttonPlot.setEnabled(False)
-        self.buttonPlot.clicked.connect(self.plotImage)       
+        self.buttonLoad = QtWidgets.QPushButton('Open')
+        self.buttonLoad.setMinimumSize(QtCore.QSize(50, 40))
+        self.buttonLoad.setEnabled(True)
+        self.buttonLoad.clicked.connect(self.openImage)       
         self.labelDimensions = QtWidgets.QLabel('[h=0,w=0]')
         self.labelSliceId = QtWidgets.QLabel('Slice = 0')
         self.labelSliceId.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
         # set the layouts
         mainLayout = QtWidgets.QVBoxLayout(self.m_widget)
+        mainLayout.addWidget(self.titleLabel)
         mainLayout.addWidget(self.toolbar)
         layoutH2 = QtWidgets.QHBoxLayout()
         layoutH3 = QtWidgets.QHBoxLayout()
         layoutH2.addWidget(self.buttonMinus)        
         layoutH2.addWidget(self.slideBar)        
         layoutH2.addWidget(self.buttonPlus)  
-        layoutH3.addWidget(self.buttonPlot)
         layoutH3.addWidget(self.labelDimensions)
-        layoutH3.addItem(QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.MinimumExpanding))
+        layoutH3.addItem(QtWidgets.QSpacerItem(15, 15, QtWidgets.QSizePolicy.MinimumExpanding))
+        layoutH3.addWidget(self.buttonLoad)
+        layoutH3.addItem(QtWidgets.QSpacerItem(15, 15, QtWidgets.QSizePolicy.MinimumExpanding))
         layoutH3.addWidget(self.labelSliceId)
         mainLayout.addWidget(self.canvas, QtWidgets.QSizePolicy.MinimumExpanding)
         mainLayout.addLayout(layoutH2)
-        mainLayout.addLayout(layoutH3)      
+        mainLayout.addLayout(layoutH3)   
+        mainLayout.setAlignment(QtCore.Qt.AlignTop)   
 
         # initialize the main image data
         self.m_data = None # numpy array
@@ -78,7 +86,7 @@ class image_viewer():
         img = ax.imshow(self.m_data,vmin=0,vmax=255)      
         self.figure.colorbar(img)
         ax.figure.canvas.draw()
-        self.buttonPlot.setEnabled(False)  
+        # self.buttonPlot.setEnabled(False)  
 
     # @Slot()
     def changeValue(self, _value):

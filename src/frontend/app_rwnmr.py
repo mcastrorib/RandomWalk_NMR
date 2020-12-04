@@ -8,6 +8,8 @@ from matplotlib.figure import Figure
 from PyQt5 import QtCore, QtGui, QtWidgets 
 from scipy import ndimage
 from image_viewer import image_viewer
+from setup_screen import setup_screen
+from configfile_screen import configfile_screen
 
 # Inherit from QDialog
 class app_rwnmr(QtWidgets.QMainWindow):
@@ -15,13 +17,17 @@ class app_rwnmr(QtWidgets.QMainWindow):
     def __init__(self, app_name='', parent=None):
         super(app_rwnmr, self).__init__(parent)
 
+        self.m_setup = None
+        self.m_viewer = None
+        self.m_config = None
+
         # setting title 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle(app_name) 
         
         # setting geometry and minimum size
         self.setGeometry(100, 100, 1024, 860) 
-        self.setMinimumSize(QtCore.QSize(700, 700))
+        self.setMinimumSize(QtCore.QSize(1024, 860))
         
         # setting main Widget 
         self.central_widget = QtWidgets.QWidget()
@@ -33,14 +39,17 @@ class app_rwnmr(QtWidgets.QMainWindow):
         # setting two initial windows
         self.active_widgets.append(QtWidgets.QWidget())
         self.active_widgets.append(QtWidgets.QWidget())
+        self.active_widgets.append(QtWidgets.QWidget())
 
         lay = QtWidgets.QGridLayout(self.central_widget)
 
         lay.addWidget(self.active_widgets[0], 0, 0)
         lay.addWidget(self.active_widgets[1], 0, 1)
+        
 
-        lay = QtWidgets.QVBoxLayout(self.active_widgets[0])
-        lay.addWidget(QtWidgets.QTextEdit())
+        # lay = QtWidgets.QVBoxLayout(self.active_widgets[0])
+        self.m_setup = setup_screen(self, self.active_widgets[0])
+        # lay.addWidget(QtWidgets.QTextEdit())
 
         lay = QtWidgets.QGridLayout(self.active_widgets[1])
         self.active_widgets.append(QtWidgets.QWidget())
@@ -48,16 +57,18 @@ class app_rwnmr(QtWidgets.QMainWindow):
         lay.addWidget(self.active_widgets[2], 0, 0)
         lay.addWidget(self.active_widgets[3], 1, 0)
 
-        lay = QtWidgets.QVBoxLayout(self.active_widgets[2])
-        lay.addWidget(QtWidgets.QTextEdit())
+        # lay = QtWidgets.QVBoxLayout(self.active_widgets[2])
+        # lay.addWidget(QtWidgets.QTextEdit())
+
+        # setting config_creation object
+        self.m_config = configfile_screen(self, self.active_widgets[2])
 
         # setting image_viewer object
-        self.m_viewer = None
         self.m_viewer = image_viewer(self, self.active_widgets[3])
 
         # Set file menu  
         self.file_menu = QtWidgets.QMenu('&File', self)
-        self.file_menu.addAction('&Open', self.openImage,
+        self.file_menu.addAction('&Open image', self.openImage,
                                 QtCore.Qt.CTRL + QtCore.Qt.Key_O)
         self.file_menu.addAction('&Quit', self.fileQuit,
                                  QtCore.Qt.CTRL + QtCore.Qt.Key_Q)
@@ -94,5 +105,5 @@ class app_rwnmr(QtWidgets.QMainWindow):
             last_widget_id = len(self.active_widgets)
     
     # method
-    def divideLastWidget():
-        widget_size = len(self.active_widgets)
+    def addConfigTab(self, tabName):
+        self.m_config.createNewTab(tabName)
