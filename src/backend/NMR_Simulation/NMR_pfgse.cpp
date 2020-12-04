@@ -571,7 +571,7 @@ void NMR_PFGSE::writeParameters()
     file << this->exposureTime << ", ";
     file << this->pulseWidth << ", ";
     file << this->giromagneticRatio << ", ";
-	file << this->NMR.getDiffusionCoefficient();
+	file << this->NMR.getDiffusionCoefficient() << ", ";
     file << this->D_sat << ", ";
     file << this->D_msd << ", ";
     file << this->SVp << ", ";
