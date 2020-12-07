@@ -7,6 +7,7 @@ from matplotlib.backends.backend_qt5agg import (FigureCanvasQTAgg, NavigationToo
 from matplotlib.figure import Figure
 from PyQt5 import QtCore, QtGui, QtWidgets 
 from scipy import ndimage
+from setup_tab import setup_tab
 from image_viewer import image_viewer
 from setup_screen import setup_screen
 from configfile_screen import configfile_screen
@@ -17,54 +18,46 @@ class app_rwnmr(QtWidgets.QMainWindow):
     def __init__(self, app_name='', parent=None):
         super(app_rwnmr, self).__init__(parent)
 
-        self.m_setup = None
-        self.m_viewer = None
-        self.m_config = None
+        # Set app major tabs objects as None
+        self.m_setup_tab = None
+        self.m_datavis_tab = None
 
-        # setting title 
+        # Set app title 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle(app_name) 
         
-        # setting geometry and minimum size
+        # Set geometry and minimum size
         self.setGeometry(100, 100, 1024, 860) 
         self.setMinimumSize(QtCore.QSize(1024, 860))
         
-        # setting main Widget 
+        # Set app main QWidget 
         self.central_widget = QtWidgets.QWidget()
-        self.setCentralWidget(self.central_widget)    
-        
-        # setting list of widgets
-        self.active_widgets = []
+        self.setCentralWidget(self.central_widget)   
 
-        # setting two initial windows
-        self.active_widgets.append(QtWidgets.QWidget())
-        self.active_widgets.append(QtWidgets.QWidget())
-        self.active_widgets.append(QtWidgets.QWidget())
+        # Set app major toolbar
+        self.toolbar = self.addToolBar("File")
 
-        lay = QtWidgets.QGridLayout(self.central_widget)
+        # Open 'setup' tab button
+        self.setup_button = QtWidgets.QAction(QtGui.QIcon("icons/setup"), "setup", self)
+        self.toolbar.addAction(self.setup_button)
 
-        lay.addWidget(self.active_widgets[0], 0, 0)
-        lay.addWidget(self.active_widgets[1], 0, 1)
-        
+        # Open 'dataviz' tab button
+        self.dataviz_button = QtWidgets.QAction(QtGui.QIcon("icons/dataviz"), "visualization", self)
+        self.toolbar.addAction(self.dataviz_button)
 
-        # lay = QtWidgets.QVBoxLayout(self.active_widgets[0])
-        self.m_setup = setup_screen(self, self.active_widgets[0])
-        # lay.addWidget(QtWidgets.QTextEdit())
+        # Trigger action from buttons in ToolBar
+        self.toolbar.actionTriggered[QtWidgets.QAction].connect(self.tbpressed)
 
-        lay = QtWidgets.QGridLayout(self.active_widgets[1])
-        self.active_widgets.append(QtWidgets.QWidget())
-        self.active_widgets.append(QtWidgets.QWidget())
-        lay.addWidget(self.active_widgets[2], 0, 0)
-        lay.addWidget(self.active_widgets[3], 1, 0)
+        # Initialize tab screen
+        self.tabs = QtWidgets.QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self.closeTab)
+        self.open_tabs = []
+        self.open_tabs_names = []
 
-        # lay = QtWidgets.QVBoxLayout(self.active_widgets[2])
-        # lay.addWidget(QtWidgets.QTextEdit())
-
-        # setting config_creation object
-        self.m_config = configfile_screen(self, self.active_widgets[2])
-
-        # setting image_viewer object
-        self.m_viewer = image_viewer(self, self.active_widgets[3])
+        # Set the tab layouts
+        layout = QtWidgets.QVBoxLayout(self.central_widget)  
+        layout.addWidget(self.tabs) 
 
         # Set file menu  
         self.file_menu = QtWidgets.QMenu('&File', self)
@@ -79,31 +72,90 @@ class app_rwnmr(QtWidgets.QMainWindow):
         self.help_menu.addAction("About...", self.aboutDlg, QtCore.Qt.CTRL + QtCore.Qt.Key_H)
         self.menuBar().addSeparator()
         self.menuBar().addMenu(self.help_menu)
+        return
 
-
+    # @Slot()
+    def closeTab(self, index):
+        currentQWidget = self.open_tabs[index]
+        currentQWidget.deleteLater()
+        self.tabs.removeTab(index)
+        self.open_tabs.pop(index)
+        name = self.open_tabs_names[index]
+        self.open_tabs_names.pop(index)
+        
+        if(name == "setup"):
+            self.m_setup_tab = None
+        elif(name == "dataviz"):
+            self.m_datavis_tab = None
+        
+        return
+   
     
+    # @Slot()
     def fileQuit(self):
-        if (self.m_viewer != None and len(self.m_viewer.m_map) > 0):
-            self.m_viewer.removeTempImages()
+        if (self.m_setup_tab.m_viewer != None and len(self.m_setup_tab.m_viewer.m_map) > 0):
+            self.m_setup_tab.m_viewer.removeTempImages()
         self.close()
+        return
+
+    # @Slot()
+    def tbpressed(self, a):
+        if a.text() == "setup":
+            self.createNewTab('setup')
+        elif a.text() == "visualization":
+            self.createNewTab("dataviz")
+        return
 
 
     # @Slot()
     def aboutDlg(self):
-        sm = """pyTomoViewer\nVersion 1.0.0\n2020\nLicense GPL 3.0\n\nThe authors and the involved Institutions are not responsible for the use or bad use of the program and their results. The authors have no legal dulty or responsability for any person or company for the direct or indirect damage caused resulting from the use of any information or usage of the program available here. The user is responsible for all and any conclusion made with the program. There is no warranty for the program use. """
+        sm = """RWNMR\nVersion 1.0.0\n2020\nLicense GPL 3.0\n\nThe authors and the involved Institutions are not responsible for the use or bad use of the program and their results. The authors have no legal dulty or responsability for any person or company for the direct or indirect damage caused resulting from the use of any information or usage of the program available here. The user is responsible for all and any conclusion made with the program. There is no warranty for the program use. """
         msg = QtWidgets.QMessageBox()
         msg.setText(sm)
         msg.setWindowTitle("About")
         msg.exec_()
+        return
     
     # @Slot()
     def openImage(self):
-        if(self.m_viewer != None):
-            self.m_viewer.openImage()
+        if(self.m_setup_tab != None):
+            if(len(self.m_setup_tab.m_viewer.m_map) > 0):
+                self.m_setup_tab.m_viewer.clear()        
+            self.m_setup_tab.m_viewer.openImage()
         else:
-            self.divideLastWidget()
-            last_widget_id = len(self.active_widgets)
+            self.createNewTab("setup")
+            self.m_setup_tab.m_viewer.openImage()
+        return
     
-    # method
+    # Class methods
     def addConfigTab(self, tabName):
-        self.m_config.createNewTab(tabName)
+        self.m_setup_tab.m_config.createNewTab(tabName)
+        return
+
+    def createNewTab(self, tabName):
+        if(tabName not in self.open_tabs_names):   
+            new_tab = QtWidgets.QWidget()
+            self.open_tabs.append(new_tab)
+            self.open_tabs_names.append(tabName)
+            self.tabs.addTab(new_tab, tabName)
+
+            if(tabName == 'setup'):
+                self.createSetupTab()
+            elif(tabName == 'dataviz'):
+                self.createDataVizTab()
+
+            lastTabIndex = len(self.open_tabs) - 1
+            self.tabs.setCurrentIndex(lastTabIndex)
+        else:
+            tab_index = self.open_tabs_names.index(tabName)
+            self.tabs.setCurrentIndex(tab_index)
+        return  
+    
+    def createDataVizTab(self):
+        print("creating data viz tab")
+        return
+
+    def createSetupTab(self):
+        if(self.m_setup_tab == None):
+            self.m_setup_tab = setup_tab(self, self.open_tabs[self.open_tabs_names.index('setup')])
+        return

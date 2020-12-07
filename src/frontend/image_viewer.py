@@ -9,6 +9,7 @@ class image_viewer():
     def __init__(self, _parent, _widget):
         self.parent = _parent
         self.m_widget = _widget
+        self.filepaths = None
 
         self.m_widget.setMinimumSize(QtCore.QSize(350, 350))
 
@@ -71,6 +72,9 @@ class image_viewer():
         self.m_data = None # numpy array
         self.m_image = None # QImage object
         self.m_map = []  # path of all image files 
+    
+    def clear(self):
+        self.__del__()
 
     def __del__(self):
         # remove temporary data: 
@@ -109,7 +113,7 @@ class image_viewer():
         files, _ = QtWidgets.QFileDialog.getOpenFileNames(self.parent, "Open uCT-image", "","Image Files (*.png);;Image Files (*.png)", options=options)
         if files:
             if len(self.m_map) > 0:
-                self.removeTempImagens()
+                self.removeTempImages()
             self.m_map.clear() # remove all items
             for filepath in files:
                 self.m_map.append( filepath )
@@ -120,6 +124,9 @@ class image_viewer():
             self.slideBar.setValue(0)
             self.slideBar.setEnabled(True)
             self.labelSliceId.setText("Slice = 1")
+
+            self.filepaths = files
+            print(self.filepaths)
 
     # @Slot()
     def aboutDlg(self):
