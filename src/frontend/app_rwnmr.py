@@ -27,7 +27,7 @@ class app_rwnmr(QtWidgets.QMainWindow):
         self.setWindowTitle(app_name) 
         
         # Set geometry and minimum size
-        self.setGeometry(100, 100, 1024, 860) 
+        self.setGeometry(100, 100, 1024, 900) 
         self.setMinimumSize(QtCore.QSize(1024, 860))
         
         # Set app main QWidget 
@@ -93,7 +93,7 @@ class app_rwnmr(QtWidgets.QMainWindow):
     
     # @Slot()
     def fileQuit(self):
-        if (self.m_setup_tab.m_viewer != None and len(self.m_setup_tab.m_viewer.m_map) > 0):
+        if (self.m_setup_tab != None and self.m_setup_tab.m_viewer != None and len(self.m_setup_tab.m_viewer.m_map) > 0):
             self.m_setup_tab.m_viewer.removeTempImages()
         self.close()
         return
@@ -128,8 +128,8 @@ class app_rwnmr(QtWidgets.QMainWindow):
         return
     
     # Class methods
-    def addConfigTab(self, tabName):
-        self.m_setup_tab.m_config.createNewTab(tabName)
+    def addConfigTab(self, tabName, index=-1):
+        self.m_setup_tab.m_config.createNewTab(tabName, index)
         return
 
     def createNewTab(self, tabName):

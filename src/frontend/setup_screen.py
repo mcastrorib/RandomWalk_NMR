@@ -5,8 +5,11 @@ class setup_screen():
         self.parent = _parent
         self.m_widget = _widget
 
-        self.procedure_boxes = []
+        self.procedures = []
         self.procedure_paths = []
+        self.procedure_tabs = []
+        self.procedure_buttons = []
+        self.procedure_layouts = []
 
         # these are the app widgets connected to their slot methods
         self.titleLabel = QtWidgets.QLabel('--- RWNMR SETUP ---')
@@ -30,11 +33,16 @@ class setup_screen():
         self.uctConfigCreateButton = QtWidgets.QPushButton('Create')
         self.uctConfigCreateButton.clicked.connect(self.createUCTConfigFile)      
 
-        # Set add procedure
+        # Set procedures zone
         self.procedureLabel = QtWidgets.QLabel("-- Procedures --")
         self.procedureLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
-        self.addProcedureButton = QtWidgets.QPushButton("+ add procedure")
-        self.addProcedureButton.clicked.connect(self.addProcedure) 
+        
+        # Set add procedure
+        procedureOptions = ['cpmg', 'pfgse', 'ga']
+        self.newProcedureBox = QtWidgets.QComboBox()
+        self.newProcedureBox.addItems(procedureOptions)
+        self.addProcedureButton = QtWidgets.QPushButton("Add")
+        self.addProcedureButton.clicked.connect(lambda: self.addProcedure(self.newProcedureBox.currentText())) 
         
 
         # set the layouts
@@ -65,7 +73,11 @@ class setup_screen():
         self.addLayout.addWidget(QtWidgets.QLabel(''))
         self.addLayout.addWidget(QtWidgets.QLabel(''))
         self.addLayout.addWidget(QtWidgets.QLabel(''))
-        self.addLayout.addWidget(self.addProcedureButton)  
+        self.addHBLayout = QtWidgets.QHBoxLayout()
+        self.addHBLayout.addWidget(QtWidgets.QLabel('New procedure:'))
+        self.addHBLayout.addWidget(self.newProcedureBox)        
+        self.addHBLayout.addWidget(self.addProcedureButton)
+        self.addLayout.addLayout(self.addHBLayout)
 
         # adding layouts to main
         self.mainLayout.addLayout(layoutH2a)
@@ -103,49 +115,52 @@ class setup_screen():
         return
 
     # @Slot()
-    def addProcedure(self):
-        print("Adding procedure")
-        procedureOptions = ['cpmg', 'pfgse', 'ga']
+    def addProcedure(self, procedure):
+        print("Adding", procedure, "procedure")
 
-        if(self.procedure_boxes != None):
-            index = len(self.procedure_boxes)            
+        index = len(self.procedures)            
 
         # set RW config widgets
-        newLabel1 = QtWidgets.QLabel('Procedure:')
-        newBox = QtWidgets.QComboBox()        
-        newBox.addItems(procedureOptions)
-        newLabel2 = QtWidgets.QLabel('Configuration file:')
+        newLabel1 = QtWidgets.QLabel(procedure + ' configuration file:')
         newLineEdit = QtWidgets.QLineEdit('default')
         newLineEdit.setEnabled(False)
         newOpenButton = QtWidgets.QPushButton('Open')
         newOpenButton.clicked.connect(lambda: self.getProcedureConfigPath(index))
         newCreateButton = QtWidgets.QPushButton('Create')
         newCreateButton.clicked.connect(lambda: self.createProcedureConfigFile(index))
+        newRemoveButton = QtWidgets.QPushButton('Remove')
+        newRemoveButton.clicked.connect(lambda: self.removeProcedure(index))
+        
 
         # set new config layout
         layoutH2a = QtWidgets.QHBoxLayout()
         layoutH2a.addWidget(newLabel1)
-        layoutH2a.addWidget(newBox)
 
         layoutH2b = QtWidgets.QHBoxLayout()
-        layoutH2b.addWidget(newLabel2)
         layoutH2b.addWidget(newLineEdit)
         layoutH2b.addWidget(newOpenButton)
         layoutH2b.addWidget(newCreateButton) 
-
+        layoutH2b.addWidget(newRemoveButton) 
+        
         blankLayout = QtWidgets.QVBoxLayout()
-        blankLayout.addWidget(QtWidgets.QLabel(''))        
+        blankLayout.addWidget(QtWidgets.QLabel(''))   
+
+        procedureLayout = QtWidgets.QVBoxLayout()
+        procedureLayout.addLayout(layoutH2a)
+        procedureLayout.addLayout(layoutH2b) 
+        procedureLayout.addLayout(blankLayout)     
 
         # adding layouts to main
-        self.mainLayout.addLayout(layoutH2a)
-        self.mainLayout.addLayout(layoutH2b) 
-        self.mainLayout.addLayout(blankLayout) 
+        self.mainLayout.addLayout(procedureLayout)
         self.deleteBox(self.addLayout)
         self.createAddProcedureLayout()
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)  
 
-        self.procedure_boxes.append(newBox)
+        self.procedures.append(procedure)
         self.procedure_paths.append(newLineEdit)
+        self.procedure_tabs.append(None)
+        self.procedure_buttons.append(newCreateButton)
+        self.procedure_layouts.append(procedureLayout)
         return
 
     # @Slot()
@@ -180,7 +195,7 @@ class setup_screen():
 
     # @Slot()
     def getProcedureConfigPath(self, index):
-        print("opening", self.procedure_boxes[index].currentText(), "config file", index)
+        print("opening", self.procedures[index], "config file", index)
         options = QtWidgets.QFileDialog.Options()
         filepath, _ = QtWidgets.QFileDialog.getOpenFileName(self.parent, "Open", "","Config Files (*.config);;Config Files (*.config)", options=options)
         if filepath != '':
@@ -190,10 +205,12 @@ class setup_screen():
 
     # @Slot()
     def createProcedureConfigFile(self, index):
-        print("creating ", str(self.procedure_boxes[index].currentText()), "config file", index)
-        self.parent.addConfigTab(str(self.procedure_boxes[index].currentText()))
+        print("creating ", str(self.procedures[index]), "config file", index)
+        self.parent.addConfigTab(str(self.procedures[index]), index)
+        self.procedure_buttons[index].setEnabled(False)
         return
     
+    # Method
     def deleteItemsOfLayout(self, layout):
         if layout is not None:
             while layout.count():
@@ -204,6 +221,7 @@ class setup_screen():
                 else:
                     self.deleteItemsOfLayout(item.layout())
     
+    # Method
     def deleteBox(self, box):
         for i in range(self.mainLayout.count()):
             layout_item = self.mainLayout.itemAt(i)
@@ -212,13 +230,30 @@ class setup_screen():
                 self.mainLayout.removeItem(layout_item)
                 break
     
+    # Method
     def createAddProcedureLayout(self):
+        # Set add procedure
+        procedureOptions = ['cpmg', 'pfgse', 'ga']
+        self.newProcedureBox = QtWidgets.QComboBox()
+        self.newProcedureBox.addItems(procedureOptions)
+        self.addProcedureButton = QtWidgets.QPushButton("Add")
+        self.addProcedureButton.clicked.connect(lambda: self.addProcedure(self.newProcedureBox.currentText()))
+
         self.addLayout = QtWidgets.QVBoxLayout()
         self.addLayout.addWidget(QtWidgets.QLabel(''))
         self.addLayout.addWidget(QtWidgets.QLabel(''))
         self.addLayout.addWidget(QtWidgets.QLabel(''))
-        self.addLayout.addWidget(self.addProcedureButton)  
+        self.addHBLayout = QtWidgets.QHBoxLayout()
+        self.addHBLayout.addWidget(QtWidgets.QLabel('New procedure:'))
+        self.addHBLayout.addWidget(self.newProcedureBox)        
+        self.addHBLayout.addWidget(self.addProcedureButton)
+        self.addLayout.addLayout(self.addHBLayout) 
 
         # adding layouts to main
         self.mainLayout.addLayout(self.addLayout) 
         return 
+
+    # @Slot()
+    def removeProcedure(self, index):
+        self.deleteBox(self.procedure_layouts[index])
+        return
