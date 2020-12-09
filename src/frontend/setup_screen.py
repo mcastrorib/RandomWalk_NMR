@@ -87,31 +87,6 @@ class setup_screen():
         self.mainLayout.addLayout(layout3)
         self.mainLayout.addLayout(self.addLayout)     
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)  
-
-        
-
-        # self.slideBar = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        # self.slideBar.setMinimum(0)
-        # self.slideBar.setTickPosition(QtWidgets.QSlider.TicksBothSides)
-        # self.slideBar.setTickInterval(1)        
-        # self.slideBar.setSingleStep(1)
-        # self.slideBar.setEnabled(False)
-        # self.slideBar.valueChanged[int].connect(self.changeValue)
-        # self.buttonPlus = QtWidgets.QPushButton('+')
-        # self.buttonPlus.setMaximumSize(QtCore.QSize(25, 30))
-        # self.buttonPlus.setEnabled(False)
-        # self.buttonPlus.clicked.connect(self.slideMoveUp)
-        # self.buttonMinus = QtWidgets.QPushButton('-')
-        # self.buttonMinus.setMaximumSize(QtCore.QSize(25, 30))
-        # self.buttonMinus.setEnabled(False) 
-        # self.buttonMinus.clicked.connect(self.slideMoveDown)        
-        # self.buttonLoad = QtWidgets.QPushButton('Open')
-        # self.buttonLoad.setMinimumSize(QtCore.QSize(50, 40))
-        # self.buttonLoad.setEnabled(True)
-        # self.buttonLoad.clicked.connect(self.openImage)       
-        # self.labelDimensions = QtWidgets.QLabel('[h=0,w=0]')
-        # self.labelSliceId = QtWidgets.QLabel('Slice = 0')
-        # self.labelSliceId.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         return
 
     # @Slot()

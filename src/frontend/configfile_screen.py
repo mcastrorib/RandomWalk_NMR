@@ -1,5 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets 
 
+# this should not be used like this...
+CONFIG_PATH = '/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/'
+
 class configfile_screen():
     def __init__(self, _parent, _widget):
         self.parent = _parent
@@ -10,6 +13,7 @@ class configfile_screen():
         self.nameLineEdit = None
         self.walkersLineEdit = None
         self.placementBox = None
+        self.placementDeviationLineEdit = None
         self.rhoTypeBox = None
         self.rhoLineEdit = None
         self.D0LineEdit = None
@@ -46,6 +50,7 @@ class configfile_screen():
 
         # Initialize tab screen
         self.tabs = QtWidgets.QTabWidget()
+        self.tabs.setFixedWidth(480)
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.open_tabs = []
@@ -137,6 +142,9 @@ class configfile_screen():
         placementOptions = ['random', 'point', 'cubic']
         self.placementBox.addItems(placementOptions)
 
+        deviationLabel = QtWidgets.QLabel('Deviation:')
+        self.placementDeviationLineEdit = QtWidgets.QLineEdit('0')
+
         stepsLabel = QtWidgets.QLabel('Steps/echo:')
         self.stepsLineEdit = QtWidgets.QLineEdit()
         self.stepsLineEdit.setText('1')
@@ -218,7 +226,9 @@ class configfile_screen():
         walkersLayout.addWidget(walkersLabel)
         walkersLayout.addWidget(self.walkersLineEdit)  
         walkersLayout.addWidget(placementLabel)
-        walkersLayout.addWidget(self.placementBox)  
+        walkersLayout.addWidget(self.placementBox)
+        walkersLayout.addWidget(deviationLabel)
+        walkersLayout.addWidget(self.placementDeviationLineEdit)  
 
         stepsLayout = QtWidgets.QHBoxLayout()
         stepsLayout.addWidget(stepsLabel)
@@ -312,7 +322,33 @@ class configfile_screen():
 
     # @Slot()
     def saveRWConfig(self):
-        filename = self.rwFileLineEdit.text() + ".config"
+        filename = CONFIG_PATH + self.rwFileLineEdit.text() + ".config"
+        with open(filename, "w") as file:
+            file.write("--- RWNMR Configuration\n")
+            file.write("NAME: {}\n".format(self.nameLineEdit.text()))
+            
+            file.write("-- PARAMETERS\n")
+            file.write("WALKERS: {}\n".format(self.walkersLineEdit.text()))
+            file.write("WALKERS_PLACEMENT: {}\n".format(self.placementBox.currentText()))
+            file.write("PLACEMENT_DEVIATION: {}\n".format(self.placementDeviationLineEdit.text()))
+            file.write("RHO_TYPE: {}\n".format(self.rhoTypeBox.currentText()))           
+            file.write("RHO: {}\n".format(self.rhoLineEdit.text()))
+            file.write("D0: {}\n".format(self.D0LineEdit.text()))
+            file.write("STEPS_PER_ECHO: {}\n".format(self.stepsLineEdit.text()))
+            file.write("SEED: {}\n".format(self.seedLineEdit.text()))
+
+            file.write("-- COLLISION HISTOGRAMS\n")
+            file.write("HISTOGRAMS: {}\n".format(self.histLineEdit.text()))
+            file.write("HISTOGRAM_SIZE: {}\n".format(self.histSizeLineEdit.text()))
+
+            file.write("-- PERFORMANCE\n")
+            file.write("OPENMP_USAGE: {}\n".format(self.ompBox.currentText()))
+            file.write("GPU_USAGE: {}\n".format(self.gpuBox.currentText()))
+            
+            file.write("-- SAVE MODE\n")
+            file.write("SAVE_IMG_INFO: {}\n".format(self.saveInfoBox.currentText()))
+            file.write("SAVE_BINIMG: {}\n".format(self.saveBinImgBox.currentText()))           
+            
         self.parent.m_setup_tab.m_setup.rwConfigLineEdit.setText(filename)
         return
     
@@ -451,7 +487,7 @@ class configfile_screen():
     
     # @Slot()
     def saveUCTConfig(self):
-        filename = self.uctFileLineEdit.text() + ".config"
+        filename = CONFIG_PATH + self.uctFileLineEdit.text() + ".config"
         self.parent.m_setup_tab.m_setup.uctConfigLineEdit.setText(filename)
         return
 
@@ -751,7 +787,43 @@ class configfile_screen():
         
     # @Slot()
     def savePFGSEConfig(self, _index):
-        filename = self.procedures_qwidgets[_index]["configFilename"].text() + ".config"
+        filename = CONFIG_PATH + self.procedures_qwidgets[_index]["configFilename"].text() + ".config"
+        with open(filename, "w") as file:
+            file.write("--- PFGSE Configuration\n")
+            file.write("-- PHYSICAL ATTRIBUTES\n")
+            file.write("D0: {}\n".format(self.procedures_qwidgets[_index]["D0"].text()))
+            file.write("GIROMAGNETIC_RATIO: {}\n".format(self.procedures_qwidgets[_index]["gyro"].text()))
+            file.write("PULSE_WIDTH: {}\n".format(self.procedures_qwidgets[_index]["pulseWidth"].text()))
+            
+            file.write("-- GRADIENT VECTOR\n")
+            file.write("GRADIENT SAMPLES: {}\n".format(self.procedures_qwidgets[_index]["gradientSamples"].text()))
+            gradX_str = self.procedures_qwidgets[_index]["maxGradientX"].text()
+            gradY_str = self.procedures_qwidgets[_index]["maxGradientY"].text()
+            gradZ_str = self.procedures_qwidgets[_index]["maxGradientZ"].text()            
+            gradientVectorString = "{" + gradX_str + ", " + gradY_str + ", " + gradZ_str + "}"
+            file.write("MAX_GRADIENT: {}\n".format(gradientVectorString))
+
+            file.write("-- TIME SEQUENCE\n")
+            file.write("TIME_SEQ: {}\n".format(self.procedures_qwidgets[_index]["timeSequence"].currentText()))
+            file.write("TIME_SAMPLES: {}\n".format(self.procedures_qwidgets[_index]["timeSamples"].text()))
+            file.write("TIME_VALUES: {}\n".format(self.procedures_qwidgets[_index]["timeValues"].text()))
+            file.write("TIME_MIN: {}\n".format(self.procedures_qwidgets[_index]["timeMin"].text()))
+            file.write("TIME_MAX: {}\n".format(self.procedures_qwidgets[_index]["timeMax"].text()))
+            file.write("APPLY_SCALE_FACTOR: {}\n".format(self.procedures_qwidgets[_index]["scaleFactor"].currentText()))
+            file.write("INSPECTION_LENGTH: {}\n".format(self.procedures_qwidgets[_index]["inspectionLength"].text()))
+
+            file.write("-- THRESHOLD\n")            
+            file.write("THRESHOLD_TYPE: {}\n".format(self.procedures_qwidgets[_index]["thresholdType"].currentText()))
+            file.write("THRESHOLD_VALUE: {}\n".format(self.procedures_qwidgets[_index]["thresholdValue"].text()))
+
+            file.write("-- SAVE MODE\n")
+            file.write("SAVE_MODE: {}\n".format(self.procedures_qwidgets[_index]["saveMode"].currentText()))
+            file.write("SAVE_PFGSE: {}\n".format(self.procedures_qwidgets[_index]["savePFGSE"].currentText()))
+            file.write("SAVE_COLLISIONS: {}\n".format(self.procedures_qwidgets[_index]["saveCollisions"].currentText()))
+            file.write("SAVE_DECAY: {}\n".format(self.procedures_qwidgets[_index]["saveDecay"].currentText()))
+            file.write("SAVE_HISTOGRAM: {}\n".format(self.procedures_qwidgets[_index]["saveHistogram"].currentText()))
+            file.write("SAVE_HISTOGRAM_LIST: {}\n".format(self.procedures_qwidgets[_index]["saveHistList"].currentText()))
+
         self.parent.m_setup_tab.m_setup.procedure_paths[_index].setText(filename)
         return
     
@@ -997,8 +1069,33 @@ class configfile_screen():
         
     # @Slot()
     def saveCPMGConfig(self, _index):
-        filename = self.procedures_qwidgets[_index]["configFilename"].text() + ".config"
-        self.parent.m_setup_tab.m_setup.procedure_paths[_index].setText(filename)
+        filename = CONFIG_PATH + self.procedures_qwidgets[_index]["configFilename"].text() + ".config"
+        with open(filename, "w") as file:
+            file.write("--- CPMG Configuration\n")
+            file.write("METHOD: {}\n".format(self.procedures_qwidgets[_index]["method"].currentText()))
+            file.write("D0: {}\n".format(self.procedures_qwidgets[_index]["D0"].text()))
+            file.write("OBS_TIME: {}\n".format(self.procedures_qwidgets[_index]["expTime"].text()))
+            
+            file.write("-- LAPLACE INVERSION PARAMETERS\n")
+            file.write("MIN_T2: {}\n".format(self.procedures_qwidgets[_index]["minT2"].text()))
+            file.write("MAX_T2: {}\n".format(self.procedures_qwidgets[_index]["maxT2"].text()))
+            file.write("USE_T2_LOGSPACE: {}\n".format(self.procedures_qwidgets[_index]["T2bins"].text()))
+            file.write("NUM_T2_BINS: {}\n".format(self.procedures_qwidgets[_index]["logspace"].currentText()))
+            file.write("MIN_LAMBDA: {}\n".format(self.procedures_qwidgets[_index]["minLambda"].text()))
+            file.write("MAX_LAMBDA: {}\n".format(self.procedures_qwidgets[_index]["maxLambda"].text()))
+            file.write("NUM_LAMBDAS: {}\n".format(self.procedures_qwidgets[_index]["numLambdas"].text()))
+            file.write("PRUNE_NUM: {}\n".format(self.procedures_qwidgets[_index]["pruneNum"].text()))
+            file.write("NOISE_AMP: {}\n".format(self.procedures_qwidgets[_index]["noiseAmp"].text()))
+
+            file.write("-- SAVE MODE\n")
+            file.write("SAVE_MODE: {}\n".format(self.procedures_qwidgets[_index]["saveMode"].currentText()))
+            file.write("SAVE_T2: {}\n".format(self.procedures_qwidgets[_index]["saveT2"].currentText()))
+            file.write("SAVE_COLLISIONS: {}\n".format(self.procedures_qwidgets[_index]["saveCollisions"].currentText()))
+            file.write("SAVE_DECAY: {}\n".format(self.procedures_qwidgets[_index]["saveDecay"].currentText()))
+            file.write("SAVE_HISTOGRAM: {}\n".format(self.procedures_qwidgets[_index]["saveHistogram"].currentText()))
+            file.write("SAVE_HISTOGRAM_LIST: {}\n".format(self.procedures_qwidgets[_index]["saveHistList"].currentText()))
+
+        self.parent.m_setup_tab.m_setup.procedure_paths[_index].setText(filename)            
         return
 
     def createNewGAConfigTab(self):
