@@ -8,6 +8,14 @@
 
 #include "../Math/Vector3D.h"
 
+#ifndef CONFIG_ROOT
+#define CONFIG_ROOT "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/"
+#endif
+
+#ifndef PFGSE_CONFIG_DEFAULT
+#define PFGSE_CONFIG_DEFAULT "./default/pfgse.config"
+#endif
+
 using namespace std;
 
 class pfgse_config

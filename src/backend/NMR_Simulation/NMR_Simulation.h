@@ -155,6 +155,7 @@ public:
     void setImage(ImagePath path, uint images);
     void readImage();
     void loadRockImage();
+    void loadRockImageFromList();
     void createBinaryMap(Mat &_rockImage, uint slice);
     void createBitBlockMap();
 

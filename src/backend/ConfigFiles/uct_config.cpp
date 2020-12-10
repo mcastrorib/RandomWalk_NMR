@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <sstream>
 #include <fstream>
+#include <vector>
 #include <string>
 #include <stdint.h>
 
@@ -13,7 +14,15 @@ using namespace std;
 // default constructors
 uct_config::uct_config(const string configFile) : config_filepath(configFile)
 {
-	(*this).readConfigFile(configFile);
+	this->IMG_FILES_LIST = "Empty";
+	vector<string> IMG_FILES();
+
+	string default_dirpath = CONFIG_ROOT;
+	string default_filename = UCT_CONFIG_DEFAULT;
+	(*this).readConfigFile(default_dirpath + default_filename);
+	if(configFile != (default_dirpath + default_filename)) (*this).readConfigFile(configFile);
+	if((*this).getImgFilesList() == "Empty") (*this).createImgFileList();	
+	(*this).readImgFiles();
 }
 
 //copy constructors
@@ -28,6 +37,8 @@ uct_config::uct_config(const uct_config &otherConfig)
     this->SLICES = otherConfig.SLICES;
     this->RESOLUTION = otherConfig.RESOLUTION;
     this->VOXEL_DIVISION = otherConfig.VOXEL_DIVISION;
+	this->IMG_FILES_LIST = otherConfig.IMG_FILES_LIST;
+	this->IMG_FILES = otherConfig.IMG_FILES;
 }
 
 // read config file
@@ -67,6 +78,7 @@ void uct_config::readConfigFile(const string configFile)
 			else if(token == "SLICES") (*this).readSlices(content);
 			else if(token == "RESOLUTION") (*this).readResolution(content);
 			else if(token == "VOXEL_DIVISION") (*this).readVoxelDivision(content);
+			else if(token == "IMG_FILES_LIST") (*this).readImgFilesList(content);
 			
 		}
     } 
@@ -113,6 +125,82 @@ void uct_config::readResolution(string s)
 void uct_config::readVoxelDivision(string s)
 {
 	this->VOXEL_DIVISION = std::stoi(s);
+}
+
+void uct_config::readImgFilesList(string s)
+{
+	this->IMG_FILES_LIST = s;
+}
+
+void uct_config::readImgFiles()
+{
+	const string filepath = (*this).getImgFilesList();
+	cout << "reading image list from file " << filepath << "...";
+
+    ifstream fileObject;
+    fileObject.open(filepath, ios::in);
+    if (fileObject.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+	// reserve memory for image file list
+	if(this->IMG_FILES.size() > 0) this->IMG_FILES.clear();
+	this->IMG_FILES.reserve((*this).getSlices());
+
+    string line;
+	uint slice = 0;
+    while(fileObject)
+    {
+    	getline(fileObject, line);
+		cout << line << endl;
+    	if(slice < (*this).getSlices()) this->IMG_FILES.push_back(line);
+		slice++;
+    } 
+	cout << "img list size: " << this->IMG_FILES.size() << endl;
+    cout << "Ok" << endl;
+    fileObject.close();
+}
+
+void uct_config::createImgFileList()
+{
+    cout << "creating image file list...";
+
+	string dirpath = CONFIG_ROOT;
+	string filepath = dirpath + "/imgs/ImagesList.txt";
+
+    ofstream fileObject;
+    fileObject.open(filepath, ios::out);
+    if (fileObject.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+	// constant strings
+    string currentDirectory = (*this).getDirPath();
+    string currentFileName = (*this).getFilename();
+    string currentExtension = (*this).getExtension();
+	uint firstImage = (*this).getFirstIdx();
+    uint digits = (*this).getDigits();
+	uint slices = (*this).getSlices();
+
+    // variable strings
+    string currentFileID;
+    string currentImagePath;    
+
+    for (uint slice = 0; slice < slices; slice++)
+    {
+        // identifying next image to be read
+        currentFileID = (*this).convertFileIDToString(firstImage + slice, digits);
+        currentImagePath = currentDirectory + currentFileName + currentFileID + currentExtension;
+
+        fileObject << currentImagePath << endl;
+    }	  
+
+	(*this).readImgFilesList(filepath);    
+    cout << "Ok. (" << time << " seconds)." << endl;
 }
 
 

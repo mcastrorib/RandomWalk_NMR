@@ -17,8 +17,12 @@ using namespace std;
 pfgse_config::pfgse_config(const string configFile) : config_filepath(configFile)
 {
     vector<double> TIME_VALUES();
+
+    string default_dirpath = CONFIG_ROOT;
+    string default_filename = PFGSE_CONFIG_DEFAULT;
+    (*this).readConfigFile(default_dirpath + default_filename);
 	(*this).readConfigFile(configFile);
-    (*this).createTimeSamples();
+    if(configFile != (default_dirpath + default_filename)) (*this).createTimeSamples();
 }
 
 //copy constructors

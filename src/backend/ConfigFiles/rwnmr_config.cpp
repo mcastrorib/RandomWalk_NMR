@@ -15,7 +15,11 @@ using namespace std;
 rwnmr_config::rwnmr_config(const string configFile) : config_filepath(configFile)
 {
 	vector<double> RHO();
-	(*this).readConfigFile(configFile);
+	
+	string default_dirpath = CONFIG_ROOT;
+	string default_filename = RWNMR_CONFIG_DEFAULT;
+	(*this).readConfigFile(default_dirpath + default_filename);
+	if(configFile != (default_dirpath + default_filename)) (*this).readConfigFile(configFile);
 }
 
 //copy constructors

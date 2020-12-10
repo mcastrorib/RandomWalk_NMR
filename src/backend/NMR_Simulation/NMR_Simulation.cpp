@@ -354,8 +354,18 @@ void NMR_Simulation::setTimeFramework(double _time)
 
 void NMR_Simulation::readImage()
 {
-    (*this).assemblyImagePath();
-    (*this).loadRockImage();
+    if(this->uCT_config.IMG_FILES.size() == this->uCT_config.SLICES)
+    {
+        this->numberOfImages = this->uCT_config.SLICES;
+        this->depth = this->uCT_config.SLICES;
+        (*this).loadRockImageFromList();
+    }
+    else
+    {
+        (*this).assemblyImagePath();
+        (*this).loadRockImage();
+    } 
+
     (*this).createBitBlockMap();
     (*this).countPoresInBitBlock();
 }
@@ -532,6 +542,40 @@ void NMR_Simulation::loadRockImage()
     time = omp_get_wtime() - time;
     cout << "Ok. (" << time << " seconds)." << endl;
 }
+
+void NMR_Simulation::loadRockImageFromList()
+{
+    double time = omp_get_wtime();
+    cout << "loading rock image from list...";
+
+    // reserve memory for binaryMap
+    this->binaryMap.reserve(numberOfImages);
+
+    // variable strings
+    string currentImagePath;
+
+    for (uint slice = 0; slice < this->numberOfImages; slice++)
+    {
+        currentImagePath = this->uCT_config.getImgFile(slice);
+
+        Mat rockImage = imread(currentImagePath, 1);
+
+        if (!rockImage.data)
+        {
+            cout << "Error: No image data in file " << currentImagePath << endl;
+            exit(1);
+        }
+
+        this->height = rockImage.rows;
+        this->width = rockImage.cols * rockImage.channels();
+
+        (*this).createBinaryMap(rockImage, slice);
+    }
+
+    time = omp_get_wtime() - time;
+    cout << "Ok. (" << time << " seconds)." << endl;
+}
+
 
 void NMR_Simulation::createBinaryMap(Mat &_rockImage, uint slice)
 {

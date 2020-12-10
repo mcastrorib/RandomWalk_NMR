@@ -6,6 +6,14 @@
 #include <string>
 #include <vector>
 
+#ifndef CONFIG_ROOT
+#define CONFIG_ROOT "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/"
+#endif
+
+#ifndef GA_CONFIG_DEFAULT
+#define GA_CONFIG_DEFAULT "./default/ga.config"
+#endif
+
 using namespace std;
 
 class ga_config

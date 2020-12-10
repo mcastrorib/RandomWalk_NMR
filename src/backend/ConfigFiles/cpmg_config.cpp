@@ -14,8 +14,10 @@ using namespace std;
 // default constructors
 cpmg_config::cpmg_config(const string configFile) : config_filepath(configFile)
 {
-    vector<double> TIME_VALUES();
-	(*this).readConfigFile(configFile);
+    string default_dirpath = CONFIG_ROOT;
+    string default_filename = CPMG_CONFIG_DEFAULT;
+    (*this).readConfigFile(default_dirpath + default_filename);
+	if(configFile != (default_dirpath + default_filename)) (*this).readConfigFile(configFile);
 }
 
 //copy constructors

@@ -2,8 +2,19 @@
 #define UCT_CONFIG_H_
 
 // include C++ standard libraries
+#include <sstream>
+#include <iomanip>
 #include <iostream>
+#include <vector>
 #include <string>
+
+#ifndef CONFIG_ROOT
+#define CONFIG_ROOT "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/"
+#endif
+
+#ifndef UCT_CONFIG_DEFAULT
+#define UCT_CONFIG_DEFAULT "./default/uct.config"
+#endif
 
 using namespace std;
 
@@ -19,6 +30,8 @@ public:
     uint SLICES;
     double RESOLUTION;
     uint VOXEL_DIVISION;
+    string IMG_FILES_LIST;
+    vector<string> IMG_FILES;
 
 
 
@@ -46,6 +59,8 @@ public:
     void readSlices(string s); 
     void readResolution(string s);
     void readVoxelDivision(string s);
+    void readImgFilesList(string s);
+    void readImgFiles();
 
     // -- Read methods
     string getConfigFilepath() {return this->config_filepath; }
@@ -57,6 +72,17 @@ public:
     uint getSlices(){ return this->SLICES;} 
     double getResolution(){ return this->RESOLUTION;}
     uint getVoxelDivision(){ return this->VOXEL_DIVISION;}
+    string getImgFilesList(){ return this->IMG_FILES_LIST;}
+    vector<string> getImgFiles(){ return this->IMG_FILES;}
+    string getImgFile(uint idx){ return this->IMG_FILES[idx];}
+
+    void createImgFileList();
+    inline string convertFileIDToString(uint id, uint digits)
+    {
+        stringstream result;
+        result << std::setfill('0') << std::setw(digits) << id;
+        return result.str();
+    }
 };
 
 #endif

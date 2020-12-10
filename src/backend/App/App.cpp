@@ -35,7 +35,6 @@ void App::buildEssentials()
     string rwnmr_config_path;
     if((*this).getArgsPath(0) != "default") rwnmr_config_path = (*this).getArgsPath(0);
     else rwnmr_config_path = RWNMR_CONFIG_DEFAULT;
-
     
     string uct_config_path;
     if((*this).getArgsPath(1) != "default") rwnmr_config_path = (*this).getArgsPath(1);

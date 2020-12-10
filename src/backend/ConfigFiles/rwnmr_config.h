@@ -6,6 +6,14 @@
 #include <string>
 #include <vector>
 
+#ifndef CONFIG_ROOT
+#define CONFIG_ROOT "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/"
+#endif
+
+#ifndef RWNMR_CONFIG_DEFAULT
+#define RWNMR_CONFIG_DEFAULT "./default/rwnmr.config"
+#endif
+
 using namespace std;
 
 class rwnmr_config

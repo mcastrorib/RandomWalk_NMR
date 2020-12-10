@@ -8,6 +8,15 @@
 
 using namespace std;
 
+#ifndef CONFIG_ROOT
+#define CONFIG_ROOT "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/"
+#endif
+
+#ifndef CPMG_CONFIG_DEFAULT
+#define CPMG_CONFIG_DEFAULT "./default/cpmg.config"
+#endif
+
+
 class cpmg_config
 {
 public:
