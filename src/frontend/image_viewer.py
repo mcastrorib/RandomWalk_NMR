@@ -5,6 +5,8 @@ from matplotlib.figure import Figure
 from PyQt5 import QtCore, QtGui, QtWidgets 
 from scipy import ndimage
 
+IMAGE_FILE_LIST_PATH = '/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/imgs/'
+
 class image_viewer():
     def __init__(self, _parent, _widget):
         self.parent = _parent
@@ -44,7 +46,11 @@ class image_viewer():
         self.buttonLoad = QtWidgets.QPushButton('Open')
         self.buttonLoad.setMinimumSize(QtCore.QSize(50, 40))
         self.buttonLoad.setEnabled(True)
-        self.buttonLoad.clicked.connect(self.openImage)       
+        self.buttonLoad.clicked.connect(self.openImage)   
+        self.buttonSave = QtWidgets.QPushButton('Save')
+        self.buttonSave.setMinimumSize(QtCore.QSize(50, 40))
+        self.buttonSave.setEnabled(True)
+        self.buttonSave.clicked.connect(self.saveImagesList)     
         self.labelDimensions = QtWidgets.QLabel('[h=0,w=0]')
         self.labelSliceId = QtWidgets.QLabel('Slice = 0')
         self.labelSliceId.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -61,6 +67,7 @@ class image_viewer():
         layoutH3.addWidget(self.labelDimensions)
         layoutH3.addItem(QtWidgets.QSpacerItem(15, 15, QtWidgets.QSizePolicy.MinimumExpanding))
         layoutH3.addWidget(self.buttonLoad)
+        layoutH3.addWidget(self.buttonSave)
         layoutH3.addItem(QtWidgets.QSpacerItem(15, 15, QtWidgets.QSizePolicy.MinimumExpanding))
         layoutH3.addWidget(self.labelSliceId)
         mainLayout.addWidget(self.canvas, QtWidgets.QSizePolicy.MinimumExpanding)
@@ -162,6 +169,15 @@ class image_viewer():
                         print("Exception handled: {0}".format(err))
                 else:
                     print("The file does not exist") 
+    
+    def saveImagesList(self):
+        filepath = IMAGE_FILE_LIST_PATH + 'ImagesList.txt'
+        with open(filepath, 'w') as file:
+            for img in self.m_map:
+                file.write(img)
+                file.write("\n")
+        print("images file list saved.")
+        return
 
 # This function was adapted from (https://github.com/Entscheider/SeamEater/blob/master/gui/QtTool.py)
 # Project: SeamEater; Author: Entscheider; File: QtTool.py; GNU General Public License v3.0 

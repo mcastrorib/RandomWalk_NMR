@@ -127,37 +127,42 @@ class configfile_screen():
         
         # RW config fields
         nameLabel = QtWidgets.QLabel('Simulation name:')
+        nameLabel.setFixedWidth(150)
         self.nameLineEdit = QtWidgets.QLineEdit()
         self.nameLineEdit.setText('NMR_Simulation')        
 
-        walkersHeaderLabel = QtWidgets.QLabel('-- RW Parameters --')
-        walkersHeaderLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)       
+        walkersHeaderLabel = QtWidgets.QLabel('-- RW Parameters')    
     
         walkersLabel = QtWidgets.QLabel('Walkers:')
+        walkersLabel.setFixedWidth(150)
         self.walkersLineEdit = QtWidgets.QLineEdit()
         self.walkersLineEdit.setText('10000')
 
         placementLabel = QtWidgets.QLabel('Placement:')
+        placementLabel.setFixedWidth(150)
         self.placementBox = QtWidgets.QComboBox()
         placementOptions = ['random', 'point', 'cubic']
         self.placementBox.addItems(placementOptions)
 
         deviationLabel = QtWidgets.QLabel('Deviation:')
+        deviationLabel.setFixedWidth(150)
         self.placementDeviationLineEdit = QtWidgets.QLineEdit('0')
 
         stepsLabel = QtWidgets.QLabel('Steps/echo:')
+        stepsLabel.setFixedWidth(150)
         self.stepsLineEdit = QtWidgets.QLineEdit()
         self.stepsLineEdit.setText('1')
 
         seedLabel = QtWidgets.QLabel('RNG seed:')
+        seedLabel.setFixedWidth(150)
         self.seedLineEdit = QtWidgets.QLineEdit()
         self.seedLineEdit.setText('0')
         seedLabel2 = QtWidgets.QLabel('(0 == random)')
 
-        physicalsLabel = QtWidgets.QLabel('-- Physical parameters --')
-        physicalsLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)       
+        physicalsLabel = QtWidgets.QLabel('-- Physical parameters')  
 
         rhoLabel = QtWidgets.QLabel('Superficial relaxivity:')
+        rhoLabel.setFixedWidth(150)
         self.rhoTypeBox = QtWidgets.QComboBox()
         rhoTypeOptions = ['uniform', 'sigmoid']
         self.rhoTypeBox.addItems(rhoTypeOptions)
@@ -165,49 +170,56 @@ class configfile_screen():
         self.rhoLineEdit.setText('{0.0}')
         rhoUnitLabel = QtWidgets.QLabel('um/ms')
 
-        D0Label = QtWidgets.QLabel('Fluid diffusion coeficient:')
+        D0Label = QtWidgets.QLabel('Fluid free diffusion coef.:')
+        D0Label.setFixedWidth(150)
+        D0Label.setFont(QtGui.QFont("Arial", 10))
         self.D0LineEdit = QtWidgets.QLineEdit()
         self.D0LineEdit.setText('0.0')
         D0UnitLabel = QtWidgets.QLabel('um²/ms')      
 
-        histHeaderLabel = QtWidgets.QLabel('-- Collision histogram --')
-        histHeaderLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)       
+        histHeaderLabel = QtWidgets.QLabel('-- Collision histogram')     
         histLabel = QtWidgets.QLabel('Histograms:')
+        histLabel.setFixedWidth(150)
         self.histLineEdit = QtWidgets.QLineEdit()
         self.histLineEdit.setText('1')
         histSizeLabel = QtWidgets.QLabel('Size:')
+        histSizeLabel.setFixedWidth(150)
         self.histSizeLineEdit = QtWidgets.QLineEdit()
         self.histSizeLineEdit.setText('1024')
         
         
-        performanceLabel = QtWidgets.QLabel('-- Performance boost --')
-        performanceLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
-        ompLabel = QtWidgets.QLabel('Multithreads:')
+        performanceLabel = QtWidgets.QLabel('-- Performance boost')
+        ompLabel = QtWidgets.QLabel('Multi-thread:')
+        ompLabel.setFixedWidth(150)
         self.ompBox = QtWidgets.QComboBox()
         self.ompBox.addItems(boolOptions)        
         gpuLabel = QtWidgets.QLabel('GPU:')
+        gpuLabel.setFixedWidth(150)
         self.gpuBox = QtWidgets.QComboBox()
         self.gpuBox.addItems(boolOptions)
 
 
-        savingsLabel = QtWidgets.QLabel('-- Savings --')
-        savingsLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
+        savingsLabel = QtWidgets.QLabel('-- Savings')
         saveInfoLabel = QtWidgets.QLabel("Save info:")
+        saveInfoLabel.setFixedWidth(150)
         self.saveInfoBox = QtWidgets.QComboBox()
         self.saveInfoBox.addItems(boolOptions) 
 
         saveBinImgLabel = QtWidgets.QLabel("Save binary image:")
+        saveBinImgLabel.setFixedWidth(150)
         self.saveBinImgBox = QtWidgets.QComboBox()
         self.saveBinImgBox.addItems(boolOptions)
+        self.saveBinImgBox.setCurrentIndex(1)
 
-        fileLabel = QtWidgets.QLabel("-- Config file --")
-        fileLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
+        fileLabel = QtWidgets.QLabel("-- Config file")
         fileNameLabel = QtWidgets.QLabel("Name: ")
+        fileNameLabel.setFixedWidth(150)
         self.rwFileLineEdit = QtWidgets.QLineEdit()
         self.rwFileLineEdit.setText("rwnmr")
         fileExtensionLabel = QtWidgets.QLabel(".config")
 
         saveButton = QtWidgets.QPushButton("Save")
+        saveButton.setFixedWidth(50)
         saveButton.clicked.connect(self.saveRWConfig)
 
         # set the layouts
@@ -222,13 +234,19 @@ class configfile_screen():
         walkersHeaderLayout = QtWidgets.QHBoxLayout()
         walkersHeaderLayout.addWidget(walkersHeaderLabel)
 
-        walkersLayout = QtWidgets.QHBoxLayout()
-        walkersLayout.addWidget(walkersLabel)
-        walkersLayout.addWidget(self.walkersLineEdit)  
-        walkersLayout.addWidget(placementLabel)
-        walkersLayout.addWidget(self.placementBox)
-        walkersLayout.addWidget(deviationLabel)
-        walkersLayout.addWidget(self.placementDeviationLineEdit)  
+        walkersLayout = QtWidgets.QVBoxLayout()
+        walkersLayoutH1 = QtWidgets.QHBoxLayout()
+        walkersLayoutH1.addWidget(walkersLabel)
+        walkersLayoutH1.addWidget(self.walkersLineEdit)  
+        walkersLayoutH2 = QtWidgets.QHBoxLayout()
+        walkersLayoutH2.addWidget(placementLabel)
+        walkersLayoutH2.addWidget(self.placementBox)
+        walkersLayoutH3 = QtWidgets.QHBoxLayout()
+        walkersLayoutH3.addWidget(deviationLabel)
+        walkersLayoutH3.addWidget(self.placementDeviationLineEdit)
+        walkersLayout.addLayout(walkersLayoutH1)
+        walkersLayout.addLayout(walkersLayoutH2)
+        walkersLayout.addLayout(walkersLayoutH3)  
 
         stepsLayout = QtWidgets.QHBoxLayout()
         stepsLayout.addWidget(stepsLabel)
@@ -257,11 +275,15 @@ class configfile_screen():
         histHeaderLayout = QtWidgets.QHBoxLayout()
         histHeaderLayout.addWidget(histHeaderLabel)
 
-        histLayout = QtWidgets.QHBoxLayout()
-        histLayout.addWidget(histLabel)
-        histLayout.addWidget(self.histLineEdit)
-        histLayout.addWidget(histSizeLabel)
-        histLayout.addWidget(self.histSizeLineEdit)
+        histLayout = QtWidgets.QVBoxLayout()
+        histLayoutH1 = QtWidgets.QHBoxLayout()
+        histLayoutH1.addWidget(histLabel)
+        histLayoutH1.addWidget(self.histLineEdit)
+        histLayoutH2 = QtWidgets.QHBoxLayout()
+        histLayoutH2.addWidget(histSizeLabel)
+        histLayoutH2.addWidget(self.histSizeLineEdit)
+        histLayout.addLayout(histLayoutH1)
+        histLayout.addLayout(histLayoutH2)
 
         performanceLayout = QtWidgets.QHBoxLayout()
         performanceLayout.addWidget(performanceLabel)
@@ -284,12 +306,16 @@ class configfile_screen():
            
         fileHeaderLayout = QtWidgets.QHBoxLayout()
         fileHeaderLayout.addWidget(fileLabel)
-        fileLayout = QtWidgets.QHBoxLayout()
-        fileLayout.addWidget(fileNameLabel)
-        fileLayout.addWidget(self.rwFileLineEdit)
-        fileLayout.addWidget(fileExtensionLabel)        
-        fileLayout.addWidget(saveButton)
-        
+        fileLayout = QtWidgets.QVBoxLayout()
+        fileLayoutH1 = QtWidgets.QHBoxLayout()
+        fileLayoutH1.addWidget(fileNameLabel)
+        fileLayoutH1.addWidget(self.rwFileLineEdit)
+        fileLayoutH1.addWidget(fileExtensionLabel)
+        fileLayoutH2 = QtWidgets.QHBoxLayout()
+        # fileLayoutH2.addItem(QtWidgets.QSpacerItem(150, 150, QtWidgets.QSizePolicy.MinimumExpanding))        
+        fileLayoutH2.addWidget(saveButton)
+        fileLayout.addLayout(fileLayoutH1)
+        fileLayout.addLayout(fileLayoutH2)
 
         # adding layouts to main
         mainLayout.addLayout(nameLayout)
@@ -361,54 +387,55 @@ class configfile_screen():
         titleLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
         
         # RW config fields
-        dirPathLabel = QtWidgets.QLabel('Directory:')
-        self.uctDirPathLineEdit = QtWidgets.QLineEdit()
-        self.uctDirPathLineEdit.setText('')
-        path_button = QtWidgets.QPushButton('Browse')
-        path_button.clicked.connect(self.getUCTDirPath)
+        # dirPathLabel = QtWidgets.QLabel('Directory:')
+        # self.uctDirPathLineEdit = QtWidgets.QLineEdit()
+        # self.uctDirPathLineEdit.setText('')
+        # path_button = QtWidgets.QPushButton('Browse')
+        # path_button.clicked.connect(self.getUCTDirPath)
 
-        filenameLabel = QtWidgets.QLabel('File name:')
-        self.filenameLineEdit = QtWidgets.QLineEdit('')
+        # filenameLabel = QtWidgets.QLabel('File name:')
+        # self.filenameLineEdit = QtWidgets.QLineEdit('')
 
-        extensionLabel = QtWidgets.QLabel('Extension:')
-        self.extensionLineEdit = QtWidgets.QLineEdit('.png')
-        self.extensionLineEdit.setFixedWidth(50)
+        # extensionLabel = QtWidgets.QLabel('Extension:')
+        # self.extensionLineEdit = QtWidgets.QLineEdit('.png')
+        # self.extensionLineEdit.setFixedWidth(50)
         
-        firstIndexLabel = QtWidgets.QLabel('First index:')
-        firstIndexLabel.setFixedWidth(80)
-        self.firstIndexLineEdit = QtWidgets.QLineEdit('0')
-        self.firstIndexLineEdit.setFixedWidth(40)
+        # firstIndexLabel = QtWidgets.QLabel('First index:')
+        # firstIndexLabel.setFixedWidth(80)
+        # self.firstIndexLineEdit = QtWidgets.QLineEdit('0')
+        # self.firstIndexLineEdit.setFixedWidth(40)
 
-        digitsLabel = QtWidgets.QLabel('Digits:')
-        digitsLabel.setFixedWidth(45)
-        self.digitsLineEdit = QtWidgets.QLineEdit('1')
-        self.digitsLineEdit.setFixedWidth(40)        
+        # digitsLabel = QtWidgets.QLabel('Digits:')
+        # digitsLabel.setFixedWidth(45)
+        # self.digitsLineEdit = QtWidgets.QLineEdit('1')
+        # self.digitsLineEdit.setFixedWidth(40)        
 
-        slicesLabel = QtWidgets.QLabel('Slices:')
-        slicesLabel.setFixedWidth(45)
+        slicesLabel = QtWidgets.QLabel('Image slices:')
+        slicesLabel.setFixedWidth(150)
         self.slicesLineEdit = QtWidgets.QLineEdit('1')
         self.slicesLineEdit.setFixedWidth(40)   
 
-        resolutionLabel = QtWidgets.QLabel('Resolution:')
-        resolutionLabel.setFixedWidth(80)
+        resolutionLabel = QtWidgets.QLabel('Image resolution:')
+        resolutionLabel.setFixedWidth(150)
         self.resolutionLineEdit = QtWidgets.QLineEdit('1.0')
         self.resolutionLineEdit.setFixedWidth(40)
         resolutionUnitLabel = QtWidgets.QLabel('um/voxel')
         resolutionUnitLabel.setFixedWidth(80)
 
-        voxelDivisionsLabel = QtWidgets.QLabel('Voxel divisions:')
-        voxelDivisionsLabel.setFixedWidth(110)
+        voxelDivisionsLabel = QtWidgets.QLabel('Voxel subdivisions:')
+        voxelDivisionsLabel.setFixedWidth(150)
         self.voxelDivisionsLineEdit = QtWidgets.QLineEdit('0')
         self.voxelDivisionsLineEdit.setFixedWidth(40)
 
-        fileLabel = QtWidgets.QLabel("-- Config file --")
-        fileLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
+        fileLabel = QtWidgets.QLabel("-- Config file")
         fileNameLabel = QtWidgets.QLabel("Name: ")
+        fileNameLabel.setFixedWidth(150)
         self.uctFileLineEdit = QtWidgets.QLineEdit()
         self.uctFileLineEdit.setText("uct")
         fileExtensionLabel = QtWidgets.QLabel(".config")
 
         saveButton = QtWidgets.QPushButton("Save")
+        saveButton.setFixedWidth(50)
         saveButton.clicked.connect(self.saveUCTConfig)
 
 
@@ -417,22 +444,22 @@ class configfile_screen():
         mainLayout.addWidget(titleLabel)
 
         # set other layouts
-        dirPathLayout = QtWidgets.QHBoxLayout()
-        dirPathLayout.addWidget(dirPathLabel)
-        dirPathLayout.addWidget(self.uctDirPathLineEdit)
-        dirPathLayout.addWidget(path_button)
+        # dirPathLayout = QtWidgets.QHBoxLayout()
+        # dirPathLayout.addWidget(dirPathLabel)
+        # dirPathLayout.addWidget(self.uctDirPathLineEdit)
+        # dirPathLayout.addWidget(path_button)
 
-        filenameLayout = QtWidgets.QHBoxLayout()
-        filenameLayout.addWidget(filenameLabel)
-        filenameLayout.addWidget(self.filenameLineEdit)
-        filenameLayout.addWidget(extensionLabel)
-        filenameLayout.addWidget(self.extensionLineEdit)
+        # filenameLayout = QtWidgets.QHBoxLayout()
+        # filenameLayout.addWidget(filenameLabel)
+        # filenameLayout.addWidget(self.filenameLineEdit)
+        # filenameLayout.addWidget(extensionLabel)
+        # filenameLayout.addWidget(self.extensionLineEdit)
 
         ImgLayout = QtWidgets.QHBoxLayout()
-        ImgLayout.addWidget(firstIndexLabel)
-        ImgLayout.addWidget(self.firstIndexLineEdit)
-        ImgLayout.addWidget(digitsLabel)
-        ImgLayout.addWidget(self.digitsLineEdit)        
+        # ImgLayout.addWidget(firstIndexLabel)
+        # ImgLayout.addWidget(self.firstIndexLineEdit)
+        # ImgLayout.addWidget(digitsLabel)
+        # ImgLayout.addWidget(self.digitsLineEdit)        
         ImgLayout.addWidget(slicesLabel)
         ImgLayout.addWidget(self.slicesLineEdit)
 
@@ -445,22 +472,25 @@ class configfile_screen():
         voxelDivisionsLayout.addWidget(voxelDivisionsLabel)
         voxelDivisionsLayout.addWidget(self.voxelDivisionsLineEdit)
 
+        fileLayout = QtWidgets.QVBoxLayout()
         fileHeaderLayout = QtWidgets.QHBoxLayout()
         fileHeaderLayout.addWidget(fileLabel)
-        fileLayout = QtWidgets.QHBoxLayout()
-        fileLayout.addWidget(fileNameLabel)
-        fileLayout.addWidget(self.uctFileLineEdit)
-        fileLayout.addWidget(fileExtensionLabel)        
-        fileLayout.addWidget(saveButton)
-        
+        fileLayoutH1 = QtWidgets.QHBoxLayout()
+        fileLayoutH1.addWidget(fileNameLabel)
+        fileLayoutH1.addWidget(self.uctFileLineEdit)
+        fileLayoutH1.addWidget(fileExtensionLabel)        
+        fileLayoutH2 = QtWidgets.QHBoxLayout()
+        fileLayoutH2.addWidget(saveButton)
+        fileLayout.addLayout(fileHeaderLayout)
+        fileLayout.addLayout(fileLayoutH1)
+        fileLayout.addLayout(fileLayoutH2)      
 
         # add to main layout
-        mainLayout.addLayout(dirPathLayout)
-        mainLayout.addLayout(filenameLayout)
+        # mainLayout.addLayout(dirPathLayout)
+        # mainLayout.addLayout(filenameLayout)
         mainLayout.addLayout(ImgLayout)
         mainLayout.addLayout(resolutionLayout)
         mainLayout.addLayout(voxelDivisionsLayout)
-        mainLayout.addLayout(fileHeaderLayout)
         mainLayout.addLayout(fileLayout)
         
 
@@ -488,6 +518,13 @@ class configfile_screen():
     # @Slot()
     def saveUCTConfig(self):
         filename = CONFIG_PATH + self.uctFileLineEdit.text() + ".config"
+        with open(filename, "w") as file:
+            file.write("--- UCT Configuration\n")
+            file.write("SLICES: {}\n".format(self.slicesLineEdit.text()))
+            file.write("RESOLUTION: {}\n".format(self.resolutionLineEdit.text()))
+            file.write("VOXEL_DIVISION: {}\n".format(self.voxelDivisionsLineEdit.text()))
+            file.write("IMG_FILES_LIST: {}\n".format(CONFIG_PATH + 'imgs/ImagesList.txt'))            
+
         self.parent.m_setup_tab.m_setup.uctConfigLineEdit.setText(filename)
         return
 
@@ -513,15 +550,20 @@ class configfile_screen():
         
         # PFGSE config fields
         # header 1
-        D0Label = QtWidgets.QLabel('Fluid free diffusion coefficient:')
+        D0Label = QtWidgets.QLabel('Fluid free diffusion coef.:')
+        D0Label.setFixedWidth(150)
+        D0Label.setFont(QtGui.QFont("Arial", 10))
         D0LineEdit = QtWidgets.QLineEdit('2.5')
         D0UnitLabel = QtWidgets.QLabel('um²/ms')
 
         gyroLabel = QtWidgets.QLabel('Fluid gyromagnetic ratio:')
+        gyroLabel.setFixedWidth(150)
+        gyroLabel.setFont(QtGui.QFont("Arial", 10))
         gyroLineEdit = QtWidgets.QLineEdit('42.576')
         gyroUnitLabel = QtWidgets.QLabel('MHz/T')
 
         pulseWidthLabel = QtWidgets.QLabel('Pulse width:')
+        pulseWidthLabel.setFixedWidth(150)
         pulseWidthLineEdit = QtWidgets.QLineEdit('0.1')
         pulseWidthUnitLabel = QtWidgets.QLabel('ms')
 
@@ -536,6 +578,7 @@ class configfile_screen():
         gradientUnitLabel = QtWidgets.QLabel('Gauss/cm')
 
         gradientSamplesLabel = QtWidgets.QLabel('Samples: ')
+        gradientSamplesLabel.setFixedWidth(150)
         gradientSamplesLineEdit = QtWidgets.QLineEdit('200')
 
         # header 3
@@ -544,18 +587,24 @@ class configfile_screen():
         sequenceBox = QtWidgets.QComboBox()
         sequenceBox.addItems(sequenceTypes)
         timeSamplesLabel = QtWidgets.QLabel('Samples: ')
+        timeSamplesLabel.setFixedWidth(150)
         timeSamplesLineEdit = QtWidgets.QLineEdit('4')
         timeValuesLabel = QtWidgets.QLabel('Values: ')
+        timeValuesLabel.setFixedWidth(150)
         timeValuesLineEdit = QtWidgets.QLineEdit('{0.2, 0.5, 1.0, 2.0}')
         timeUnitLabel = QtWidgets.QLabel('ms')
         timeMinLabel = QtWidgets.QLabel('min: ')
+        timeMinLabel.setFixedWidth(150)
         timeMinLineEdit = QtWidgets.QLineEdit('-1.0')
         timeMaxLabel = QtWidgets.QLabel('max: ')
+        timeMaxLabel.setFixedWidth(150)
         timeMaxLineEdit = QtWidgets.QLineEdit('1.0')
         scaleLabel = QtWidgets.QLabel('Apply scale factor: ')
+        scaleLabel.setFixedWidth(150)  
         scaleBox = QtWidgets.QComboBox()
         scaleBox.addItems(boolOptions)
         inspectionLengthLabel = QtWidgets.QLabel('Inspection length: ')
+        inspectionLengthLabel.setFixedWidth(150)  
         inspectionLengthLineEdit = QtWidgets.QLineEdit('5.0')
         inspectionLengthUnitLabel = QtWidgets.QLabel('um')
 
@@ -565,37 +614,46 @@ class configfile_screen():
         thresholdTypeBox = QtWidgets.QComboBox()
         thresholdTypeBox.addItems(thresholdTypes)
         thresholdValueLabel = QtWidgets.QLabel('value: ')
+        thresholdValueLabel.setFixedWidth(150)
         thresholdValueLineEdit = QtWidgets.QLineEdit('0')
 
         # header 5
         saveModeLabel = QtWidgets.QLabel("Save mode:")
+        saveModeLabel.setFixedWidth(150)
         saveModeBox = QtWidgets.QComboBox()
         saveModeBox.addItems(boolOptions)
         savePFGSELabel = QtWidgets.QLabel("Save pfgse:")
+        savePFGSELabel.setFixedWidth(150)
         savePFGSEBox = QtWidgets.QComboBox()
         savePFGSEBox.addItems(boolOptions)
         saveCollisionsLabel = QtWidgets.QLabel("Save collisions:")
+        saveCollisionsLabel.setFixedWidth(150)
         saveCollisionsBox = QtWidgets.QComboBox()
         saveCollisionsBox.addItems(boolOptions)
         saveDecayLabel = QtWidgets.QLabel("Save decay:")
+        saveDecayLabel.setFixedWidth(150)
         saveDecayBox = QtWidgets.QComboBox()
         saveDecayBox.addItems(boolOptions)
         saveHistogramLabel = QtWidgets.QLabel("Save histogram:")
+        saveHistogramLabel.setFixedWidth(150)
         saveHistogramBox = QtWidgets.QComboBox()
         saveHistogramBox.addItems(boolOptions)
-        saveHistListLabel = QtWidgets.QLabel("Save histogram list:")    
+        saveHistListLabel = QtWidgets.QLabel("Save histogram list:")  
+        saveHistListLabel.setFixedWidth(150)  
         saveHistListBox = QtWidgets.QComboBox()
         saveHistListBox.addItems(boolOptions)
         
         # config file 
-        fileLabel = QtWidgets.QLabel("-- Config file --")
+        fileLabel = QtWidgets.QLabel("-- Config file")
         # fileLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
         fileNameLabel = QtWidgets.QLabel("Name: ")
+        fileNameLabel.setFixedWidth(150)  
         pfgseFileLineEdit = QtWidgets.QLineEdit()
         pfgseFileLineEdit.setText("pfgse")
         fileExtensionLabel = QtWidgets.QLabel(".config")
 
         saveButton = QtWidgets.QPushButton("Save")
+        saveButton.setFixedWidth(50)
         saveButton.clicked.connect(lambda: self.savePFGSEConfig(_index))
 
 
@@ -631,6 +689,11 @@ class configfile_screen():
         # header 2
         layoutV2 = QtWidgets.QVBoxLayout()
         layoutV2.addWidget(header2)
+
+        layoutV2H2 = QtWidgets.QHBoxLayout()
+        layoutV2H2.addWidget(gradientSamplesLabel)
+        layoutV2H2.addWidget(gradientSamplesLineEdit)
+        layoutV2.addLayout(layoutV2H2)
         
         layoutV2H1 = QtWidgets.QHBoxLayout()
         layoutV2H1.addWidget(maxGradientLabel)
@@ -641,12 +704,7 @@ class configfile_screen():
         layoutV2H1.addWidget(maxGradientZLineEdit)
         layoutV2H1.addWidget(ezLabel)
         layoutV2H1.addWidget(gradientUnitLabel)
-        layoutV2.addLayout(layoutV2H1)
-
-        layoutV2H2 = QtWidgets.QHBoxLayout()
-        layoutV2H2.addWidget(gradientSamplesLabel)
-        layoutV2H2.addWidget(gradientSamplesLineEdit)
-        layoutV2.addLayout(layoutV2H2)
+        layoutV2.addLayout(layoutV2H1)        
 
         layoutV2.addWidget(QtWidgets.QLabel(''))
 
@@ -655,10 +713,10 @@ class configfile_screen():
         layoutV3.addWidget(header3)
         
         layoutV3H1 = QtWidgets.QHBoxLayout()
-        layoutV3H1.addWidget(sequenceLabel)
-        layoutV3H1.addWidget(sequenceBox)
         layoutV3H1.addWidget(timeSamplesLabel)
         layoutV3H1.addWidget(timeSamplesLineEdit)
+        layoutV3H1.addWidget(sequenceLabel)
+        layoutV3H1.addWidget(sequenceBox)        
         layoutV3.addLayout(layoutV3H1)
 
         layoutV3H3 = QtWidgets.QHBoxLayout()
@@ -675,11 +733,14 @@ class configfile_screen():
 
         layoutV3H5 = QtWidgets.QHBoxLayout()
         layoutV3H5.addWidget(scaleLabel)
-        layoutV3H5.addWidget(scaleBox)
-        layoutV3H5.addWidget(inspectionLengthLabel)
-        layoutV3H5.addWidget(inspectionLengthLineEdit)
-        layoutV3H5.addWidget(inspectionLengthUnitLabel)        
+        layoutV3H5.addWidget(scaleBox)    
         layoutV3.addLayout(layoutV3H5) 
+
+        layoutV3H6 = QtWidgets.QHBoxLayout()
+        layoutV3H6.addWidget(inspectionLengthLabel)
+        layoutV3H6.addWidget(inspectionLengthLineEdit)
+        layoutV3H6.addWidget(inspectionLengthUnitLabel)        
+        layoutV3.addLayout(layoutV3H6) 
 
         layoutV3.addWidget(QtWidgets.QLabel(''))
 
@@ -688,10 +749,10 @@ class configfile_screen():
         layoutV4.addWidget(header4)
 
         layoutV4H1 = QtWidgets.QHBoxLayout()
-        layoutV4H1.addWidget(thresholdTypeLabel)
-        layoutV4H1.addWidget(thresholdTypeBox)
         layoutV4H1.addWidget(thresholdValueLabel)
         layoutV4H1.addWidget(thresholdValueLineEdit)
+        layoutV4H1.addWidget(thresholdTypeLabel)
+        layoutV4H1.addWidget(thresholdTypeBox)
         layoutV4.addLayout(layoutV4H1)
 
         layoutV4.addWidget(QtWidgets.QLabel(''))
@@ -733,13 +794,19 @@ class configfile_screen():
         layoutV5.addWidget(QtWidgets.QLabel(''))
 
         # file configs
+        fileLayout = QtWidgets.QVBoxLayout()
+        
         fileHeaderLayout = QtWidgets.QHBoxLayout()
         fileHeaderLayout.addWidget(fileLabel)
-        fileLayout = QtWidgets.QHBoxLayout()
-        fileLayout.addWidget(fileNameLabel)
-        fileLayout.addWidget(pfgseFileLineEdit)
-        fileLayout.addWidget(fileExtensionLabel)        
-        fileLayout.addWidget(saveButton)
+        fileLayoutH1 = QtWidgets.QHBoxLayout()
+        fileLayoutH1.addWidget(fileNameLabel)
+        fileLayoutH1.addWidget(pfgseFileLineEdit)
+        fileLayoutH1.addWidget(fileExtensionLabel)        
+        fileLayoutH2 = QtWidgets.QHBoxLayout()
+        fileLayoutH2.addWidget(saveButton)
+        fileLayout.addLayout(fileHeaderLayout)
+        fileLayout.addLayout(fileLayoutH1)
+        fileLayout.addLayout(fileLayoutH2)
         
 
         # add to main layout
@@ -748,7 +815,7 @@ class configfile_screen():
         mainLayout.addLayout(layoutV3)
         mainLayout.addLayout(layoutV4)
         mainLayout.addLayout(layoutV5)
-        mainLayout.addLayout(fileHeaderLayout)
+        # mainLayout.addLayout(fileHeaderLayout)
         mainLayout.addLayout(fileLayout)
         
 
@@ -831,12 +898,12 @@ class configfile_screen():
         boolOptions = ['true', 'false']
 
         # these are the app widgets connected to their slot methods
-        titleLabel = QtWidgets.QLabel('--- PFGSE CONFIGURATION ---')
+        titleLabel = QtWidgets.QLabel('--- CPMG CONFIGURATION ---')
         titleLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
 
         header1 = QtWidgets.QLabel('-- Physical attributes')
         # header1.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
-        header2 = QtWidgets.QLabel('-- Laplace inversion parameters')
+        header2 = QtWidgets.QLabel('-- Laplace inversion')
         # header2.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
         header3 = QtWidgets.QLabel('-- Savings')
         # header3.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
@@ -844,68 +911,88 @@ class configfile_screen():
         
         # PFGSE config fields
         # header 1
-        D0Label = QtWidgets.QLabel('Fluid free diffusion coefficient:')
+        D0Label = QtWidgets.QLabel('Fluid free diffusion coef:')
+        D0Label.setFixedWidth(150)
+        D0Label.setFont(QtGui.QFont("Arial",10))
         D0LineEdit = QtWidgets.QLineEdit('2.5')
         D0UnitLabel = QtWidgets.QLabel('um²/ms')
 
         expTimeLabel = QtWidgets.QLabel('Experiment time:')
+        expTimeLabel.setFixedWidth(150)
         expTimeLineEdit = QtWidgets.QLineEdit('2000.0')
         expTimeUnitLabel = QtWidgets.QLabel('ms')
 
-        methodLabel = QtWidgets.QLabel('Pulse width:')
+        methodLabel = QtWidgets.QLabel('RW Method:')
+        methodLabel.setFixedWidth(150)
         methodBox = QtWidgets.QComboBox()
         methodBox.addItems(['image-based','histogram'])
 
         # header 2
         minT2Label = QtWidgets.QLabel('Min T2:')
+        minT2Label.setFixedWidth(150)
         minT2LineEdit = QtWidgets.QLineEdit('0.1')
         maxT2Label = QtWidgets.QLabel('Max T2:')
+        maxT2Label.setFixedWidth(150)
         maxT2LineEdit = QtWidgets.QLineEdit('10000')
         T2binsLabel = QtWidgets.QLabel("T2 bins:")
+        T2binsLabel.setFixedWidth(150)
         T2binsLineEdit = QtWidgets.QLineEdit('128')        
         logspaceLabel = QtWidgets.QLabel('Use logspace:')
+        logspaceLabel.setFixedWidth(150)
         logspaceBox = QtWidgets.QComboBox()
         logspaceBox.addItems(boolOptions)
         minLambdaLabel = QtWidgets.QLabel('Min lambda:')
+        minLambdaLabel.setFixedWidth(150)
         minLambdaLineEdit = QtWidgets.QLineEdit('-4.0')
         maxLambdaLabel = QtWidgets.QLabel('Max lambda:')
+        maxLambdaLabel.setFixedWidth(150)
         maxLambdaLineEdit = QtWidgets.QLineEdit('2.0')
         numLambdasLabel = QtWidgets.QLabel('Lambdas:')
+        numLambdasLabel.setFixedWidth(150)
         numLambdasLineEdit = QtWidgets.QLineEdit('512')
         pruneNumLabel = QtWidgets.QLabel('Prunes:')
+        pruneNumLabel.setFixedWidth(150)
         pruneNumLineEdit = QtWidgets.QLineEdit('512')
         noiseAmpLabel = QtWidgets.QLabel('Noise amplitude:')
+        noiseAmpLabel.setFixedWidth(150)
         noiseAmpLineEdit = QtWidgets.QLineEdit('0.0')   
 
         # header 3
         saveModeLabel = QtWidgets.QLabel("Save mode:")
         saveModeBox = QtWidgets.QComboBox()
+        saveModeLabel.setFixedWidth(150)
         saveModeBox.addItems(boolOptions)
         saveT2Label = QtWidgets.QLabel("Save T2:")
+        saveT2Label.setFixedWidth(150)
         saveT2Box = QtWidgets.QComboBox()
         saveT2Box.addItems(boolOptions)
         saveCollisionsLabel = QtWidgets.QLabel("Save collisions:")
+        saveCollisionsLabel.setFixedWidth(150)
         saveCollisionsBox = QtWidgets.QComboBox()
         saveCollisionsBox.addItems(boolOptions)
         saveDecayLabel = QtWidgets.QLabel("Save decay:")
+        saveDecayLabel.setFixedWidth(150)
         saveDecayBox = QtWidgets.QComboBox()
         saveDecayBox.addItems(boolOptions)
         saveHistogramLabel = QtWidgets.QLabel("Save histogram:")
+        saveHistogramLabel.setFixedWidth(150)
         saveHistogramBox = QtWidgets.QComboBox()
         saveHistogramBox.addItems(boolOptions)
         saveHistListLabel = QtWidgets.QLabel("Save histogram list:")    
+        saveHistListLabel.setFixedWidth(150)
         saveHistListBox = QtWidgets.QComboBox()
         saveHistListBox.addItems(boolOptions)
         
         # config file 
-        fileLabel = QtWidgets.QLabel("-- Config file --")
-        # fileLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
+        fileLabel = QtWidgets.QLabel("-- Config file")
         fileNameLabel = QtWidgets.QLabel("Name: ")
+        fileNameLabel.setFixedWidth(150)
         pfgseFileLineEdit = QtWidgets.QLineEdit()
         pfgseFileLineEdit.setText("cpmg")
         fileExtensionLabel = QtWidgets.QLabel(".config")
 
         saveButton = QtWidgets.QPushButton("Save")
+        saveButton.setFixedWidth(50)
         saveButton.clicked.connect(lambda: self.saveCPMGConfig(_index))
 
 
@@ -941,12 +1028,15 @@ class configfile_screen():
         layoutV2 = QtWidgets.QVBoxLayout()
         layoutV2.addWidget(header2)
         
-        layoutV2H1 = QtWidgets.QHBoxLayout()
-        layoutV2H1.addWidget(minT2Label)
-        layoutV2H1.addWidget(minT2LineEdit)
-        layoutV2H1.addWidget(maxT2Label)
-        layoutV2H1.addWidget(maxT2LineEdit)
-        layoutV2.addLayout(layoutV2H1)
+        layoutV2H1a = QtWidgets.QHBoxLayout()
+        layoutV2H1a.addWidget(minT2Label)
+        layoutV2H1a.addWidget(minT2LineEdit)
+        layoutV2.addLayout(layoutV2H1a)
+
+        layoutV2H1b = QtWidgets.QHBoxLayout()
+        layoutV2H1b.addWidget(maxT2Label)
+        layoutV2H1b.addWidget(maxT2LineEdit)
+        layoutV2.addLayout(layoutV2H1b)
         
         layoutV2H2 = QtWidgets.QHBoxLayout()
         layoutV2H2.addWidget(T2binsLabel)
@@ -958,12 +1048,15 @@ class configfile_screen():
         layoutV2H3.addWidget(logspaceBox)
         layoutV2.addLayout(layoutV2H3)
 
-        layoutV2H4 = QtWidgets.QHBoxLayout()
-        layoutV2H4.addWidget(minLambdaLabel)
-        layoutV2H4.addWidget(minLambdaLineEdit)
-        layoutV2H4.addWidget(maxLambdaLabel)
-        layoutV2H4.addWidget(maxLambdaLineEdit)
-        layoutV2.addLayout(layoutV2H4)
+        layoutV2H4a = QtWidgets.QHBoxLayout()
+        layoutV2H4a.addWidget(minLambdaLabel)
+        layoutV2H4a.addWidget(minLambdaLineEdit)
+        layoutV2.addLayout(layoutV2H4a)
+
+        layoutV2H4b = QtWidgets.QHBoxLayout()
+        layoutV2H4b.addWidget(maxLambdaLabel)
+        layoutV2H4b.addWidget(maxLambdaLineEdit)
+        layoutV2.addLayout(layoutV2H4b)
 
         layoutV2H5 = QtWidgets.QHBoxLayout()
         layoutV2H5.addWidget(numLambdasLabel)
@@ -1019,20 +1112,24 @@ class configfile_screen():
         layoutV3.addWidget(QtWidgets.QLabel(''))
 
         # file configs
+        fileLayout = QtWidgets.QVBoxLayout()
         fileHeaderLayout = QtWidgets.QHBoxLayout()
         fileHeaderLayout.addWidget(fileLabel)
-        fileLayout = QtWidgets.QHBoxLayout()
-        fileLayout.addWidget(fileNameLabel)
-        fileLayout.addWidget(pfgseFileLineEdit)
-        fileLayout.addWidget(fileExtensionLabel)        
-        fileLayout.addWidget(saveButton)
+        fileLayoutH1 = QtWidgets.QHBoxLayout()
+        fileLayoutH1.addWidget(fileNameLabel)
+        fileLayoutH1.addWidget(pfgseFileLineEdit)
+        fileLayoutH1.addWidget(fileExtensionLabel)        
+        fileLayoutH2 = QtWidgets.QHBoxLayout()
+        fileLayoutH2.addWidget(saveButton)
+        fileLayout.addLayout(fileHeaderLayout)
+        fileLayout.addLayout(fileLayoutH1)
+        fileLayout.addLayout(fileLayoutH2)
         
 
         # add to main layout
         mainLayout.addLayout(layoutV1)
         mainLayout.addLayout(layoutV2)
         mainLayout.addLayout(layoutV3)
-        mainLayout.addLayout(fileHeaderLayout)
         mainLayout.addLayout(fileLayout)
         
 

@@ -25,6 +25,7 @@ class app_rwnmr(QtWidgets.QMainWindow):
         # Set app title 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle(app_name) 
+        self.setWindowIcon(QtGui.QIcon('icons/app.png')) 
         
         # Set geometry and minimum size
         self.setGeometry(100, 100, 1024, 900) 
