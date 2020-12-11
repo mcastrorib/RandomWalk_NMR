@@ -18,6 +18,10 @@ class app_rwnmr(QtWidgets.QMainWindow):
     def __init__(self, app_name='', parent=None):
         super(app_rwnmr, self).__init__(parent)
 
+        # Set args for cpp app call
+        self.cppArgs = None
+        self.argsReady = False
+
         # Set app major tabs objects as None
         self.m_setup_tab = None
         self.m_datavis_tab = None
@@ -37,10 +41,21 @@ class app_rwnmr(QtWidgets.QMainWindow):
 
         # Set app major toolbar
         self.toolbar = self.addToolBar("File")
+        self.toolbar.setIconSize(QtCore.QSize(50,50))
 
         # Open 'setup' tab button
         self.setup_button = QtWidgets.QAction(QtGui.QIcon("icons/setup"), "setup", self)
         self.toolbar.addAction(self.setup_button)
+
+        # Open 'build' tab button
+        self.build_button = QtWidgets.QAction(QtGui.QIcon("icons/build"), "build", self)
+        self.toolbar.addAction(self.build_button)
+        self.build_button.setEnabled(False)
+
+        # Open 'launch' tab button
+        self.launch_button = QtWidgets.QAction(QtGui.QIcon("icons/launch"), "setup", self)
+        self.toolbar.addAction(self.launch_button)
+        self.launch_button.setEnabled(False)
 
         # Open 'dataviz' tab button
         self.dataviz_button = QtWidgets.QAction(QtGui.QIcon("icons/dataviz"), "visualization", self)
@@ -86,6 +101,7 @@ class app_rwnmr(QtWidgets.QMainWindow):
         
         if(name == "setup"):
             self.m_setup_tab = None
+            self.build_button.setEnabled(False)
         elif(name == "dataviz"):
             self.m_datavis_tab = None
         
@@ -103,8 +119,21 @@ class app_rwnmr(QtWidgets.QMainWindow):
     def tbpressed(self, a):
         if a.text() == "setup":
             self.createNewTab('setup')
+            self.build_button.setEnabled(True)
         elif a.text() == "visualization":
             self.createNewTab("dataviz")
+        elif a.text() == "build":
+            self.build()
+        return
+    
+    # @Slot()
+    def build(self):
+        print("building app...")
+        self.cppArgs, builded = self.m_setup_tab.build()
+        self.argsReady = builded
+
+        print(self.cppArgs)
+        print(self.argsReady)
         return
 
 

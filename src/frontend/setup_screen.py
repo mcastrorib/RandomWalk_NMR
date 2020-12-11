@@ -5,18 +5,28 @@ class setup_screen():
         self.parent = _parent
         self.m_widget = _widget
 
+        self.procedureCount = 0
         self.procedures = []
+        self.procedure_actives = []
         self.procedure_paths = []
         self.procedure_tabs = []
         self.procedure_buttons = []
         self.procedure_layouts = []
+        self.wrappedArgs = []
+
+        titleFont=QtGui.QFont("Arial",15)
+        titleFont.setBold(True)
+        headerFont = QtGui.QFont("Arial",12)
+        headerFont.setBold(True)
 
         # these are the app widgets connected to their slot methods
-        self.titleLabel = QtWidgets.QLabel('--- RWNMR SETUP ---')
+        self.titleLabel = QtWidgets.QLabel('RWNMR Setup')
+        self.titleLabel.setFont(titleFont)
         self.titleLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
         
         # set RW config widgets
         self.rwConfigLabel = QtWidgets.QLabel('rw configuration file:')
+        self.rwConfigLabel.setFont(headerFont)
         self.rwConfigLineEdit = QtWidgets.QLineEdit('default')
         self.rwConfigLineEdit.setEnabled(False)
         self.rwConfigOpenButton = QtWidgets.QPushButton('Open')
@@ -26,6 +36,7 @@ class setup_screen():
 
         # set uCT config widgets
         self.uctConfigLabel = QtWidgets.QLabel('uct configuration file:')
+        self.uctConfigLabel.setFont(headerFont)
         self.uctConfigLineEdit = QtWidgets.QLineEdit('default')
         self.uctConfigLineEdit.setEnabled(False)
         self.uctConfigOpenButton = QtWidgets.QPushButton('Open')
@@ -34,11 +45,14 @@ class setup_screen():
         self.uctConfigCreateButton.clicked.connect(self.createUCTConfigFile)      
 
         # Set procedures zone
-        self.procedureLabel = QtWidgets.QLabel("-- Procedures --")
+        self.procedureLabel = QtWidgets.QLabel("Procedures")
+        self.procedureLabel.setFont(titleFont)
         self.procedureLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
         
         # Set add procedure
         procedureOptions = ['cpmg', 'pfgse', 'ga']
+        self.newProcedureLabel = QtWidgets.QLabel('New procedure:')
+        # self.newProcedureLabel.setFont(headerFont)
         self.newProcedureBox = QtWidgets.QComboBox()
         self.newProcedureBox.addItems(procedureOptions)
         self.addProcedureButton = QtWidgets.QPushButton("Add")
@@ -48,6 +62,9 @@ class setup_screen():
         # set the layouts
         self.mainLayout = QtWidgets.QVBoxLayout(self.m_widget)        
         self.mainLayout.addWidget(self.titleLabel)
+
+        # essentials layout
+        essentialsLayout = QtWidgets.QVBoxLayout()
 
         # set RW config layout
         layoutH2a = QtWidgets.QHBoxLayout()
@@ -65,6 +82,13 @@ class setup_screen():
         layoutH3b.addWidget(self.uctConfigOpenButton)
         layoutH3b.addWidget(self.uctConfigCreateButton)
 
+        essentialsLayout.addLayout(layoutH2a)
+        essentialsLayout.addLayout(layoutH2b)
+        essentialsLayout.addLayout(layoutH3a)
+        essentialsLayout.addLayout(layoutH3b)
+        essentialsLayout.addWidget(QtWidgets.QLabel(''))
+        
+
         # set Procedures title layout
         layout3 = QtWidgets.QHBoxLayout()
         layout3.addWidget(self.procedureLabel)
@@ -74,16 +98,13 @@ class setup_screen():
         self.addLayout.addWidget(QtWidgets.QLabel(''))
         self.addLayout.addWidget(QtWidgets.QLabel(''))
         self.addHBLayout = QtWidgets.QHBoxLayout()
-        self.addHBLayout.addWidget(QtWidgets.QLabel('New procedure:'))
+        self.addHBLayout.addWidget(self.newProcedureLabel)
         self.addHBLayout.addWidget(self.newProcedureBox)        
         self.addHBLayout.addWidget(self.addProcedureButton)
         self.addLayout.addLayout(self.addHBLayout)
 
         # adding layouts to main
-        self.mainLayout.addLayout(layoutH2a)
-        self.mainLayout.addLayout(layoutH2b) 
-        self.mainLayout.addLayout(layoutH3a)
-        self.mainLayout.addLayout(layoutH3b) 
+        self.mainLayout.addLayout(essentialsLayout)
         self.mainLayout.addLayout(layout3)
         self.mainLayout.addLayout(self.addLayout)     
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)  
@@ -92,11 +113,14 @@ class setup_screen():
     # @Slot()
     def addProcedure(self, procedure):
         print("Adding", procedure, "procedure")
-
-        index = len(self.procedures)            
+        headerFont = QtGui.QFont("Arial", 12)
+        headerFont.setBold(True)
+        index = self.procedureCount            
+        self.procedureCount += 1
 
         # set RW config widgets
         newLabel1 = QtWidgets.QLabel(procedure + ' configuration file:')
+        newLabel1.setFont(headerFont)
         newLineEdit = QtWidgets.QLineEdit('default')
         newLineEdit.setEnabled(False)
         newOpenButton = QtWidgets.QPushButton('Open')
@@ -132,6 +156,7 @@ class setup_screen():
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)  
 
         self.procedures.append(procedure)
+        self.procedure_actives.append(True)
         self.procedure_paths.append(newLineEdit)
         self.procedure_tabs.append(None)
         self.procedure_buttons.append(newCreateButton)
@@ -219,7 +244,7 @@ class setup_screen():
         self.addLayout.addWidget(QtWidgets.QLabel(''))
         self.addLayout.addWidget(QtWidgets.QLabel(''))
         self.addHBLayout = QtWidgets.QHBoxLayout()
-        self.addHBLayout.addWidget(QtWidgets.QLabel('New procedure:'))
+        self.addHBLayout.addWidget(self.newProcedureLabel)
         self.addHBLayout.addWidget(self.newProcedureBox)        
         self.addHBLayout.addWidget(self.addProcedureButton)
         self.addLayout.addLayout(self.addHBLayout) 
@@ -230,5 +255,43 @@ class setup_screen():
 
     # @Slot()
     def removeProcedure(self, index):
+        self.procedure_actives[index] = False
         self.deleteBox(self.procedure_layouts[index])
         return
+
+    def build(self):
+        self.wrapArgs()
+        return self.wrappedArgs
+    
+    def wrapArgs(self):
+        args = []
+        cmd = ''
+        path = ''
+
+        cmd  = "-rwconfig"
+        path = str(self.rwConfigLineEdit.text())
+        if(path != 'default'):
+            args.append([cmd, path])
+
+        cmd  = "-uctconfig"
+        path = str(self.uctConfigLineEdit.text())
+        if(path != 'default'):
+            args.append([cmd, path])
+        
+        numberOfProcedures = len(self.procedures)
+        for idx in range(numberOfProcedures):
+            if(self.procedure_actives[idx] == True):
+                cmd = self.procedures[idx]
+                flag = "-config"
+                path = self.procedure_paths[idx].text()
+                if(path != "default"):
+                    args.append([cmd, flag, path])
+                else:
+                    args.append([cmd])
+        
+        self.wrappedArgs = args
+        return
+        
+
+
+

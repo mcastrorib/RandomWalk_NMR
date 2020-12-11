@@ -17,7 +17,7 @@ from app_rwnmr import app_rwnmr
 
 ORGANIZATION_NAME = 'LCC-IC-UFF'
 ORGANIZATION_DOMAIN = ''
-APPLICATION_NAME = 'pyRWNMR'
+APPLICATION_NAME = 'RWNMR'
 SETTINGS_TRAY = 'settings/tray'
 
 def main():

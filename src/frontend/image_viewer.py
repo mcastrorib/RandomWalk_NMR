@@ -12,6 +12,8 @@ class image_viewer():
         self.parent = _parent
         self.m_widget = _widget
         self.filepaths = None
+        self.saved = False
+        self.loaded = False
 
         self.m_widget.setMinimumSize(QtCore.QSize(350, 350))
 
@@ -26,7 +28,10 @@ class image_viewer():
         self.toolbar = NavigationToolbar2QT(self.canvas, self.parent)
 
         # these are the app widgets connected to their slot methods
-        self.titleLabel = QtWidgets.QLabel('--- IMAGE VIEWER ---')
+        titleFont=QtGui.QFont("Arial",15)
+        titleFont.setBold(True)
+        self.titleLabel = QtWidgets.QLabel('Image viwer')
+        self.titleLabel.setFont(titleFont)
         self.titleLabel.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)        
         self.slideBar = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.slideBar.setMinimum(0)
@@ -49,7 +54,7 @@ class image_viewer():
         self.buttonLoad.clicked.connect(self.openImage)   
         self.buttonSave = QtWidgets.QPushButton('Save')
         self.buttonSave.setMinimumSize(QtCore.QSize(50, 40))
-        self.buttonSave.setEnabled(True)
+        self.buttonSave.setEnabled(False)
         self.buttonSave.clicked.connect(self.saveImagesList)     
         self.labelDimensions = QtWidgets.QLabel('[h=0,w=0]')
         self.labelSliceId = QtWidgets.QLabel('Slice = 0')
@@ -125,13 +130,15 @@ class image_viewer():
             for filepath in files:
                 self.m_map.append( filepath )
             self.loadImageData(files[0],True)
+            self.buttonSave.setEnabled(True)
             self.buttonPlus.setEnabled(True) 
             self.buttonMinus.setEnabled(True) 
             self.slideBar.setMaximum(len(self.m_map)-1)
             self.slideBar.setValue(0)
             self.slideBar.setEnabled(True)
             self.labelSliceId.setText("Slice = 1")
-
+            self.loaded = True
+            self.saved = False
             self.filepaths = files
             print(self.filepaths)
 
@@ -177,6 +184,7 @@ class image_viewer():
                 file.write(img)
                 file.write("\n")
         print("images file list saved.")
+        self.saved = True
         return
 
 # This function was adapted from (https://github.com/Entscheider/SeamEater/blob/master/gui/QtTool.py)

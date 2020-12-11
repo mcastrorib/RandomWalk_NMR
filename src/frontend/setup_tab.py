@@ -48,10 +48,22 @@ class setup_tab():
         self.m_config = configfile_screen(self.parent, self.active_widgets[2])
 
         # setting image_viewer object
-        self.m_viewer = image_viewer(self.parent, self.active_widgets[3])       
+        self.m_viewer = image_viewer(self.parent, self.active_widgets[3])
+        return       
 
     
     # method
     def addConfigTab(self, tabName):
         self.m_config.createNewTab(tabName)
         return
+    
+    def build(self):
+        correctBuild = True
+        if(self.m_viewer.saved == False):
+            print("image not saved yet")
+            if(self.m_viewer.loaded):
+                self.m_viewer.saveImagesList()
+            else:
+                correctBuild = False
+        args = self.m_setup.build()
+        return args, correctBuild
