@@ -1,0 +1,8 @@
+/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/AC1_1um_3D/AC1_1um_3D_002.png
+/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/AC1_1um_3D/AC1_1um_3D_003.png
+/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/AC1_1um_3D/AC1_1um_3D_004.png
+/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/AC1_1um_3D/AC1_1um_3D_005.png
+/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/AC1_1um_3D/AC1_1um_3D_006.png
+/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/AC1_1um_3D/AC1_1um_3D_007.png
+/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/AC1_1um_3D/AC1_1um_3D_008.png
+/home/matheus/Documentos/doutorado_ic/tese/NMR/Images/AC1_1um_3D/AC1_1um_3D_009.png
