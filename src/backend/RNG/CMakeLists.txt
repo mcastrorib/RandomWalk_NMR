@@ -5,4 +5,4 @@ target_include_directories(RNG
           )
 
 install(TARGETS RNG DESTINATION lib)
-install(FILES rng.h xorshift.h DESTINATION include)
+install(FILES randomIndex.h xorshift.h DESTINATION include)

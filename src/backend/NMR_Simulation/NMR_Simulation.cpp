@@ -31,6 +31,7 @@
 #include "NMR_Simulation.h"
 #include "../Utils/OMPLoopEnabler.h"
 #include "../Utils/ImagePath.h"
+#include "../RNG/randomIndex.h"
 
 
 using namespace cv;
@@ -278,12 +279,13 @@ void NMR_Simulation::applyVoxelDivision(uint _shifts)
         uint indexExpansion = (uint) shiftFactor;
         if(indexExpansion < 1) indexExpansion = 1;
         uint shiftX, shiftY, shiftZ;
+        RandomIndex rIndex(0, indexExpansion);
         for(uint idx = 0; idx < this->walkers.size(); idx++)
         {   
             // randomly place walker in voxel sites
-            shiftX = ((uint) this->walkers[idx].initialPosition.x * shiftFactor) + (*this).pickRandomIndex(indexExpansion);
-            shiftY = ((uint) this->walkers[idx].initialPosition.y * shiftFactor) + (*this).pickRandomIndex(indexExpansion);
-            shiftZ = ((uint) this->walkers[idx].initialPosition.z * shiftFactor) + (*this).pickRandomIndex(indexExpansion);
+            shiftX = ((uint) this->walkers[idx].initialPosition.x * shiftFactor) + rIndex();
+            shiftY = ((uint) this->walkers[idx].initialPosition.y * shiftFactor) + rIndex();
+            shiftZ = ((uint) this->walkers[idx].initialPosition.z * shiftFactor) + rIndex();
             this->walkers[idx].placeWalker(shiftX, shiftY, shiftZ);
 
             // update collision penalty
@@ -388,9 +390,9 @@ void NMR_Simulation::setWalkers(void)
         if (this->rwNMR_config.getWalkersPlacement() == "cubic")
         {   
             // define restriction points
-            int center_x = (int) (*this).getImageWidth()/2;
-            int center_y = (int) (*this).getImageHeight()/2;
-            int center_z = (int) (*this).getImageDepth()/2;
+            int center_x = (int) ((*this).getImageWidth() - 1)/2;
+            int center_y = (int) ((*this).getImageHeight() - 1)/2;
+            int center_z = (int) ((*this).getImageDepth() - 1)/2;
             int deviation = (int) this->rwNMR_config.getPlacementDeviation();
             Point3D point1(center_x - deviation, center_y - deviation, center_z - deviation);
             Point3D point2(center_x + deviation, center_y + deviation, center_z + deviation);
@@ -963,7 +965,83 @@ void NMR_Simulation::createWalkersIDList()
         return;
     }
 
-    if(this->walkerOccupancy < 1.0)
+
+    /*
+        case 1 - set exactly one random walker at each pore voxel in image
+    */
+    if(this->walkerOccupancy == 1.0)
+    {
+        // set omp variables for parallel loop throughout walker list
+        const int num_cpu_threads = omp_get_max_threads();
+        const int loop_size = this->numberOfWalkers;
+        int loop_start, loop_finish;
+        cout << "using " << num_cpu_threads << " cpu threads...";
+
+        #pragma omp parallel shared(walkersIDList) private(loop_start, loop_finish) 
+        {
+            const int thread_id = omp_get_thread_num();
+            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+            loop_start = looper.getStart();
+            loop_finish = looper.getFinish();  
+            
+            for(uint idx = loop_start; idx < loop_finish; idx++)
+            {
+                #pragma omp critical
+                {
+                    this->walkersIDList.push_back(idx);
+                }
+            }
+        }
+    }
+
+    /* 
+        case 3 - for each walker, choose a pore voxel randomly 
+    */
+    // if(this->walkerOccupancy > 1.0)
+    if(this->walkerOccupancy != 1.0)
+    {
+        // set omp variables for parallel loop throughout walker list
+        const int num_cpu_threads = omp_get_max_threads();
+        const int loop_size = this->numberOfWalkers;
+        int loop_start, loop_finish;
+        cout << "using " << num_cpu_threads << " cpu threads...";
+
+        const uint listSize = (*this).getNumberOfPores();
+        vector<RandomIndex> generators;
+        for(uint i = 0; i < num_cpu_threads; i++)
+        {
+            RandomIndex rnew(0, listSize - 1, i);
+            generators.emplace_back(rnew);
+        }
+
+        #pragma omp parallel shared(walkersIDList, generators) private(loop_start, loop_finish) 
+        {
+            const int thread_id = omp_get_thread_num();
+            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+            loop_start = looper.getStart();
+            loop_finish = looper.getFinish();              
+
+            for (uint idx = loop_start; idx < loop_finish; idx++)
+            {
+                // ramdomly choose a pore location for the new walker with no restrictions
+                uint nextPoreIndex = generators[thread_id]();
+                #pragma omp critical
+                {
+                    this->walkersIDList.push_back(nextPoreIndex);
+                }
+            } 
+        }
+    }
+
+    /* 
+    case 3: 
+        for each walker, choose a pore voxel randomly but never allow two walkers in same voxel
+        - it needs to be revisited, a bug was found in the random picking procedure - try using 
+        RandomIndex class instead. 
+        For now, all the cases where occupancy != 1.0 will be branched to case 2
+    */
+    bool debuged = false; 
+    if(this->walkerOccupancy < 1.0 and debuged == true)
     {
         // create pore pool
         vector<uint> porePool;
@@ -995,59 +1073,6 @@ void NMR_Simulation::createWalkersIDList()
                     this->walkersIDList.push_back(nextPoreIndex);
                 }
             }
-        }
-    } 
-
-    if(this->walkerOccupancy == 1.0)
-    {
-        // set omp variables for parallel loop throughout walker list
-        const int num_cpu_threads = omp_get_max_threads();
-        const int loop_size = this->numberOfWalkers;
-        int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads...";
-
-        #pragma omp parallel shared(walkersIDList) private(loop_start, loop_finish) 
-        {
-            const int thread_id = omp_get_thread_num();
-            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
-            loop_start = looper.getStart();
-            loop_finish = looper.getFinish();  
-            
-            for(uint idx = loop_start; idx < loop_finish; idx++)
-            {
-                #pragma omp critical
-                {
-                    this->walkersIDList.push_back(idx);
-                }
-            }
-        }
-    }
-
-    // case 3
-    if(this->walkerOccupancy > 1.0)
-    {
-        // set omp variables for parallel loop throughout walker list
-        const int num_cpu_threads = omp_get_max_threads();
-        const int loop_size = this->numberOfWalkers;
-        int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads...";
-
-        #pragma omp parallel shared(walkersIDList) private(loop_start, loop_finish) 
-        {
-            const int thread_id = omp_get_thread_num();
-            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
-            loop_start = looper.getStart();
-            loop_finish = looper.getFinish();  
-
-            for (uint idx = loop_start; idx < loop_finish; idx++)
-            {
-                // ramdomly choose a pore location for the new walker with no restrictions
-                uint nextPoreIndex = (*this).pickRandomIndex((*this).getNumberOfPores() - 1);
-                #pragma omp critical
-                {
-                    this->walkersIDList.push_back(nextPoreIndex);
-                }
-            } 
         }
     }
 
@@ -1132,13 +1157,17 @@ void NMR_Simulation::placeWalkersByChance()
     uint idx = 0;
     Point3D point; 
     bool validPoint = false;   
-
+    
+    RandomIndex columnRandomIndex(0, this->bitBlock.imageColumns - 1);
+    RandomIndex rowRandomIndex(0, this->bitBlock.imageRows - 1);
+    RandomIndex depthRandomIndex(0, this->bitBlock.imageDepth - 1);
+    
     while(walkersInserted < this->numberOfWalkers && errorCount < erroLimit)
     {
         // randomly choose a position
-        point.x = (*this).pickRandomIndex(this->bitBlock.imageColumns - 1);
-        point.y = (*this).pickRandomIndex(this->bitBlock.imageRows - 1);
-        point.z = (*this).pickRandomIndex(this->bitBlock.imageDepth - 1);
+        point.x = columnRandomIndex();
+        point.y = rowRandomIndex();
+        point.z = depthRandomIndex();
         if(dim3)
         {
             validPoint = walkers[idx].checkNextPosition_3D(point, this->bitBlock);        
@@ -1323,23 +1352,27 @@ void NMR_Simulation::placeWalkersInCubicSpace(Point3D _vertex1, Point3D _vertex2
         int loop_start, loop_finish;
         cout << "using " << num_cpu_threads << " cpu threads...";
 
-        #pragma omp parallel shared(walkers, pores, selectedPores) private(loop_start, loop_finish) 
+        const uint listSize = selectedPores.size();
+        vector<RandomIndex> generators;
+        for(uint i = 0; i < num_cpu_threads; i++)
+        {
+            RandomIndex rnew(0, listSize - 1, i);
+            generators.emplace_back(rnew);
+        }
+
+        #pragma omp parallel shared(walkers, pores, selectedPores, generators) private(loop_start, loop_finish) 
         {
             const int thread_id = omp_get_thread_num();
             OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
             loop_start = looper.getStart();
             loop_finish = looper.getFinish();
 
-            cout << "thread id: " << thread_id;
-            cout << " start: " << loop_start;
-            cout << " end: " << loop_finish << endl;
-
             // pick random pores in selected list
             const uint listSize = selectedPores.size();
             for(uint id = loop_start; id < loop_finish; id++)
             {   
         
-                uint poreID = selectedPores[(*this).pickRandomIndex(listSize)];
+                uint poreID = selectedPores[generators[thread_id]()];
                 this->walkers[id].placeWalker(this->pores[poreID].position_x, 
                                               this->pores[poreID].position_y, 
                                               this->pores[poreID].position_z);
