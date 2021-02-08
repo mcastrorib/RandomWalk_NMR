@@ -22,7 +22,7 @@ pfgse_config::pfgse_config(const string configFile) : config_filepath(configFile
     string default_filename = PFGSE_CONFIG_DEFAULT;
     (*this).readConfigFile(default_dirpath + default_filename);
 	(*this).readConfigFile(configFile);
-    if(configFile != (default_dirpath + default_filename)) (*this).createTimeSamples();
+    (*this).createTimeSamples();
 }
 
 //copy constructors
@@ -42,7 +42,7 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
     this->TIME_VALUES = otherConfig.TIME_VALUES;
     this->TIME_MIN = otherConfig.TIME_MIN;
     this->TIME_MAX = otherConfig.TIME_MAX;
-    bool APPLY_SCALE_FACTOR = otherConfig.APPLY_SCALE_FACTOR;
+    this->APPLY_SCALE_FACTOR = otherConfig.APPLY_SCALE_FACTOR;
     this->INSPECTION_LENGTH = otherConfig.INSPECTION_LENGTH;
 
     // --- Threshold application for D(t) recovering.
@@ -110,8 +110,7 @@ void pfgse_config::readConfigFile(const string configFile)
             else if(token == "SAVE_COLLISIONS") (*this).readSaveCollisions(content);
             else if(token == "SAVE_DECAY") (*this).readSaveDecay(content);
             else if(token == "SAVE_HISTOGRAM") (*this).readSaveHistogram(content);
-            else if(token == "SAVE_HISTOGRAM_LIST") (*this).readSaveHistogramList(content); 
-			
+            else if(token == "SAVE_HISTOGRAM_LIST") (*this).readSaveHistogramList(content); 			
 		}
     } 
 
@@ -182,6 +181,7 @@ void pfgse_config::readTimeSamples(string s)
 
 void pfgse_config::readTimeValues(string s)
 {
+    if(this->TIME_VALUES.size() > 0) this->TIME_VALUES.clear();
     if(this->TIME_SEQ == "manual")
     {
         // parse vector

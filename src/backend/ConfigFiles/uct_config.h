@@ -7,14 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
-
-#ifndef CONFIG_ROOT
-#define CONFIG_ROOT "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/"
-#endif
-
-#ifndef UCT_CONFIG_DEFAULT
-#define UCT_CONFIG_DEFAULT "./default/uct.config"
-#endif
+#include "configFiles_defs.h"
 
 using namespace std;
 

@@ -31,16 +31,16 @@ ArgsParser::ArgsParser(int argc, char *argv[])
                 
                 if((arg_idx + 1) < argc)
                 {
-                    string new_path = argv[arg_idx+1];
-                    this->paths[0] = new_path;
+                    string newPath = argv[arg_idx+1];
+                    this->paths[0] = newPath;
                 }                
             }
             else if(argument == "-uctconfig")
             {                
                 if((arg_idx + 1) < argc)
                 {
-                    string new_path = argv[arg_idx+1];
-                    this->paths[1] = new_path;
+                    string newPath = argv[arg_idx+1];
+                    this->paths[1] = newPath;
                 }                
             }
             else if(argument == "cpmg")
@@ -49,11 +49,11 @@ ArgsParser::ArgsParser(int argc, char *argv[])
 
                 if((arg_idx + 1) < argc)
                 {
-                    string add_flag = argv[arg_idx + 1];
-                    if(add_flag == "-config" and (arg_idx + 2) < argc)
+                    string addFlag = argv[arg_idx + 1];
+                    if(addFlag == "-config" and (arg_idx + 2) < argc)
                     {
-                        string new_path = argv[arg_idx + 2];
-                        this->paths.push_back(new_path);
+                        string newPath = argv[arg_idx + 2];
+                        this->paths.push_back(newPath);
                     } else
                     {
                         this->paths.push_back("default");
@@ -69,11 +69,11 @@ ArgsParser::ArgsParser(int argc, char *argv[])
 
                 if((arg_idx + 1) < argc)
                 {
-                    string add_flag = argv[arg_idx + 1];
-                    if(add_flag == "-config" and (arg_idx + 2) < argc)
+                    string addFlag = argv[arg_idx + 1];
+                    if(addFlag == "-config" and (arg_idx + 2) < argc)
                     {
                         string new_path = argv[arg_idx + 2];
-                        this->paths.push_back("default");
+                        this->paths.push_back(new_path);
                     } else
                     {
                         this->paths.push_back("default");
@@ -89,11 +89,11 @@ ArgsParser::ArgsParser(int argc, char *argv[])
 
                 if((arg_idx + 1) < argc)
                 {
-                    string add_flag = argv[arg_idx + 1];
-                    if(add_flag == "-config" and (arg_idx + 2) < argc)
+                    string addFlag = argv[arg_idx + 1];
+                    if(addFlag == "-config" and (arg_idx + 2) < argc)
                     {
-                        string new_path = argv[arg_idx + 2];
-                        this->paths.push_back("default");
+                        string newPath = argv[arg_idx + 2];
+                        this->paths.push_back(newPath);
                     } else
                     {
                         this->paths.push_back("default");

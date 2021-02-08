@@ -119,7 +119,7 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
         (*this).setInitialSeed(myRNG::RNG_uint64(), true);
     } else
     {
-        (*this).setInitialSeed(this->rwNMR_config.getSeed());
+        (*this).setInitialSeed(this->rwNMR_config.getSeed(), true);
     }   
 
     // assign attributes from uct config files
@@ -1189,8 +1189,7 @@ void NMR_Simulation::placeWalkersUniformly()
         const int thread_id = omp_get_thread_num();
         OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
         loop_start = looper.getStart();
-        loop_finish = looper.getFinish();     
-
+        loop_finish = looper.getFinish();         
 
         if (this->walkerOccupancy != 1.0) 
         {
@@ -1330,6 +1329,10 @@ void NMR_Simulation::placeWalkersInCubicSpace(Point3D _vertex1, Point3D _vertex2
             OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
             loop_start = looper.getStart();
             loop_finish = looper.getFinish();
+
+            cout << "thread id: " << thread_id;
+            cout << " start: " << loop_start;
+            cout << " end: " << loop_finish << endl;
 
             // pick random pores in selected list
             const uint listSize = selectedPores.size();
@@ -1511,7 +1514,8 @@ void NMR_Simulation::saveImageInfo(string filedir)
                                  this->bitBlock.imageColumns, 
                                  this->bitBlock.imageRows, 
                                  this->bitBlock.imageDepth, 
-                                 this->imageVoxelResolution);
+                                 this->imageVoxelResolution,
+                                 this->porosity);
 }
 
 void NMR_Simulation::saveEnergyDecay(string filePath)
@@ -1587,7 +1591,7 @@ void NMR_Simulation::printDetails()
     }
     else
     {
-        cout << "not defined by user" << endl;
+        cout << this->initialSeed << "\tdefined by user" << endl;
     }
 
     cout << "GPU usage: ";

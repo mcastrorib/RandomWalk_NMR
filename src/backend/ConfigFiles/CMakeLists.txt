@@ -10,7 +10,8 @@ target_include_directories(ConfigFiles
 
 
 install(TARGETS ConfigFiles DESTINATION lib)
-install(FILES rwnmr_config.h 
+install(FILES configFiles_defs.h
+			  rwnmr_config.h 
 			  uct_config.h 
 			  cpmg_config.h 
 			  pfgse_config.h

@@ -154,7 +154,7 @@ void uct_config::readImgFiles()
     while(fileObject)
     {
     	getline(fileObject, line);
-		cout << line << endl;
+		// cout << line << endl;
     	if(slice < (*this).getSlices()) this->IMG_FILES.push_back(line);
 		slice++;
     } 
