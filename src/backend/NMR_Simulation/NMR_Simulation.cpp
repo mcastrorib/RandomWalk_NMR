@@ -31,6 +31,7 @@
 #include "NMR_Simulation.h"
 #include "../Utils/OMPLoopEnabler.h"
 #include "../Utils/ImagePath.h"
+#include "../Utils/ProgressBar.h"
 #include "../RNG/randomIndex.h"
 
 
@@ -465,20 +466,28 @@ void NMR_Simulation::saveInfo()
 void NMR_Simulation::save()
 {
     double time = omp_get_wtime();
-    cout << "saving results...";
+    cout << "saving results:" << endl;
+
+    ProgressBar pBar(2.0);
 
     if(this->rwNMR_config.getSaveImgInfo())
     {   
         (*this).saveImageInfo(this->simulationDirectory);
     } 
 
+    pBar.update(1);
+    pBar.print();
+
     if(this->rwNMR_config.getSaveBinImg())
     {   
         (*this).saveBitBlock(this->simulationDirectory);
     }
 
+    pBar.update(1);
+    pBar.print();
+
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
 }
 
 // save results in other directory
@@ -486,25 +495,33 @@ void NMR_Simulation::save(string _otherDir)
 {
     double time = omp_get_wtime();
     cout << "saving results...";
+
+    ProgressBar pBar(2.0);
     
     if(this->rwNMR_config.getSaveImgInfo())
     {   
         (*this).saveImageInfo(_otherDir);
     }
 
+    pBar.update(1);
+    pBar.print();
+
     if(this->rwNMR_config.getSaveBinImg())
     {   
         (*this).saveBitBlock(_otherDir);
     }
 
+    pBar.update(1);
+    pBar.print();
+
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
 }
 
 void NMR_Simulation::loadRockImage()
 {
     double time = omp_get_wtime();
-    cout << "loading rock image ...";
+    cout << "- loading rock image:" << endl;
 
     // reserve memory for binaryMap
     this->binaryMap.reserve(numberOfImages);
@@ -520,6 +537,9 @@ void NMR_Simulation::loadRockImage()
 
     uint firstImage = this->imagePath.fileID;
     uint digits = this->imagePath.digits;
+
+    // create progress bar object
+    ProgressBar pBar((double) (this->numberOfImages));
 
     for (uint slice = 0; slice < this->numberOfImages; slice++)
     {
@@ -539,22 +559,30 @@ void NMR_Simulation::loadRockImage()
         this->width = rockImage.cols * rockImage.channels();
 
         (*this).createBinaryMap(rockImage, slice);
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();
+        
     }
 
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl;
+    cout << " in " << time << " seconds." << endl;
 }
 
 void NMR_Simulation::loadRockImageFromList()
 {
     double time = omp_get_wtime();
-    cout << "loading rock image from list...";
+    cout << "- loading rock image from list:" << endl;
 
     // reserve memory for binaryMap
-    this->binaryMap.reserve(numberOfImages);
+    this->binaryMap.reserve(this->numberOfImages);
 
     // variable strings
     string currentImagePath;
+
+    // create progress bar object
+    ProgressBar pBar((double) this->numberOfImages);
 
     for (uint slice = 0; slice < this->numberOfImages; slice++)
     {
@@ -572,10 +600,14 @@ void NMR_Simulation::loadRockImageFromList()
         this->width = rockImage.cols * rockImage.channels();
 
         (*this).createBinaryMap(rockImage, slice);
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();
     }
 
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl;
+    cout << " in " << time << " seconds." << endl;
 }
 
 
@@ -624,7 +656,7 @@ void NMR_Simulation::createBinaryMap(Mat &_rockImage, uint slice)
 void NMR_Simulation::createBitBlockMap()
 {
     double time = omp_get_wtime();
-    cout << "creating (bit)block map...";
+    cout << "- creating (bit)block map:" << endl;
     this->bitBlock.createBlockMap(this->binaryMap);
 
     // update image info
@@ -634,7 +666,7 @@ void NMR_Simulation::createBitBlockMap()
     this->binaryMap.clear();
 
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl;
+    cout << " in " << time << " seconds." << endl;
 }
 
 // deprecated
@@ -680,12 +712,15 @@ void NMR_Simulation::countPoresInBinaryMap()
 void NMR_Simulation::countPoresInBitBlock()
 {
     double time = omp_get_wtime(); 
-    cout << "counting ";
+    cout << "- counting pore voxels in rock image:" << endl;
 
     // consider 2 or 3 dimensions
     bool dim3 = false; 
     if(this->bitBlock.imageDepth > 1) 
         dim3 = true;
+
+    // Create progress bar object
+    ProgressBar pBar((double) (this->bitBlock.imageDepth));
 
     // first, count all pores in image
     this->numberOfPores = 0;
@@ -712,20 +747,25 @@ void NMR_Simulation::countPoresInBitBlock()
                     this->numberOfPores++;
                 }
             }
-        }       
+        } 
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();      
     }
 
     (*this).updatePorosity();
 
     time = omp_get_wtime() - time;
-    cout << this->numberOfPores << " pore voxels in rock image...Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
+    cout << this->numberOfPores << " pore voxel(s) identified. " ;
     cout << "porosity: " << this->porosity << endl;
 }
 
 void NMR_Simulation::countPoresInCubicSpace(Point3D _vertex1, Point3D _vertex2)
 {
     double time = omp_get_wtime(); 
-    cout << "counting ";
+    cout << "- counting pore voxels in cubic space:" << endl;
 
     // consider 2 or 3 dimensions
     bool dim3 = false; 
@@ -771,6 +811,9 @@ void NMR_Simulation::countPoresInCubicSpace(Point3D _vertex1, Point3D _vertex2)
     if(yf > this->bitBlock.imageRows) yf = this->bitBlock.imageRows;
     if(zf > this->bitBlock.imageDepth) zf = this->bitBlock.imageDepth;
 
+    // Create progress bar object
+    ProgressBar pBar((double) (zf - z0));  
+
     // first, count all pores in image
     this->numberOfPores = 0;
     for(uint z = z0; z < zf; z++)
@@ -796,11 +839,17 @@ void NMR_Simulation::countPoresInCubicSpace(Point3D _vertex1, Point3D _vertex2)
                     this->numberOfPores++;
                 }
             }
-        }       
+        }  
+        
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();       
     }
 
     time = omp_get_wtime() - time;
-    cout << this->numberOfPores << " pore voxels in cubic space...Ok. (" << time << " seconds)." << endl;  
+    cout << " in " << time << " seconds." << endl; 
+    cout << this->numberOfPores << " pore voxel(s) in cubic space identified." << endl; 
+    cout << "porosity: " << this->porosity << endl; 
 }
 
 void NMR_Simulation::updatePorosity()
@@ -817,7 +866,7 @@ void NMR_Simulation::updateNumberOfPores()
 void NMR_Simulation::createPoreList()
 {
     double time = omp_get_wtime(); 
-    cout << "creating pore list...";
+    cout << "- creating pore list:" << endl;
 
     // consider 2 or 3 dimensions
     bool dim3 = false; 
@@ -828,6 +877,10 @@ void NMR_Simulation::createPoreList()
     (*this).updateNumberOfPores();
     if(this->pores.size() > 0) this->pores.clear();
     this->pores.reserve(this->numberOfPores);
+
+    // Create progress bar object
+    ProgressBar pBar((double) (this->bitBlock.imageDepth));   
+
     for(uint z = 0; z < this->bitBlock.imageDepth; z++)
     {
         for(uint y = 0; y < this->bitBlock.imageRows; y++)
@@ -851,17 +904,21 @@ void NMR_Simulation::createPoreList()
                     this->pores.push_back(detectedPore);
                 }
             }
-        }       
+        } 
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();         
     }
 
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
 }
 
 void NMR_Simulation::createPoreList(Point3D _vertex1, Point3D _vertex2)
 {
     double time = omp_get_wtime(); 
-    cout << "creating pore list...";
+    cout << "- creating pore list:" << endl;
 
     // consider 2 or 3 dimensions
     bool dim3 = false; 
@@ -910,6 +967,9 @@ void NMR_Simulation::createPoreList(Point3D _vertex1, Point3D _vertex2)
     // second, create pore list
     if(this->pores.size() > 0) this->pores.clear();
     this->pores.reserve(this->numberOfPores);
+
+    // Create progress bar object
+    ProgressBar pBar((double) (zf-z0));
     for(uint z = z0; z < zf; z++)
     {
         for(uint y = y0; y < yf; y++)
@@ -933,11 +993,15 @@ void NMR_Simulation::createPoreList(Point3D _vertex1, Point3D _vertex2)
                     this->pores.push_back(detectedPore);
                 }
             }
-        }       
+        }
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();          
     }
 
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
 }
 
 void NMR_Simulation::setNumberOfWalkers(uint _numberOfWalkers)
@@ -953,7 +1017,7 @@ void NMR_Simulation::updateWalkerOccupancy()
 void NMR_Simulation::createWalkersIDList()
 {
     double time = omp_get_wtime();
-    cout << "creating list of " << this->numberOfWalkers << " random walkers ";
+    cout << "- creating list of " << this->numberOfWalkers << " random walkers ";
 
     if(this->walkersIDList.size() > 0) this->walkersIDList.clear();
     this->walkersIDList.reserve(this->numberOfWalkers);
@@ -965,7 +1029,6 @@ void NMR_Simulation::createWalkersIDList()
         return;
     }
 
-
     /*
         case 1 - set exactly one random walker at each pore voxel in image
     */
@@ -975,9 +1038,13 @@ void NMR_Simulation::createWalkersIDList()
         const int num_cpu_threads = omp_get_max_threads();
         const int loop_size = this->numberOfWalkers;
         int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads...";
+        cout << "using " << num_cpu_threads << " cpu threads:" << endl;
 
-        #pragma omp parallel shared(walkersIDList) private(loop_start, loop_finish) 
+        // create Progress Bar object
+        ProgressBar pBar((double) num_cpu_threads);
+        pBar.print();
+
+        #pragma omp parallel shared(walkersIDList, pBar) private(loop_start, loop_finish) 
         {
             const int thread_id = omp_get_thread_num();
             OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -990,6 +1057,12 @@ void NMR_Simulation::createWalkersIDList()
                 {
                     this->walkersIDList.push_back(idx);
                 }
+            }
+
+            #pragma omp critical
+            {
+                pBar.update(1);
+                pBar.print();
             }
         }
     }
@@ -1004,7 +1077,11 @@ void NMR_Simulation::createWalkersIDList()
         const int num_cpu_threads = omp_get_max_threads();
         const int loop_size = this->numberOfWalkers;
         int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads...";
+        cout << "using " << num_cpu_threads << " cpu threads:" << endl;
+
+        // create Progress Bar object
+        ProgressBar pBar((double) num_cpu_threads);
+        pBar.print();
 
         const uint listSize = (*this).getNumberOfPores();
         vector<RandomIndex> generators;
@@ -1014,7 +1091,7 @@ void NMR_Simulation::createWalkersIDList()
             generators.emplace_back(rnew);
         }
 
-        #pragma omp parallel shared(walkersIDList, generators) private(loop_start, loop_finish) 
+        #pragma omp parallel shared(walkersIDList, generators, pBar) private(loop_start, loop_finish) 
         {
             const int thread_id = omp_get_thread_num();
             OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -1030,6 +1107,12 @@ void NMR_Simulation::createWalkersIDList()
                     this->walkersIDList.push_back(nextPoreIndex);
                 }
             } 
+
+            #pragma omp critical
+            {
+                pBar.update(1);
+                pBar.print();
+            }
         }
     }
 
@@ -1055,9 +1138,13 @@ void NMR_Simulation::createWalkersIDList()
         const int num_cpu_threads = omp_get_max_threads();
         const int loop_size = this->numberOfWalkers;
         int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads...";
+        cout << "using " << num_cpu_threads << " cpu threads:" << endl;
 
-        #pragma omp parallel shared(walkersIDList) private(loop_start, loop_finish) 
+        // create Progress Bar object
+        ProgressBar pBar((double) num_cpu_threads);
+        pBar.print();
+
+        #pragma omp parallel shared(walkersIDList, pBar) private(loop_start, loop_finish) 
         {
             const int thread_id = omp_get_thread_num();
             OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -1073,18 +1160,24 @@ void NMR_Simulation::createWalkersIDList()
                     this->walkersIDList.push_back(nextPoreIndex);
                 }
             }
+
+            #pragma omp critical
+            {
+                pBar.update(1);
+                pBar.print();
+            }
         }
     }
 
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
 }
 
 
 void NMR_Simulation::createWalkers()
 {
     double time = omp_get_wtime();
-    cout << "creating " << this->numberOfWalkers << " walkers...";
+    cout << "- creating " << this->numberOfWalkers << " walkers:" << endl;
 
     // define the dimensionality that walkers will be trated
     bool dim3 = false;
@@ -1101,8 +1194,53 @@ void NMR_Simulation::createWalkers()
     // create walkers
     vector<double> rho;
     rho = this->rwNMR_config.getRho();
-    for (uint idx = 0; idx < this->numberOfWalkers; idx++)
+
+    uint walkerPacks = 10;
+    uint packSize = this->numberOfWalkers / walkerPacks;
+    uint lastPackSize = this->numberOfWalkers % walkerPacks;
+
+    // create progress bar object
+    ProgressBar pBar(10);
+    uint idx = 0;
+    uint count = 0;
+    for (uint pack = 0; pack < (walkerPacks - 1); pack++)
     {
+        for (uint i = 0; i < packSize; i++)
+        {
+            idx = pack * packSize + i;
+            Walker temporaryWalker(dim3);
+            this->walkers.push_back(temporaryWalker);
+            if(this->rwNMR_config.getRhoType() == "uniform") this->walkers[idx].setSurfaceRelaxivity(rho[0]);
+            else if(this->rwNMR_config.getRhoType() == "sigmoid") this->walkers[idx].setSurfaceRelaxivity(rho);
+            this->walkers[idx].computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
+            
+            // set initial seed
+            if (this->seedFlag != true)
+            {
+                this->walkers[idx].createRandomSeed();
+            }
+            else // seed was defined by user
+            {
+                // scramble some bits in the original seed
+                tempSeed ^= tempSeed >> 12;
+                tempSeed ^= tempSeed << 25;
+                tempSeed ^= tempSeed >> 27;
+
+                this->walkers[idx].setInitialSeed(tempSeed);
+                this->walkers[idx].resetSeed();
+            }  
+
+            count++;
+        }
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();
+    }
+
+    for (uint i = 0; i < (packSize + lastPackSize); i++)
+    {
+        idx = (walkerPacks - 1) * packSize + i;
         Walker temporaryWalker(dim3);
         this->walkers.push_back(temporaryWalker);
         if(this->rwNMR_config.getRhoType() == "uniform") this->walkers[idx].setSurfaceRelaxivity(rho[0]);
@@ -1123,11 +1261,17 @@ void NMR_Simulation::createWalkers()
 
             this->walkers[idx].setInitialSeed(tempSeed);
             this->walkers[idx].resetSeed();
-        }
+        }  
+
+        count++;
     }
+
+    // Update progress bar
+    pBar.update(1);
+    pBar.print();
     
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
 }
 
 
@@ -1135,7 +1279,7 @@ void NMR_Simulation::placeWalkersByChance()
 {
 
     double time = omp_get_wtime();
-    cout << "placing walkers by chance...";
+    cout << "- placing walkers by chance...";
 
     if(numberOfPores == 0)
     {
@@ -1191,14 +1335,14 @@ void NMR_Simulation::placeWalkersByChance()
     
     time = omp_get_wtime() - time;
     cout << "Ok. (" << time << " seconds)." << endl; 
-    if(errorCount == erroLimit) cout << "could only insert " << walkersInserted << "walkers." << endl;
+    if(errorCount == erroLimit) cout << "could only insert " << endl;
 }
 
 
 void NMR_Simulation::placeWalkersUniformly()
 {
     double time = omp_get_wtime();
-    cout << "placing walkers uniformly ";
+    cout << "- placing walkers uniformly ";
 
     if(this->pores.size() == 0)
     {
@@ -1211,14 +1355,18 @@ void NMR_Simulation::placeWalkersUniformly()
     const int num_cpu_threads = omp_get_max_threads();
     const int loop_size = this->numberOfWalkers;
     int loop_start, loop_finish;
-    cout << "using " << num_cpu_threads << " cpu threads...";
+    cout << "using " << num_cpu_threads << " cpu threads:" << endl;
 
-    #pragma omp parallel shared(walkers, walkersIDList, pores) private(loop_start, loop_finish) 
+    ProgressBar pBar((double) num_cpu_threads);
+    pBar.print();
+
+    #pragma omp parallel shared(walkers, walkersIDList, pores, pBar) private(loop_start, loop_finish) 
     {
         const int thread_id = omp_get_thread_num();
         OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
         loop_start = looper.getStart();
-        loop_finish = looper.getFinish();         
+        loop_finish = looper.getFinish();   
+
 
         if (this->walkerOccupancy != 1.0) 
         {
@@ -1242,16 +1390,23 @@ void NMR_Simulation::placeWalkersUniformly()
             }
         }
 
+        #pragma omp critical
+        {
+            // update progress bar
+            pBar.update(1);
+            pBar.print();
+        }
+
     }
 
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
 }
 
 void NMR_Simulation::placeWalkersInSamePoint(uint _x, uint _y, uint _z)
 {
     double time = omp_get_wtime();
-    cout << "placing walkers at point ";
+    cout << "- placing walkers at point ";
     cout << "(" << _x << ", " << _y << ", " << _z << ")..."; 
 
     // check walkers array
@@ -1311,7 +1466,7 @@ void NMR_Simulation::placeWalkersInSamePoint(uint _x, uint _y, uint _z)
 void NMR_Simulation::placeWalkersInCubicSpace(Point3D _vertex1, Point3D _vertex2)
 {
     double time = omp_get_wtime();
-    cout << "placing walkers at selected space: " << endl;
+    cout << "- placing walkers at selected space: " << endl;
     cout << "vertex 1: "; _vertex1.printInfo();
     cout << "vertex 2: "; _vertex2.printInfo();
 
@@ -1350,7 +1505,7 @@ void NMR_Simulation::placeWalkersInCubicSpace(Point3D _vertex1, Point3D _vertex2
         const int num_cpu_threads = omp_get_max_threads();
         const int loop_size = this->walkers.size();
         int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads...";
+        cout << "using " << num_cpu_threads << " cpu threads:" << endl;
 
         const uint listSize = selectedPores.size();
         vector<RandomIndex> generators;
@@ -1360,7 +1515,11 @@ void NMR_Simulation::placeWalkersInCubicSpace(Point3D _vertex1, Point3D _vertex2
             generators.emplace_back(rnew);
         }
 
-        #pragma omp parallel shared(walkers, pores, selectedPores, generators) private(loop_start, loop_finish) 
+        // Create Progress Bar object
+        ProgressBar pBar((double) num_cpu_threads);
+        pBar.print();
+
+        #pragma omp parallel shared(walkers, pores, selectedPores, generators, pBar) private(loop_start, loop_finish) 
         {
             const int thread_id = omp_get_thread_num();
             OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -1377,10 +1536,17 @@ void NMR_Simulation::placeWalkersInCubicSpace(Point3D _vertex1, Point3D _vertex2
                                               this->pores[poreID].position_y, 
                                               this->pores[poreID].position_z);
             }
+
+            // update progress bar
+            #pragma omp critical
+            {
+                pBar.update(1);
+                pBar.print();
+            }
         }
     
         time = omp_get_wtime() - time;
-        cout << "Ok. (" << time << " seconds)." << endl; 
+        cout << " in " << time << " seconds." << endl; 
     }
 }
 

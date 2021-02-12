@@ -3,20 +3,20 @@
 #include <unistd.h>
 
 // include CMake Configuration file
-#include "NMR_RWConfig.h"
+#include "RWNMR_Config.h"
 
 // include interface header files
-#include "App.h"
+#include "rwnmrApp.h"
 #include "ArgsParser.h"
 
 using namespace std;
 
-// Main Program
+// Main program
 int main(int argc, char *argv[])
 {    
-     ArgsParser args(argc, argv);
-     App NMR_app(args);
-     NMR_app.exec();
+	
+	rwnmrApp app(argc, argv);
+	app.exec();
 
-     return 0;
+    return 0;
 }

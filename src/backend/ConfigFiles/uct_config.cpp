@@ -44,13 +44,11 @@ uct_config::uct_config(const uct_config &otherConfig)
 // read config file
 void uct_config::readConfigFile(const string configFile)
 {
-	cout << "reading uct configs from file...";
-
     ifstream fileObject;
     fileObject.open(configFile, ios::in);
     if (fileObject.fail())
     {
-        cout << "Could not open file from disc." << endl;
+        cout << "Could not open uct config file from disc." << endl;
         exit(1);
     }
 
@@ -83,7 +81,6 @@ void uct_config::readConfigFile(const string configFile)
 		}
     } 
 
-    cout << "Ok" << endl;
     fileObject.close();
 }
 
@@ -135,8 +132,7 @@ void uct_config::readImgFilesList(string s)
 void uct_config::readImgFiles()
 {
 	const string filepath = (*this).getImgFilesList();
-	cout << "reading image list from file " << filepath << "...";
-
+	
     ifstream fileObject;
     fileObject.open(filepath, ios::in);
     if (fileObject.fail())
@@ -158,23 +154,20 @@ void uct_config::readImgFiles()
     	if(slice < (*this).getSlices()) this->IMG_FILES.push_back(line);
 		slice++;
     } 
-	cout << "img list size: " << this->IMG_FILES.size() << endl;
-    cout << "Ok" << endl;
+
     fileObject.close();
 }
 
 void uct_config::createImgFileList()
 {
-    cout << "creating image file list...";
-
-	string dirpath = CONFIG_ROOT;
+    string dirpath = CONFIG_ROOT;
 	string filepath = dirpath + "/imgs/ImagesList.txt";
 
     ofstream fileObject;
     fileObject.open(filepath, ios::out);
     if (fileObject.fail())
     {
-        cout << "Could not open file from disc." << endl;
+        cout << "Could not open images list file from disc." << endl;
         exit(1);
     }
 
@@ -200,7 +193,6 @@ void uct_config::createImgFileList()
     }	  
 
 	(*this).readImgFilesList(filepath);    
-    cout << "Ok. (" << time << " seconds)." << endl;
 }
 
 

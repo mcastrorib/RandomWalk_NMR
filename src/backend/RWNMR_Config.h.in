@@ -2,7 +2,7 @@
 #define NMR_RW_simulation_VERSION_MAJOR @NMR_RW_simulation_VERSION_MAJOR @
 #define NMR_RW_simulation_VERSION_MINOR @NMR_RW_simulation_VERSION_MINOR @
 
-#cmakedefine USE_APP
+#cmakedefine USE_RWNMRAPP
 #cmakedefine USE_NMR_SIMULATION
 #cmakedefine USE_WALKER
 #cmakedefine USE_BITBLOCK

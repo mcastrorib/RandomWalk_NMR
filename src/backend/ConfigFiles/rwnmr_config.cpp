@@ -72,13 +72,11 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
 // read config file
 void rwnmr_config::readConfigFile(const string configFile)
 {
-	cout << "reading rwnmr configs from file...";
-
     ifstream fileObject;
     fileObject.open(configFile, ios::in);
     if (fileObject.fail())
     {
-        cout << "Could not open file from disc." << endl;
+        cout << "Could not open rwnmr config file from disc." << endl;
         exit(1);
     }
 
@@ -86,7 +84,6 @@ void rwnmr_config::readConfigFile(const string configFile)
     while(fileObject)
     {
     	getline(fileObject, line);
-    	// cout << line << endl;
 
     	string s = line;
     	string delimiter = ": ";
@@ -131,7 +128,6 @@ void rwnmr_config::readConfigFile(const string configFile)
 		}
     } 
 
-    cout << "Ok" << endl;
     fileObject.close();
 }
 

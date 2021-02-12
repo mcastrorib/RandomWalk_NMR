@@ -1,5 +1,5 @@
-#ifndef APP_H_
-#define APP_H_
+#ifndef RWNMRAPP_H_
+#define RWNMRAPP_H_
 
 // include C++ standard libraries
 #include <iostream>
@@ -12,7 +12,7 @@
 
 using namespace std;
 
-class App
+class rwnmrApp
 {
 public:   
     const string config_root;
@@ -20,14 +20,15 @@ public:
     NMR_Simulation *NMR;
 
     // default constructors
-    App(){};
-    App(ArgsParser _args);
+    rwnmrApp(){};
+    rwnmrApp(int argc, char *argv[]);
+    rwnmrApp(ArgsParser _args);
 
     //copy constructors
-    App(const App &_otherApp);
+    rwnmrApp(const rwnmrApp &_otherApp);
 
     // default destructor
-    virtual ~App()
+    virtual ~rwnmrApp()
     {
         delete NMR;
         NMR = NULL;

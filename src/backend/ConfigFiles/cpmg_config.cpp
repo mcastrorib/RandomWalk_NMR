@@ -51,13 +51,11 @@ cpmg_config::cpmg_config(const cpmg_config &otherConfig)
 // read config file
 void cpmg_config::readConfigFile(const string configFile)
 {
-	cout << "reading cpmg configs from file...";
-
-    ifstream fileObject;
+	ifstream fileObject;
     fileObject.open(configFile, ios::in);
     if (fileObject.fail())
     {
-        cout << "Could not open file from disc." << endl;
+        cout << "Could not open cpmg config file from disc." << endl;
         exit(1);
     }
 
@@ -99,7 +97,6 @@ void cpmg_config::readConfigFile(const string configFile)
 		}
     } 
 
-    cout << "Ok" << endl;
     fileObject.close();
 }
 

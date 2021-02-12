@@ -68,13 +68,11 @@ ga_config::ga_config(const ga_config &otherConfig)
 // read config file
 void ga_config::readConfigFile(const string configFile)
 {
-	cout << "reading ga configs from file...";
-
     ifstream fileObject;
     fileObject.open(configFile, ios::in);
     if (fileObject.fail())
     {
-        cout << "Could not open file from disc." << endl;
+        cout << "Could not open ga config file from disc." << endl;
         exit(1);
     }
 
@@ -82,7 +80,6 @@ void ga_config::readConfigFile(const string configFile)
     while(fileObject)
     {
     	getline(fileObject, line);
-    	// cout << line << endl;
 
     	string s = line;
     	string delimiter = ": ";
@@ -125,7 +122,6 @@ void ga_config::readConfigFile(const string configFile)
 		}
     } 
 
-    cout << "Ok" << endl;
     fileObject.close();
 }
 

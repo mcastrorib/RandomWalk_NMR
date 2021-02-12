@@ -1,7 +1,7 @@
 #ifndef CONFIGFILES_DEFS_H_
 #define CONFIGFILES_DEFS_H_
 
-#define CONFIG_ROOT "/home/lablcc/Desktop/matheus/rwnmr_v2.0/config/"
+#define CONFIG_ROOT "/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/config/"
 #define RWNMR_CONFIG_DEFAULT "./default/rwnmr.config"
 #define UCT_CONFIG_DEFAULT "./default/uct.config"
 #define CPMG_CONFIG_DEFAULT "./default/cpmg.config"

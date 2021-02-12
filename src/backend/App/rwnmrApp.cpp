@@ -19,16 +19,21 @@
 #include "../NMR_Simulation/NMR_cpmg.h"
 
 // include class header file
-#include "App.h"
+#include "rwnmrApp.h"
 
-App::App(ArgsParser _args) : config_root(CONFIG_ROOT), args(_args), NMR(NULL)
+rwnmrApp::rwnmrApp(int argc, char *argv[]) : config_root(CONFIG_ROOT), args(argc, argv), NMR(NULL)
 {
     (*this).buildEssentials(); 
 }
 
-void App::buildEssentials()
+rwnmrApp::rwnmrApp(ArgsParser _args) : config_root(CONFIG_ROOT), args(_args), NMR(NULL)
 {
-    cout << "-- building RWNMR essentials" << endl;
+    (*this).buildEssentials(); 
+}
+
+void rwnmrApp::buildEssentials()
+{
+    cout << "--- Building RWNMR essentials" << endl;
 
     // -- Read NMR essentials config files  
     // -- rwnmr & uct image config
@@ -44,25 +49,25 @@ void App::buildEssentials()
     uct_config uCT_Config((*this).getConfigRoot() + uct_config_path); 
     // // -----
 
-    // -- Build NMR_Simulation essentials
-    cout << "creating RWNMR object" << endl;
+    // -- Create NMR_Simulation object
     this->NMR = new NMR_Simulation(rwNMR_Config, uCT_Config);
-    cout << "RWNMR object created succesfully." << endl;
-    cout << "reading uCT-image" << endl;
+    
+    // Read digital rock image
+    cout << "-- Loading uCT-image" << endl;
     this->NMR->readImage();
-    cout << "uCT-image read succesfully." << endl;     
-    cout << "setting walkers" << endl;
+
+    // Create and set up random walkers
+    cout << endl << "-- Setting random walkers" << endl;
     this->NMR->setWalkers();
-    cout << "walkers set." << endl;
-    cout << "saving uCT-image info" << endl;
+
+    // Save image info
+    cout << endl << "-- Saving uCT-image info" << endl;
     this->NMR->save();
-    cout << "saved succesfully." << endl;
-    cout << "- RWNMR essentials were build." << endl << endl;
-    this->NMR->info();
+    cout << endl; this->NMR->info();
     // -----    
 }
 
-void App::exec()
+void rwnmrApp::exec()
 {
     uint commands = this->args.commands.size();
     uint current = 2;
@@ -76,9 +81,9 @@ void App::exec()
     }
 }
 
-void App::CPMG(uint command_idx)
+void rwnmrApp::CPMG(uint command_idx)
 {
-    cout << "-- CPMG to be executed..." << endl;
+    cout << "-- CPMG to be executed:" << endl;
     // -- Read CPMG routine config files
     string cpmg_config_path;
     if((*this).getArgsPath(command_idx) != "default") cpmg_config_path = (*this).getArgsPath(command_idx);
@@ -93,9 +98,9 @@ void App::CPMG(uint command_idx)
     // -----
 }
 
-void App::PFGSE(uint command_idx)
+void rwnmrApp::PFGSE(uint command_idx)
 {
-    cout << "-- PFGSE to be executed..." << endl;
+    cout << "-- PFGSE to be executed:" << endl;
     // -- Read PFGSE routine config files
     string pfgse_config_path;
     if((*this).getArgsPath(command_idx) != "default") pfgse_config_path = (*this).getArgsPath(command_idx);
@@ -111,7 +116,7 @@ void App::PFGSE(uint command_idx)
     // -----
 }
 
-void App::GA(uint command_idx)
+void rwnmrApp::GA(uint command_idx)
 {
     cout << "-- GA is under contruction." << endl;
 }

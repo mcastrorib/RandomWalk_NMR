@@ -21,6 +21,7 @@
 #include "../RNG/xorshift.h"
 #include "../FileHandler/fileHandler.h"
 #include "../NMR_Simulation/NMR_Simulation.h"
+#include "../Utils/ProgressBar.h"
 
 using namespace std;
 using namespace cv;
@@ -168,6 +169,9 @@ void BitBlock::createBitBlocksArray_3D(vector<Mat> &_binaryMap)
 {
     uint64_t newBlock;
 
+    // Create progress bar object
+    ProgressBar pBar((double) (this->blockDepth));
+
     for (int block_z = 0; block_z < this->blockDepth; block_z++)
     {
         for (int block_y = 0; block_y < this->blockRows; block_y++)
@@ -206,8 +210,13 @@ void BitBlock::createBitBlocksArray_3D(vector<Mat> &_binaryMap)
 
                 // assign new block to blocks array
                 blocks[IDX2C_3D(block_x, block_y, block_z, this->blockColumns, this->blockRows)] = newBlock;
+
             }
         }
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();
     }
 }
 

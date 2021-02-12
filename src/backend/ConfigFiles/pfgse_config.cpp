@@ -64,13 +64,11 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
 // read config file
 void pfgse_config::readConfigFile(const string configFile)
 {
-	cout << "reading pfgse configs from file...";
-
     ifstream fileObject;
     fileObject.open(configFile, ios::in);
     if (fileObject.fail())
     {
-        cout << "Could not open file from disc." << endl;
+        cout << "Could not open pfgse config file from disc." << endl;
         exit(1);
     }
 
@@ -78,7 +76,6 @@ void pfgse_config::readConfigFile(const string configFile)
     while(fileObject)
     {
     	getline(fileObject, line);
-    	// cout << line << endl;
 
     	string s = line;
     	string delimiter = ": ";
@@ -114,7 +111,6 @@ void pfgse_config::readConfigFile(const string configFile)
 		}
     } 
 
-    cout << "Ok" << endl;
     fileObject.close();
 }
 

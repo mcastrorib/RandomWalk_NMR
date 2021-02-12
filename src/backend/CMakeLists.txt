@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 SET(CMAKE_C_COMPILER mpicc)
 SET(CMAKE_CXX_COMPILER mpicxx)
 
-option(USE_APP "Use provided implementation for system utils" ON)
+option(USE_RWNMRAPP "Use provided implementation for system utils" ON)
 option(USE_NMR_SIMULATION "Use provided RMN_Simulation2D class implementation" ON)
 option(USE_WALKER "Use provided walker class implementation" ON)
 option(USE_BITBLOCK "Use provided blockMap class implementation" ON)
@@ -26,7 +26,7 @@ option(USE_UTILS "Use provided implementation for system utils" ON)
 
 # configure a header file to pass some of the CMake settings
 # to the source code
-configure_file(NMR_RWConfig.h.in NMR_RWConfig.h)
+configure_file(RWNMR_Config.h.in RWNMR_Config.h)
 
 # Require MPI package
 find_package(MPI REQUIRED)
@@ -55,7 +55,7 @@ include_directories(/usr/include/eigen3)
 
 
 # list libraries
-if(USE_APP)
+if(USE_RWNMRAPP)
   add_subdirectory(App)
   list(APPEND EXTRA_LIBS App)
 endif()
@@ -124,6 +124,6 @@ target_include_directories(RWNMR PUBLIC
                            )
 
 install(TARGETS RWNMR DESTINATION bin)
-install(FILES "${PROJECT_BINARY_DIR}/NMR_RWConfig.h"
+install(FILES "${PROJECT_BINARY_DIR}/RWNMR_Config.h"
   DESTINATION include
   )
