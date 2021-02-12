@@ -127,15 +127,11 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
     // assign attributes from uct config files
     (*this).setImageResolution(this->uCT_config.getResolution());
 
-    if(this->uCT_config.getVoxelDivision() == 0) 
-    {
-        (*this).setVoxelDivision(0);
-        (*this).setImageVoxelResolution();
-    }
-    else (*this).applyVoxelDivision(this->uCT_config.getVoxelDivision());
+    (*this).setVoxelDivision(0);
+    (*this).setImageVoxelResolution();
+    if(this->uCT_config.getVoxelDivision() > 0) this->voxelDivisionApplied = true; 
 
     // set default time step measurement
-    (*this).setImageVoxelResolution();
     (*this).setTimeInterval(); 
 }
 
@@ -258,7 +254,7 @@ void NMR_Simulation::setVoxelDivision(uint _shifts)
 void NMR_Simulation::applyVoxelDivision(uint _shifts)
 {
     double time = omp_get_wtime();
-    cout << "applying voxel division...";
+    cout << "- applying voxel division:" << endl;
 
     // reset resolution scales
     uint previousDivision = (*this).getVoxelDivision();
@@ -281,6 +277,7 @@ void NMR_Simulation::applyVoxelDivision(uint _shifts)
         if(indexExpansion < 1) indexExpansion = 1;
         uint shiftX, shiftY, shiftZ;
         RandomIndex rIndex(0, indexExpansion);
+        ProgressBar pBar((double) this->walkers.size());
         for(uint idx = 0; idx < this->walkers.size(); idx++)
         {   
             // randomly place walker in voxel sites
@@ -291,11 +288,15 @@ void NMR_Simulation::applyVoxelDivision(uint _shifts)
 
             // update collision penalty
             this->walkers[idx].computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
+
+            // update progress bar
+            pBar.update(1);
+            pBar.print();
         }
     }
 
     time = omp_get_wtime() - time;
-    cout << "Ok. (" << time << " seconds)." << endl; 
+    cout << " in " << time << " seconds." << endl; 
 }
 
 void NMR_Simulation::setNumberOfStepsPerEcho(uint _stepsPerEcho)
@@ -404,6 +405,9 @@ void NMR_Simulation::setWalkers(void)
         {
             (*this).setWalkers(this->rwNMR_config.getWalkers());
         }  
+        
+        // apply voxel division if needed
+        if(this->voxelDivisionApplied) (*this).applyVoxelDivision(this->uCT_config.getVoxelDivision());
     } else
     {
         cout << "error: image was not loaded yet" << endl;
