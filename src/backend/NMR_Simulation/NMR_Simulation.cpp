@@ -310,10 +310,14 @@ void NMR_Simulation::setNumberOfStepsFromTime(double _time)
     _time = _time;
     this->simulationSteps =  _time * (6 * this->diffusionCoefficient / 
                                      (this->imageVoxelResolution * this->imageVoxelResolution)); 
+    
+    // correct steps < steps per echo case (simulation becomes inaccurate but don't crash)
+    if(this->simulationSteps < this->stepsPerEcho) this->simulationSteps = this->stepsPerEcho;
 }
 
 void NMR_Simulation::setTimeFramework(uint _steps)
 {
+    if(_steps < this->stepsPerEcho) _steps = this->stepsPerEcho;
     this->numberOfEchoes = (uint)ceil( _steps / (double)this->stepsPerEcho);
     this->simulationSteps = this->numberOfEchoes * this->stepsPerEcho;
     
