@@ -262,10 +262,15 @@ void NMR_Simulation::applyVoxelDivision(uint _shifts)
     (*this).setImageVoxelResolution();
 
     // reset time framework
-    double previousTime = (*this).getTimeInterval();
+    // double previousTime = (*this).getTimeInterval();
+    // (*this).setTimeInterval();
+    // double timeFactor = previousTime / (*this).getTimeInterval();
+    // (*this).setNumberOfStepsPerEcho((uint) (*this).getStepsPerEcho() * timeFactor);
+    // uint steps = (*this).getStepsPerEcho() * (*this).getNumberOfEchoes();
+    // (*this).setTimeFramework(steps);
+
+    // // trying to maintain steps per echo
     (*this).setTimeInterval();
-    double timeFactor = previousTime / (*this).getTimeInterval();
-    (*this).setNumberOfStepsPerEcho((uint) (*this).getStepsPerEcho() * timeFactor);
     uint steps = (*this).getStepsPerEcho() * (*this).getNumberOfEchoes();
     (*this).setTimeFramework(steps);
 
@@ -307,11 +312,11 @@ void NMR_Simulation::setNumberOfStepsPerEcho(uint _stepsPerEcho)
 // param @_time needs to be in miliseconds
 void NMR_Simulation::setNumberOfStepsFromTime(double _time)
 {
-    _time = _time;
+    // _time = _time;
     this->simulationSteps =  _time * (6 * this->diffusionCoefficient / 
                                      (this->imageVoxelResolution * this->imageVoxelResolution)); 
     
-    // correct steps < steps per echo case (simulation becomes inaccurate but don't crash)
+    // correct steps < steps per echo case (simulation becomes inaccurate but at least don't crash)
     if(this->simulationSteps < this->stepsPerEcho) this->simulationSteps = this->stepsPerEcho;
 }
 
