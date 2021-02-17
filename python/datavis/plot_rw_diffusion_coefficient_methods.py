@@ -10,9 +10,9 @@ from LeastSquaresRegression import LeastSquaresRegression
 
 def main():
 	# simulation parameters
-	walkers_str = r'10k'
-	edge_length = [10.0] #, 2.5, 5.0, 10.0, 20.0]
-	edge_length_str = ['10um'] #, '2.5um', '5um', '10um', '20um']
+	walkers_str = r'100k'
+	edge_length = [2.5] #, 2.5, 5.0, 10.0, 20.0]
+	edge_length_str = ['5um'] #, '2.5um', '5um', '10um', '20um']
 	pore_type = 'isolated_sphere'
 	rho = 0.0
 	relaxation_strength = 0
@@ -21,12 +21,12 @@ def main():
 	use_raw_data = True
 
 	# Root dir
-	# root_dir = r"/home/matheus/Documentos/doutorado_ic/tese/saved_data/callaghan_test"
-	root_dir = r'/home/matheus/Documentos/doutorado_ic/tese/saved_data/free_diffusion'
+	root_dir = r"/home/matheus/Documentos/doutorado_ic/tese/saved_data/callaghan_test"
+	# root_dir = r'/home/matheus/Documentos/doutorado_ic/tese/saved_data/free_diffusion'
 
 	# Plot title
-	line1 = r'$\bf{Free media}$: resolution = ' + str(res) + r' $\mu$m/voxel'
-	line2 = r'$\rho a/D$= ' + str(relaxation_strength) + r' $\mu$m, D = ' + str(Dfree)  + r' $\mu$m²/s, walkers=' + walkers_str
+	line1 = r'$\bf{Spherical\,Pore}$'
+	line2 = r'$\rho a/D$= ' + str(relaxation_strength) + r', $D_{0}$ = ' + str(Dfree)  + r' $\mu$m²/s' 
 	plot_title =  line1 + '\n' + line2
 
 	# Set simulation data files
@@ -36,11 +36,11 @@ def main():
 		
 		# Callaghan test
 		# sim_data_dir = root_dir + r"/relaxation_strength="+ str(relaxation_strength) +"/a="+ str(edge_length_str[edge]) + r"/" + pore_type + "/using_q/res=" + str(res)
-		# sim_experiment_dir = r"/PFGSE_NMR_sphere_r=" + str(edge_length[edge]) + r"_rho=" + str(rho_sim) + r"_res=1.0_shift=0_w=" + walkers_str
+		sim_experiment_dir = r"/PFGSE_NMR_sphere_r=" + str(edge_length[edge]) + r"_rho=" + str(rho_sim) + r"_res=1.0_shift=0_w=" + walkers_str
 		
 		# Free media
-		sim_data_dir = root_dir + r"/Dt_recover"
-		sim_experiment_dir = r"/PFGSE_NMR_FreeMedia_rho=" + str(rho_sim) + r"_res=1.0_shift=0_w=" + walkers_str
+		sim_data_dir = root_dir + r"/Dt_recover/r=" + str(edge_length[0])
+		# sim_experiment_dir = r"/PFGSE_NMR_FreeMedia_a=" + str(edge_length[0]) + "_rho=" + str(rho_sim) + r"_res=1.0_shift=0_w=" + walkers_str
 		
 		sim_dir = sim_data_dir + sim_experiment_dir
 		
@@ -109,11 +109,12 @@ def main():
 				t_adim.append(np.sqrt(time * Dfree))
 
 			labels = ["S&T", "msd"]
-			x_data = t_adim
+			x_data = [t_adim, t_adim]
 			y_data = [D_sat, D_msd]
 			markers = ['o', 'x']
-			title = plot_title + '\n' + r'a = ' + str(edge_length[edge]) + r'$\mu$m'
-			scatterplot(x_data, y_data, labels, markers, title) 
+			colors = ['blue', 'orange']
+			title = plot_title + r', a = ' + str(edge_length[edge]) + r'$\mu$m'
+			dataplot(x_data, y_data, labels, markers, colors, title) 
 
 		else:
 			# check if consoleLog file exists
@@ -133,11 +134,11 @@ def main():
 
 			# plot data
 			labels = ["S&T", "msd"]
-			x_data = t_adim
+			x_data = [t_adim, t_adim]
 			y_data = [console_data["D_sat"], console_data["D_msd"]]
 			markers = ['o', 'x']
 			title = plot_title + '\n' + r'a = ' + str(edge_length[edge]) + r'$\mu$m'
-			scatterplot(x_data, y_data, labels, markers, title) 
+			dataplot(x_data, y_data, labels, markers, title) 
 
 	return
 

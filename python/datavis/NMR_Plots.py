@@ -445,7 +445,7 @@ def scatterplot(scatter_dataX, scatter_dataY,  scatter_labels, markers, title):
 	# plot normalized estimation
 	points = []
 	for i in range(len(scatter_dataY)):
-		pts = ax.scatter(scatter_dataX, scatter_dataY[i], s=100.0, marker=markers[i], label=scatter_labels[i], zorder=2)
+		pts = ax.scatter(scatter_dataX[i], scatter_dataY[i], s=25.0, marker=markers[i], label=scatter_labels[i], zorder=2)
 		points.append(pts)
 
 
@@ -457,8 +457,8 @@ def scatterplot(scatter_dataX, scatter_dataY,  scatter_labels, markers, title):
 	ax.set_title(title)
 	# ax.set_xticks(x)
 	# ax.set_xticklabels(x_ticklabels)
-	plt.xlim([0.0, 1.2*max(scatter_dataX)])
-	plt.ylim([0.0, 1.2*max(max(scatter_dataY[0]),max(scatter_dataY[1]))])
+	# plt.xlim([0.0, 1.2*max(scatter_dataX)])
+	# plt.ylim([0.0, 1.2*max(scatter_dataY[0])])
 	ax.legend()
 
 
@@ -471,6 +471,81 @@ def scatterplot(scatter_dataX, scatter_dataY,  scatter_labels, markers, title):
 	# Show the minor grid lines with very faint and almost transparent grey lines
 	plt.minorticks_on()
 	plt.grid(b = True, which = 'minor', color = '#999999', linestyle = '--', alpha = 0.2)
+
+	plt.show()
+	return
+
+def dataplot(dataX, dataY,  labels, markers, colors, title=''):
+	# SMALL_SIZE = 8
+	# MEDIUM_SIZE = 10
+	# BIGGER_SIZE = 16
+
+	# plt.rc('font', size=BIGGER_SIZE)          # controls default text sizes
+	# plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+	# plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+	# plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+	# plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+	# plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+	# plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+	plt.rcParams.update({'font.size': 16})		
+	# plt.style.use('seaborn-darkgrid')
+	fig, ax = plt.subplots(figsize=[9.6, 7.2])
+	# plt.rcParams.update({'font.size': 14})
+
+	# plot and get points
+	points = []
+	max_x = 0.0
+	min_x = 0.0
+	max_y = 0.0
+	min_y = 0.0
+	for i in range(len(dataY)):
+		# get max and min in x data  
+		new_max = max(dataX[i])
+		new_min = min(dataX[i])
+		if(new_max > max_x):
+			max_x = new_max
+		if(new_min < min_x):
+			min_x = new_min
+		
+		# get max and min in Y data  
+		new_max = max(dataY[i])
+		new_min = min(dataY[i])
+		if(new_max > max_y):
+			max_y = new_max
+		if(new_min < min_y):
+			min_y = new_min		
+
+		# plot data
+		if(markers[i] == '-'):
+			pts = ax.plot(dataX[i], dataY[i], markers[i], color=colors[i], label=labels[i], zorder=2)
+			points.append(pts)
+		else:
+			pts = ax.plot(dataX[i], dataY[i], markers[i], markersize=5, color=colors[i], label=labels[i], zorder=2)
+			points.append(pts)
+
+
+
+	# Add some text for labels, title and custom x-axis tick labels, etc.
+	ax.set_ylabel(r'D(t)/$D_{0}$')
+	
+	ax.set_xlabel(r'$(D_{0}\,t / a^{2})^{1/2}$')
+	ax.set_title(title)
+	# ax.set_xticks(x)
+	# ax.set_xticklabels(x_ticklabels)
+	plt.xlim([min_x, 1.2*max_x])
+	plt.ylim([0.0, 1.0])
+	ax.legend(loc="upper right")
+
+
+	# autolabel(rects1)
+	# autolabel(rects2)
+
+	# # Show the major grid lines with dark grey lines
+	# plt.grid(b = True, which = 'major', color = '#666666', linestyle = '-', alpha = 0.5)
+
+	# # Show the minor grid lines with very faint and almost transparent grey lines
+	# plt.minorticks_on()
+	# plt.grid(b = True, which = 'minor', color = '#999999', linestyle = '--', alpha = 0.2)
 
 	plt.show()
 	return
@@ -1104,9 +1179,9 @@ def plot_least_squares_adjust(x_data, y_data, lsa_B, delta, lsa_points, lsa_thre
 	ax.set(ylabel=yaxis_label)
 	ax.set(xlabel=xaxis_label)
 
-	if(lsa_threshold > 0):
-		ax.set(ylim=[0.95*lsa_threshold, 1.0])
-		ax.set(xlim=[0.0, 1.05*Mx[lsa_points]])
+	# if(lsa_threshold > 0):
+		# ax.set(ylim=[0.95*lsa_threshold, 1.0])
+		# ax.set(xlim=[0.0, 1.05*Mx[lsa_points]])
 
 	# for ax in axs.flat:
 	# ax.set(xlabel=xaxis_label, ylabel=r'$M(2\tau,G)/M(2\tau,0)$')
