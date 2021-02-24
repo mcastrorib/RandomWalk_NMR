@@ -18,6 +18,7 @@ public:
     void setX(vector<double> &_x);
     void setY(vector<double> &_y);
     void setThreshold(double _threshold);
+    void setPoints(int _points);
     void setLimits();
 
     void solve();    
@@ -33,6 +34,7 @@ private:
     bool solved;
 
     int begin, end;
+    int points;
     double threshold;
 
     double computeMean(vector<double> &_vector);

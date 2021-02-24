@@ -23,6 +23,7 @@ public:
     double D0; 
     uint STEPS_PER_ECHO;
     uint64_t SEED;
+    string BC;
 
     // SAVE MODE
     bool SAVE_IMG_INFO;
@@ -82,6 +83,7 @@ public:
     void readD0(string s); 
     void readStepsPerEcho(string s);
     void readSeed(string s);
+    void readBC(string s);
 
     // -- Saving
     void readSaveImgInfo(string s);
@@ -126,6 +128,7 @@ public:
     double getD0(){ return this->D0;}
     uint getStepsPerEcho(){ return this->STEPS_PER_ECHO;}
     uint64_t getSeed(){ return  this->SEED;}
+    string getBC() { return this->BC; }
 
     // -- Saving
     bool getSaveImgInfo(){ return this->SAVE_IMG_INFO;}

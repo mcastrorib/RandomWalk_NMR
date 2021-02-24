@@ -8,22 +8,35 @@
 
 
 // Kernel declarations
-__global__ void PFG_walk(int *walker_px,
-                         int *walker_py,
-                         int *walker_pz,
-                         double *decreaseFactor,
-                         double *energy,
-                         uint64_t *seed,
-                         const uint64_t *bitBlock,
-                         const uint bitBlockColumns,
-                         const uint bitBlockRows,
-                         const uint numberOfWalkers,
-                         const uint energyArraySize,
-                         const uint numberOfSteps,
-                         const uint map_columns,
-                         const uint map_rows,
-                         const uint map_depth,
-                         const uint shift_convert);
+__global__ void PFG_map_noflux(  int *walker_px,
+                                 int *walker_py,
+                                 int *walker_pz,
+                                 uint *collisions,
+                                 uint64_t *seed,
+                                 const uint64_t *bitBlock,
+                                 const uint bitBlockColumns,
+                                 const uint bitBlockRows,
+                                 const uint numberOfWalkers,
+                                 const uint numberOfSteps,
+                                 const int map_columns,
+                                 const int map_rows,
+                                 const int map_depth,
+                                 const int shift_convert);
+
+__global__ void PFG_map_periodic(int *walker_px,
+                                 int *walker_py,
+                                 int *walker_pz,
+                                 uint *collisions,
+                                 uint64_t *seed,
+                                 const uint64_t *bitBlock,
+                                 const uint bitBlockColumns,
+                                 const uint bitBlockRows,
+                                 const uint numberOfWalkers,
+                                 const uint numberOfSteps,
+                                 const int map_columns,
+                                 const int map_rows,
+                                 const int map_depth,
+                                 const int shift_convert);
 
 __global__ void PFG_measure(int *walker_x0,
                             int *walker_y0, 
@@ -38,6 +51,11 @@ __global__ void PFG_measure(int *walker_x0,
                             const double k_X,
                             const double k_Y,
                             const double k_Z);
+
+__global__ void PFG_evaluate_energy( uint *collisions,
+                                     double *penalty,
+                                     double *energy,
+                                     const uint numberOfWalkers);
 
 __global__ void PFG_reduce(double *data,
                            double *deposit,
@@ -77,8 +95,7 @@ __device__ uint64_t xorShift64_PFG(struct xorshift64_state *state);
 __device__ uint64_t mod6_PFG(uint64_t a);
 
 __device__ double compute_PFG_k_value(double gradientMagnitude, double pulse_width, double giromagneticRatio);
-__host__ double compute_k(double gradientMagnitude, double pulse_width, double giromagneticRatio);
-__device__ uint convertLocalToGlobal(uint _localPos, uint _shiftConverter);
+__device__ uint convertLocalToGlobal(int _localPos, int _shiftConverter);
 __device__ double dotProduct(double vec1X, double vec1Y, double vec1Z, double vec2X, double vec2Y, double vec2Z);
 
 #endif

@@ -33,7 +33,9 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   M0(0.0),
 										   D_sat(0.0),
 										   D_msd(0.0),
+										   msd(0.0),
 										   SVp(0.0),
+										   stepsTaken(0),
 										   mpi_rank(_mpi_rank),
 										   mpi_processes(_mpi_processes)
 {
@@ -44,6 +46,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	vector<double> RHS();
 	vector<double> Mkt();
 	vector<Vector3D> vecGradient();
+	vector<Vector3D> vecK();
 
 	// read config file
 	Vector3D gradient_max = this->PFGSE_config.getMaxGradient();
@@ -54,44 +57,11 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	this->exposureTimes = this->PFGSE_config.getTimeValues(); 
 	this->pulseWidth = this->PFGSE_config.getPulseWidth();
 	this->giromagneticRatio = this->PFGSE_config.getGiromagneticRatio();
-	// this->NMR.setFreeDiffusionCoefficientthis(this->PFGSE_config.getD0());
-
+	if(this->PFGSE_config.getUseWaveVectorTwoPi()) this->giromagneticRatio *= TWO_PI;
 
 	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
 	(*this).setGradientVector();
-}
-
-NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,  
-				     Vector3D _gradient_max,
-				     int _GPoints,
-				  	 double _bigDelta,
-				  	 double _pulseWidth, 
-				  	 double _giromagneticRatio, 
-				  	 int _mpi_rank, 
-				  	 int _mpi_processes) : NMR(_NMR),
-										   gradient_X(_gradient_max.x),
-										   gradient_Y(_gradient_max.y),
-										   gradient_Z(_gradient_max.z),
-										   gradientPoints(_GPoints),
-										   exposureTime(_bigDelta),
-										   pulseWidth(_pulseWidth),
-										   giromagneticRatio(_giromagneticRatio),
-										   D_sat(0.0),
-										   D_msd(0.0),
-										   SVp(0.0),
-										   M0(0.0),
-										   mpi_rank(_mpi_rank),
-										   mpi_processes(_mpi_processes)
-{
-	vector<double> gradient();
-	vector<double> LHS();
-	vector<double> RHS();
-	vector<double> Mkt();
-	vector<Vector3D> vecGradient();
-	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
-	(*this).setGradientVector();
-	(*this).setVectorMkt();
-	(*this).set();
+	(*this).setVectorK();
 }
 
 void NMR_PFGSE::set()
@@ -106,6 +76,10 @@ void NMR_PFGSE::set()
 
 void NMR_PFGSE::run()
 {
+	// before everything, reset conditions and map with highest time value
+	(*this).runInitialMapSimulation();
+	(*this).resetNMR();
+
 	for(uint timeSample = 0; timeSample < this->exposureTimes.size(); timeSample++)
 	{
 		(*this).setExposureTime((*this).getExposureTime(timeSample));
@@ -132,6 +106,41 @@ void NMR_PFGSE::run()
 	}
 }
 
+void NMR_PFGSE::resetNMR()
+{
+	// reset walker's initial state with omp parallel for
+
+    if(this->NMR.rwNMR_config.getOpenMPUsage())
+    {
+        // set omp variables for parallel loop throughout walker list
+        const int num_cpu_threads = omp_get_max_threads();
+        const int loop_size = this->NMR.walkers.size();
+        int loop_start, loop_finish;
+
+        #pragma omp parallel private(loop_start, loop_finish) 
+        {
+            const int thread_id = omp_get_thread_num();
+            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+            loop_start = looper.getStart();
+            loop_finish = looper.getFinish(); 
+
+            for (uint id = loop_start; id < loop_finish; id++)
+            {
+                this->NMR.walkers[id].resetPosition();
+                this->NMR.walkers[id].resetSeed();
+                this->NMR.walkers[id].resetEnergy();
+            }
+        }
+    } else
+    {
+        for (uint id = 0; id < this->NMR.walkers.size(); id++)
+        {
+            this->NMR.walkers[id].resetPosition();
+            this->NMR.walkers[id].resetSeed();
+            this->NMR.walkers[id].resetEnergy();
+        }
+    }   
+}
 
 void NMR_PFGSE::setName()
 {
@@ -181,11 +190,27 @@ void NMR_PFGSE::setGradientVector()
 	for(uint index = 0; index < this->gradientPoints; index++)
 	{
 		Vector3D newGradient(gvalueX, gvalueY, gvalueZ);
-		vecGradient.push_back(newGradient);
-		gradient.push_back(newGradient.getNorm());
+		this->vecGradient.push_back(newGradient);
+		this->gradient.push_back(newGradient.getNorm());
 		gvalueX += gapX;
 		gvalueY += gapY;
 		gvalueZ += gapZ;
+	}
+}
+
+void NMR_PFGSE::setVectorK()
+{
+	if(this->vecK.size() > 0) this->vecK.clear();
+	this->vecK.reserve(this->gradientPoints);
+
+	double Kx, Ky, Kz;
+	for(uint index = 0; index < this->gradientPoints; index++)
+	{
+		Kx = (*this).computeWaveVectorK(this->vecGradient[index].getX(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
+		Ky = (*this).computeWaveVectorK(this->vecGradient[index].getY(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
+		Kz = (*this).computeWaveVectorK(this->vecGradient[index].getZ(), (*this).getPulseWidth(), (*this).getGiromagneticRatio());
+		Vector3D Knew(Kx, Ky, Kz);
+		this->vecK.push_back(Knew);
 	}
 }
 
@@ -195,8 +220,20 @@ void NMR_PFGSE::setNMRTimeFramework()
 	this->NMR.setTimeFramework(this->exposureTime);
 	cout << "PFGSE exposure time: " << this->exposureTime << " ms";
 	cout << " (" << this->NMR.simulationSteps << " RW-steps)" << endl;
-	this->NMR.mapSimulation();
-	// this->NMR.updateRelaxativity(rho); but what rho to adopt?
+}
+
+void NMR_PFGSE::runInitialMapSimulation()
+{
+	if(this->exposureTimes.size() > 0)
+	{	
+		cout << endl << "running PFGSE simulation:" << endl;
+		double longestTime = (*this).getExposureTime(this->exposureTimes.size() - 1);
+		this->NMR.setTimeFramework(longestTime);
+		cout << "PFGSE mapping time: " << longestTime << " ms";
+		cout << " (" << this->NMR.simulationSteps << " RW-steps)" << endl;
+		this->NMR.mapSimulation();
+		// this->NMR.updateRelaxativity(); but what rho to adopt?
+	}
 }
 
 void NMR_PFGSE::setVectorRHS()
@@ -287,9 +324,8 @@ double NMR_PFGSE::computeLHS(double _Mg, double _M0)
 
 double NMR_PFGSE::computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio)
 {
-    return (pulse_width * 1.0e-03) *  (TWO_PI * giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
+    return (pulse_width * 1.0e-03) *  (giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
 }
-
 
 void NMR_PFGSE::run_sequence()
 {
@@ -298,36 +334,11 @@ void NMR_PFGSE::run_sequence()
 
 	// get M0 (reference value)
 	int idx_begin = 0;
-	int idx_end = this->gradientPoints;
-	
-	// ------------ Deprecated ---------------------------
-	// if(this->vecGradient[idx_begin].getNorm() == 0.0) 
-	// {	
-	// 	this->M0 = this->LHS[0];
-	// 	this->LHS[0] = (*this).computeLHS(M0, M0);
-	// 	idx_begin++;
-	// }	
-	// else 
-	// {
-	// 	// it is necessary to run simulation for g = 0
-	// 	this->M0 = this->NMR.PFG(0.0, this->pulseWidth, this->giromagneticRatio);
-	// }
-
-	// copy vector LHS to Mkt - old
-	// for(uint idx = 0; idx < this->gradientPoints; idx++)
-	// {
-	// 	this->Mkt.push_back(this->LHS[idx]);
-	// }
+	int idx_end = this->gradientPoints;	
 
 	this->M0 = this->Mkt[0];
 	this->LHS.push_back((*this).computeLHS(M0, M0));
 	idx_begin++;
-
-	// run diffusion measurement for different G - old
-	// for(uint point = idx_begin; point < idx_end; point++)
-	// {
-	// 	this->LHS[point] = (*this).computeLHS(this->LHS[point], M0);
-	// }
 
 	double lhs_value;
 	for(uint point = idx_begin; point < idx_end; point++)
@@ -337,13 +348,13 @@ void NMR_PFGSE::run_sequence()
 	}
 }
 
-
 void NMR_PFGSE::simulation()
 {
 	if(this->NMR.gpu_use == true)
 	{
-		(*this).simulation_cuda();
-		this->NMR.normalizeEnergyDecay();
+		if(this->NMR.getBoundaryCondition() == "noflux") (*this).simulation_cuda_noflux();
+		else if(this->NMR.getBoundaryCondition() == "periodic") (*this).simulation_cuda_periodic();
+		else cout << "error: BC not set" << endl;
 	}
 	else
 	{
@@ -405,27 +416,21 @@ void NMR_PFGSE::recoverD_msd()
 		displacementZ = resolution * (ZF - Z0);
 		// displacementZ = 0.0;
 		
-		normalizedDisplacement = sqrt( (displacementX*displacementX + 
-									    displacementY*displacementY + 
-									    displacementZ*displacementZ));
+		normalizedDisplacement = displacementX*displacementX + 
+								 displacementY*displacementY + 
+								 displacementZ*displacementZ;
 
-		// get particle contribution / energy
-		particle.resetEnergy();
-		for(uint bump = 0; bump < particle.collisions; bump++)
-		{
-			particle.energy *= particle.decreaseFactor;
-		}
-
-		squaredDisplacement += ( particle.energy * (normalizedDisplacement * normalizedDisplacement));
+		squaredDisplacement += (particle.energy * normalizedDisplacement);
 		aliveWalkerFraction += particle.energy;
 	}
 
 	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
 	squaredDisplacement = squaredDisplacement / aliveWalkerFraction;
 	(*this).setD_msd(squaredDisplacement/(6 * this->exposureTime));
+	(*this).setMsd(squaredDisplacement);
 	
 	cout << "Dnew (msd) = " << (*this).getD_msd();
-	cout << "\t(mean displacement): " << sqrt(squaredDisplacement) << " um" << endl;
+	cout << "\t(mean displacement): " << sqrt((*this).getMsd()) << " um" << endl;
 }
 
 void NMR_PFGSE::recoverSVp(string method)
@@ -507,11 +512,12 @@ void NMR_PFGSE::writeResults()
 {
 	(*this).writeParameters();
 	(*this).writeEchoes();
+	(*this).writeGvector();
 }
 
 void NMR_PFGSE::writeEchoes()
 {
-	string filename = this->dir + "/PFGSE_echoess.txt";
+	string filename = this->dir + "/PFGSE_echoes.txt";
 
 	ofstream file;
     file.open(filename, ios::out);
@@ -559,12 +565,13 @@ void NMR_PFGSE::writeParameters()
 
 	file << "RWNMR-PFGSE Results" << endl; 
 	file << "Points, ";
-    file << "Big Delta, ";
-    file << "Tiny Delta, ";
+    file << "Time, ";
+    file << "Pulse width, ";
     file << "Giromagnetic Ratio, ";
-	file << "D0, ";
+	file << "D_0, ";
     file << "D_sat, ";
     file << "D_msd, ";
+    file << "Msd, ";
 	file << "SVp, ";
     file << "RHS Threshold" << endl;
     file << this->gradientPoints << ", ";
@@ -574,8 +581,45 @@ void NMR_PFGSE::writeParameters()
 	file << this->NMR.getDiffusionCoefficient() << ", ";
     file << this->D_sat << ", ";
     file << this->D_msd << ", ";
+    file << this->msd << ", ";
     file << this->SVp << ", ";
     file << threshold << endl << endl;    
+
+    file.close();
+}
+
+void NMR_PFGSE::writeGvector()
+{
+	string filename = this->dir + "/PFGSE_gradient.txt";
+
+	ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    file << "PFGSE - Gradient values" << endl;
+    file << "id, ";
+    file << "Gx, ";
+    file << "Gy, ";
+    file << "Gz, ";
+    file << "Kx, ";
+    file << "Ky, ";
+    file << "Kz" << endl;
+
+    uint size = this->gradientPoints;
+    for (uint index = 0; index < size; index++)
+    {
+        file << index << ", ";
+        file << this->vecGradient[index].getX() << ", ";
+        file << this->vecGradient[index].getY() << ", ";
+        file << this->vecGradient[index].getZ() << ", ";
+        file << this->vecK[index].getX() << ", ";
+        file << this->vecK[index].getY() << ", ";
+        file << this->vecK[index].getZ() << endl;
+    }
 
     file.close();
 }

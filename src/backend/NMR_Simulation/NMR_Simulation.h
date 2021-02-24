@@ -75,6 +75,7 @@ public:
     uint depth;
     vector<Mat> binaryMap;
     BitBlock bitBlock;
+    string boundaryCondition;
 
     // digital voxel/image amplification
     int voxelDivision;
@@ -167,6 +168,7 @@ public:
     void setFreeDiffusionCoefficient(double _bulk);
     void setImageResolution(double _resolution);
     void setImageVoxelResolution();
+    void setBoundaryCondition(string _bc);
     void setTimeInterval();
     void setVoxelDivision(uint _shifts);
     void applyVoxelDivision(uint _shifts);
@@ -254,6 +256,7 @@ public:
     inline uint64_t getInitialSeed() { return this->initialSeed; }
     inline bool getSeedFlag() { return this->seedFlag; }
     inline bool getGPU() { return this->gpu_use; }
+    inline string getBoundaryCondition() { return this->boundaryCondition; }
 
     // pore e walkers
     inline uint getNumberOfPores() { return this->numberOfPores; }

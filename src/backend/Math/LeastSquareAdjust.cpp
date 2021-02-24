@@ -24,6 +24,7 @@ LeastSquareAdjust::LeastSquareAdjust(vector<double> &_x, vector<double> &_y): X(
 {
 	this->begin = 0;
 	this->end = this->X.size();
+	this->points = this->end + 1;
 	this->threshold = numeric_limits<double>::max();
 }
 
@@ -44,6 +45,15 @@ void LeastSquareAdjust::setThreshold(double _threshold)
 	this->threshold = _threshold;
 	cout << "threshold is " << this->threshold << endl;
 	(*this).setLimits();
+}
+
+void LeastSquareAdjust::setPoints(int _points)
+{
+	this->points = _points;
+	if(_points > 0 and _points < this->end)
+	{
+		(*this).setThreshold(this->X[_points - 1]);
+	}
 }
 
 void LeastSquareAdjust::setLimits()

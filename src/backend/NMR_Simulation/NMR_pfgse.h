@@ -29,6 +29,7 @@ public:
 	double gradient_Y;
 	double gradient_Z;
 	vector<Vector3D> vecGradient;
+	vector<Vector3D> vecK;
 
 	int gradientPoints;
 	vector<double> exposureTimes;
@@ -43,27 +44,22 @@ public:
 	double RHS_threshold;
 	double D_sat;
 	double D_msd;
+	double msd;
 	double SVp;
+	uint stepsTaken;	
 
 	NMR_PFGSE(NMR_Simulation &_NMR, 
 			  pfgse_config _pfgseConfig,
 			  int _mpi_rank = 0, 
 			  int _mpi_processes = 0);	
-
-	NMR_PFGSE(NMR_Simulation &_NMR,  
-			  Vector3D gradient_max,
-			  int gradientPoints,
-			  double _bigDelta,
-			  double _pulseWidth , 
-			  double _giromagneticRatio, 
-			  int _mpi_rank = 0, 
-			  int _mpi_processes = 0);
 	
 	virtual ~NMR_PFGSE(){};
 
 	void setNMRTimeFramework();
+	void runInitialMapSimulation();
 	void setGradientVector(double _GF, int _GPoints);
 	void setGradientVector();
+	void setVectorK();
 	void setVectorMkt();
 	void setVectorRHS();
 	void setThresholdFromRHSValue(double _value);
@@ -83,12 +79,14 @@ public:
 	void recoverD_msd();
 	void recoverSVp(string _method = "sat");
 	void clear();
+	void resetNMR();
 	void reset(double _newBigDelta);
 	void reset();
 	void save();
 	void writeResults();
 	void writeParameters();
 	void writeEchoes();
+	void writeGvector();
 	void setName();
 	void createDirectoryForData();
 
@@ -97,6 +95,7 @@ public:
 	void setGiromagneticRatio(double _value){ this->giromagneticRatio = _value; }
 	void setD_sat(double _value) { this->D_sat = _value; }
 	void setD_msd(double _value) { this->D_msd = _value; }
+	void setMsd(double _value) { this->msd = _value; }
 	void setSVp(double _value) { this->SVp = _value; }
 
 	double getExposureTime() {return this->exposureTime; }
@@ -105,6 +104,7 @@ public:
 	double getGiromagneticRatio() {return this->giromagneticRatio; }
 	double getD_sat() { return this->D_sat; }
 	double getD_msd() { return this->D_msd; }
+	double getMsd() { return this->msd; }
 	double getSVp() { return this->SVp; }
 	
 
@@ -113,6 +113,8 @@ private:
 	int mpi_processes;
 
 	void simulation_cuda();
+	void simulation_cuda_noflux();
+	void simulation_cuda_periodic();
 	void simulation_omp();
 };
 

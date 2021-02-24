@@ -35,17 +35,17 @@ class Pore
 {
 public:
     // Class attributes:
-    uint position_x, position_y, position_z;
+    int position_x, position_y, position_z;
 };
 
 class Point3D
 {
 public:
-    uint x, y, z;
+    int x, y, z;
 
     // methods
     Point3D();
-    Point3D(uint _x, uint _y, uint _z);
+    Point3D(int _x, int _y, int _z);
 
     inline bool isPore(vector<Mat> &_binaryMap)
     {
@@ -78,7 +78,7 @@ class Walker
 public:
     // Object attributes:
     Point3D initialPosition;
-    uint position_x, position_y, position_z;
+    int position_x, position_y, position_z;
     direction nextDirection;
 
     // RNG seeds
@@ -96,7 +96,7 @@ public:
     // default constructor
     Walker();
     Walker(bool _3rdDim);
-    Walker(uint _x, uint _y, uint _z, bool _3rdDim);
+    Walker(int _x, int _y, int _z, bool _3rdDim);
     // copy constructor
     Walker(const Walker &_walker);
     // virtual destructor
@@ -533,12 +533,12 @@ public:
     // 'get' inline methods
     // coordinate and orientation
     inline Point3D getInitialPosition() { return this->initialPosition; }
-    inline uint getInitialPositionX() { return this->initialPosition.x; }
-    inline uint getInitialPositionY() { return this->initialPosition.y; }
-    inline uint getInitialPositionZ() { return this->initialPosition.z; }
-    inline uint getPositionX() { return this->position_x; }
-    inline uint getPositionY() { return this->position_y; }
-    inline uint getPositionZ() { return this->position_z; }
+    inline int getInitialPositionX() { return this->initialPosition.x; }
+    inline int getInitialPositionY() { return this->initialPosition.y; }
+    inline int getInitialPositionZ() { return this->initialPosition.z; }
+    inline int getPositionX() { return this->position_x; }
+    inline int getPositionY() { return this->position_y; }
+    inline int getPositionZ() { return this->position_z; }
     inline direction getNextDirection() { return this->nextDirection; }
 
     // RNG seeds

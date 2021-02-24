@@ -29,34 +29,30 @@
 #include "NMR_pfgse.h"
 #include "NMR_pfgse_cuda.h"
 
-
 // GPU kernel for NMR simulation - a.k.a. walker's relaxation/demagnetization
-// in this kernel, each thread will behave as a solitary walker
-__global__ void PFG_walk(int *walker_px,
-                         int *walker_py,
-                         int *walker_pz,
-                         double *penalty,
-                         double *energy,
-                         uint64_t *seed,
-                         const uint64_t *bitBlock,
-                         const uint bitBlockColumns,
-                         const uint bitBlockRows,
-                         const uint numberOfWalkers,
-                         const uint energyArraySize,
-                         const uint numberOfSteps,
-                         const uint map_columns,
-                         const uint map_rows,
-                         const uint map_depth,
-                         const uint shift_convert)
+// in this kernel, each thread will behave as a unique walker
+__global__ void PFG_map_noflux(  int *walker_px,
+                                 int *walker_py,
+                                 int *walker_pz,
+                                 uint *collisions,
+                                 uint64_t *seed,
+                                 const uint64_t *bitBlock,
+                                 const uint bitBlockColumns,
+                                 const uint bitBlockRows,
+                                 const uint numberOfWalkers,
+                                 const uint numberOfSteps,
+                                 const int map_columns,
+                                 const int map_rows,
+                                 const int map_depth,
+                                 const int shift_convert)
 {
     // identify thread's walker
     int walkerId = threadIdx.x + blockIdx.x * blockDim.x;
 
     // Local variables for unique read from device global memory
     int localPosX, localPosY, localPosZ;
-    double local_penalty;
-    uint64_t local_seed;
-    double energyLvl;
+    uint localCollisions;
+    uint64_t localSeed;
 
     // thread variables for future movements
     int next_x, next_y, next_z;
@@ -69,64 +65,167 @@ __global__ void PFG_walk(int *walker_px,
         localPosX = walker_px[walkerId];
         localPosY = walker_py[walkerId];
         localPosZ = walker_pz[walkerId];
-        local_penalty = penalty[walkerId];
-        local_seed = seed[walkerId];
-        energyLvl = energy[walkerId];
-
-        // for (int echo = 0; echo < numberOfEchoes; echo++)
-        // {
+        localCollisions = collisions[walkerId];
+        localSeed = seed[walkerId];
         
-            for(int step = 0; step < numberOfSteps; step++)
-            {
-                nextDirection = computeNextDirection_PFG(local_seed);
-            
-                nextDirection = checkBorder_PFG(convertLocalToGlobal(localPosX, shift_convert),
-                                                convertLocalToGlobal(localPosY, shift_convert),
-                                                convertLocalToGlobal(localPosZ, shift_convert),
-                                                nextDirection,
-                                                map_columns,
-                                                map_rows,
-                                                map_depth);
-    
-                computeNextPosition_PFG(localPosX,
-                                        localPosY,
-                                        localPosZ,
-                                        nextDirection,
-                                        next_x,
-                                        next_y,
-                                        next_z);
-    
-                if (checkNextPosition_PFG(convertLocalToGlobal(next_x, shift_convert), 
-                                          convertLocalToGlobal(next_y, shift_convert), 
-                                          convertLocalToGlobal(next_z, shift_convert), 
-                                          bitBlock, 
-                                          bitBlockColumns, 
-                                          bitBlockRows))
-                {
-                    // position is valid
-                    localPosX = next_x;
-                    localPosY = next_y;
-                    localPosZ = next_z;
-                }
-                else
-                {
-                    // walker chocks with wall and comes back to the same position
-                    // walker loses energy due to this collision
-                    energyLvl = energyLvl * local_penalty;
-                }
-            }
-        // }
+        for(int step = 0; step < numberOfSteps; step++)
+        {
+            nextDirection = computeNextDirection_PFG(localSeed);
+        
+            nextDirection = checkBorder_PFG(convertLocalToGlobal(localPosX, shift_convert),
+                                            convertLocalToGlobal(localPosY, shift_convert),
+                                            convertLocalToGlobal(localPosZ, shift_convert),
+                                            nextDirection,
+                                            map_columns,
+                                            map_rows,
+                                            map_depth);
 
-        // walker's energy device global memory update
-        // must be done for each echo
-        energy[walkerId] = energyLvl;
+            computeNextPosition_PFG(localPosX,
+                                    localPosY,
+                                    localPosZ,
+                                    nextDirection,
+                                    next_x,
+                                    next_y,
+                                    next_z);
+
+            if (checkNextPosition_PFG(convertLocalToGlobal(next_x, shift_convert), 
+                                      convertLocalToGlobal(next_y, shift_convert), 
+                                      convertLocalToGlobal(next_z, shift_convert), 
+                                      bitBlock, 
+                                      bitBlockColumns, 
+                                      bitBlockRows))
+            {
+                // position is valid
+                localPosX = next_x;
+                localPosY = next_y;
+                localPosZ = next_z;
+            }
+            else
+            {
+                // walker hits wall and comes back to the same position
+                // collisions count is incremented
+                localCollisions++;
+            }
+        }
 
         // position and seed device global memory update
         // must be done for each kernel
         walker_px[walkerId] = localPosX;
         walker_py[walkerId] = localPosY;
         walker_pz[walkerId] = localPosZ;
-        seed[walkerId] = local_seed;
+        collisions[walkerId] = localCollisions;
+        seed[walkerId] = localSeed;
+    }
+}
+
+// GPU kernel for NMR simulation - a.k.a. walker's relaxation/demagnetization
+// in this kernel, each thread will behave as a unique walker
+__global__ void PFG_map_periodic(int *walker_px,
+                                 int *walker_py,
+                                 int *walker_pz,
+                                 uint *collisions,
+                                 uint64_t *seed,
+                                 const uint64_t *bitBlock,
+                                 const uint bitBlockColumns,
+                                 const uint bitBlockRows,
+                                 const uint numberOfWalkers,
+                                 const uint numberOfSteps,
+                                 const int map_columns,
+                                 const int map_rows,
+                                 const int map_depth,
+                                 const int shift_convert)
+{
+    // identify thread's walker
+    int walkerId = threadIdx.x + blockIdx.x * blockDim.x;
+
+    // Local variables for unique read from device global memory
+    int localPosX, localPosY, localPosZ;
+    int imgPosX, imgPosY, imgPosZ;
+    uint localCollisions;
+    uint64_t localSeed;
+
+    // thread variables for future movements
+    int localNextX, localNextY, localNextZ;
+    // int imgNextX, imgNextY, imgNextZ;
+    direction nextDirection = None;
+
+    // now begin the "walk" procedure de facto
+    if (walkerId < numberOfWalkers)
+    {
+        // Local variables for unique read from device global memory
+        localPosX = walker_px[walkerId];
+        localPosY = walker_py[walkerId];
+        localPosZ = walker_pz[walkerId];
+        localCollisions = collisions[walkerId];
+        localSeed = seed[walkerId];
+        
+        for(int step = 0; step < numberOfSteps; step++)
+        {
+            
+            nextDirection = computeNextDirection_PFG(localSeed);            
+        
+            computeNextPosition_PFG(localPosX,
+                                    localPosY,
+                                    localPosZ,
+                                    nextDirection,
+                                    localNextX,
+                                    localNextY,
+                                    localNextZ);
+
+            // update img position
+            imgPosX = convertLocalToGlobal(localNextX, shift_convert) % map_columns;
+            if(imgPosX < 0) imgPosX += map_columns;
+
+            imgPosY = convertLocalToGlobal(localNextY, shift_convert) % map_rows;
+            if(imgPosY < 0) imgPosY += map_rows;
+
+            imgPosZ = convertLocalToGlobal(localNextZ, shift_convert) % map_depth;
+            if(imgPosZ < 0) imgPosZ += map_depth;
+
+            // printf("%d, %d, %d \n", imgPosX, imgPosY, imgPosZ);
+
+            if (checkNextPosition_PFG(imgPosX, 
+                                      imgPosY, 
+                                      imgPosZ, 
+                                      bitBlock, 
+                                      bitBlockColumns, 
+                                      bitBlockRows))
+            {
+                // update real position
+                localPosX = localNextX;
+                localPosY = localNextY;
+                localPosZ = localNextZ;                
+            }
+            else
+            {
+                // walker hits wall and comes back to the same position
+                // collisions count is incremented
+                localCollisions++;
+            }
+        }
+
+        // position and seed device global memory update
+        // must be done for each kernel
+        walker_px[walkerId] = localPosX;
+        walker_py[walkerId] = localPosY;
+        walker_pz[walkerId] = localPosZ;
+        collisions[walkerId] = localCollisions;
+        seed[walkerId] = localSeed;
+    }
+}
+
+// GPU kernel for magnetization level evaluation
+__global__ void PFG_evaluate_energy( uint *collisions,
+                                     double *penalty,
+                                     double *energy,
+                                     const uint numberOfWalkers)
+{
+    // identify thread's walker
+    int walkerId = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if(walkerId < numberOfWalkers)
+    {
+        energy[walkerId] *= pow(penalty[walkerId], collisions[walkerId]);
     }
 }
 
@@ -156,7 +255,7 @@ __global__ void PFG_measure(int *walker_x0,
         double dY = (walker_yF[walkerId] - walker_y0[walkerId]);
         double dZ = (walker_zF[walkerId] - walker_z0[walkerId]);
 
-        double local_phase = dotProduct(k_X,k_Y,k_Z,dX,dY,dZ) * voxelResolution; 
+        double local_phase = dotProduct(k_X, k_Y, k_Z, dX, dY, dZ) * voxelResolution; 
         double magnitude_real_value = cos(local_phase);
         double magnitude_imag_value = sin(local_phase);
     
@@ -197,7 +296,7 @@ __global__ void PFG_reduce(double *data,
 
 // function to call GPU kernel to execute
 // walker's "walk" method in Graphics Processing Unit
-void NMR_PFGSE::simulation_cuda()
+void NMR_PFGSE::simulation_cuda_noflux()
 {
     cout << "initializing RW-PFG NMR simulation in GPU... ";
 
@@ -206,56 +305,6 @@ void NMR_PFGSE::simulation_cuda()
     double kernel_time = 0.0;
     double buffer_time = 0.0;
     double reduce_time = 0.0;
-
-
-    double gradientMagnitude = 0;
-    double pulseWidth = this->pulseWidth;
-    double giromagneticRatio = this->giromagneticRatio;
-    if(!this->PFGSE_config.getUseWaveVectorTwoPi()) giromagneticRatio /= TWO_PI;
-    uint gradientPoints = this->gradientPoints;
-
-    double tick = omp_get_wtime();
-
-    // reset walker's initial state with omp parallel for
-    if(this->NMR.rwNMR_config.getOpenMPUsage())
-    {
-        // set omp variables for parallel loop throughout walker list
-        const int num_cpu_threads = omp_get_max_threads();
-        const int loop_size = this->NMR.walkers.size();
-        int loop_start, loop_finish;
-
-        #pragma omp parallel private(loop_start, loop_finish) 
-        {
-            const int thread_id = omp_get_thread_num();
-            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
-            loop_start = looper.getStart();
-            loop_finish = looper.getFinish(); 
-
-            for (uint id = loop_start; id < loop_finish; id++)
-            {
-                this->NMR.walkers[id].resetPosition();
-                this->NMR.walkers[id].resetSeed();
-                this->NMR.walkers[id].resetEnergy();
-            }
-        }
-    } else
-    {
-        for (uint id = 0; id < this->NMR.walkers.size(); id++)
-        {
-            this->NMR.walkers[id].resetPosition();
-            this->NMR.walkers[id].resetSeed();
-            this->NMR.walkers[id].resetEnergy();
-        }
-    }
-    buffer_time += omp_get_wtime() - tick;
-
-    // reset vector to store energy decay
-    this->NMR.resetGlobalEnergy();
-    this->NMR.globalEnergy.reserve(this->NMR.numberOfEchoes + 1); // '+1' to accomodate time 0.0
-
-    // get initial energy global state
-    double energySum = ((double) this->NMR.walkers.size()) * this->NMR.walkers[0].getEnergy();
-    this->NMR.globalEnergy.push_back(energySum);
 
     // CUDA event recorder to measure computation time in device
     cudaEvent_t start, stop;
@@ -268,12 +317,13 @@ void NMR_PFGSE::simulation_cuda()
     uint bitBlockRows = this->NMR.bitBlock.blockRows;
     uint numberOfBitBlocks = this->NMR.bitBlock.numberOfBlocks;
     uint numberOfWalkers = this->NMR.numberOfWalkers;
-    uint map_columns = this->NMR.bitBlock.imageColumns;
-    uint map_rows = this->NMR.bitBlock.imageRows;
-    uint map_depth = this->NMR.bitBlock.imageDepth;
-    uint shiftConverter = log2(this->NMR.voxelDivision);
+    int map_columns = this->NMR.bitBlock.imageColumns;
+    int map_rows = this->NMR.bitBlock.imageRows;
+    int map_depth = this->NMR.bitBlock.imageDepth;
+    int shiftConverter = log2(this->NMR.voxelDivision);
     double voxelResolution = this->NMR.imageVoxelResolution;
-    uint numberOfSteps = this->NMR.simulationSteps;
+    uint numberOfSteps = this->NMR.simulationSteps - this->stepsTaken;
+    this->stepsTaken += numberOfSteps;
 
     // create a steps bucket
     uint stepsLimit = this->NMR.rwNMR_config.getMaxRWSteps();
@@ -290,10 +340,6 @@ void NMR_PFGSE::simulation_cuda()
         steps.push_back(numberOfSteps%stepsLimit);
     } 
     
-
-    // number of echos that each walker in kernel call will perform
-    // uint echoesPerKernel = ECHOESPERKERNEL;
-    // uint kernelCalls = (uint)ceil((double)numberOfEchoes / (double)echoesPerKernel);
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
     uint threadsPerBlock = this->NMR.rwNMR_config.getThreadsPerBlock();
@@ -321,19 +367,8 @@ void NMR_PFGSE::simulation_cuda()
     uint lastWalkerPackSize = numberOfWalkers % walkersPerKernel;
     uint lastWalkerPackTail = walkersPerKernel - lastWalkerPackSize;
 
-    // // debug
-    // cout << endl << endl;
-    // cout << "threads per block: " << threadsPerBlock << endl;
-    // cout << "blocks per kernel: " << blocksPerKernel << endl;
-    // cout << "walkers per kernel: " << walkersPerKernel << endl;
-    // cout << "walker packs: " << numberOfWalkerPacks << endl;
-    // cout << "last pack size: " << lastWalkerPackSize << endl;
-    // cout << "last pack tail: " << lastWalkerPackTail << endl << endl;
 
-
-    // derivatives
-    uint energyArraySize = walkersPerKernel;
-    uint phaseArraySize = walkersPerKernel;
+    // signal  
     uint energyCollectorSize = (blocksPerKernel / 2);
     uint phaseCollectorSize = (blocksPerKernel / 2);
 
@@ -355,26 +390,21 @@ void NMR_PFGSE::simulation_cuda()
     int *h_walker_px = arrayFactory.getIntArray(walkersPerKernel);
     int *h_walker_py = arrayFactory.getIntArray(walkersPerKernel);
     int *h_walker_pz = arrayFactory.getIntArray(walkersPerKernel);
+    uint *h_collisions = arrayFactory.getUIntArray(walkersPerKernel);
     double *h_penalty = arrayFactory.getDoubleArray(walkersPerKernel);
     uint64_t *h_seed = arrayFactory.getUInt64Array(walkersPerKernel);
 
-    // temporary array to collect energy contributions for each echo in a kernel
-    // double *temp_globalEnergy = setDoubleArray_3D((uint)echoesPerKernel);
-    // double *h_globalEnergy = setDoubleArray_3D(kernelCalls * echoesPerKernel);
-    double *h_energy = arrayFactory.getDoubleArray(energyArraySize);
+    // magnetization and phase
+    double *h_energy = arrayFactory.getDoubleArray(walkersPerKernel);
     double *h_energyCollector = arrayFactory.getDoubleArray(energyCollectorSize);
-    // double *h_globalEnergy = arrayFactory.getDoubleArray(gradientPoints);
     double h_globalEnergy = 0.0;
-
-    // magnetization phase
-    double *h_phase = arrayFactory.getDoubleArray(phaseArraySize);
+    double *h_phase = arrayFactory.getDoubleArray(walkersPerKernel);
     double *h_phaseCollector = arrayFactory.getDoubleArray(phaseCollectorSize);
     double *h_globalPhase = arrayFactory.getDoubleArray(gradientPoints);
 
-    tick = omp_get_wtime();
+    double tick = omp_get_wtime();
     for (uint point = 0; point < gradientPoints; point++)
     {
-        // h_globalEnergy[point] = 0.0;
         h_globalPhase[point] = 0.0;
     }
     buffer_time += omp_get_wtime() - tick;
@@ -386,6 +416,7 @@ void NMR_PFGSE::simulation_cuda()
     int *d_walker_px;
     int *d_walker_py;
     int *d_walker_pz;
+    uint *d_collisions;
     double *d_penalty;
     uint64_t *d_seed;
 
@@ -402,15 +433,16 @@ void NMR_PFGSE::simulation_cuda()
     cudaMalloc((void **)&d_walker_px, walkersPerKernel * sizeof(int));
     cudaMalloc((void **)&d_walker_py, walkersPerKernel * sizeof(int));
     cudaMalloc((void **)&d_walker_pz, walkersPerKernel * sizeof(int));
+    cudaMalloc((void **)&d_collisions, walkersPerKernel * sizeof(uint));
     cudaMalloc((void **)&d_penalty, walkersPerKernel * sizeof(double));
     cudaMalloc((void **)&d_seed, walkersPerKernel * sizeof(uint64_t));
-    cudaMalloc((void **)&d_energy, energyArraySize * sizeof(double));
+    cudaMalloc((void **)&d_energy, walkersPerKernel * sizeof(double));
     cudaMalloc((void **)&d_energyCollector, energyCollectorSize * sizeof(double));
-    cudaMalloc((void **)&d_phase, phaseArraySize * sizeof(double));
+    cudaMalloc((void **)&d_phase, walkersPerKernel * sizeof(double));
     cudaMalloc((void **)&d_phaseCollector, phaseCollectorSize * sizeof(double));
     
     tick = omp_get_wtime();
-    for (uint idx = 0; idx < energyArraySize; idx++)
+    for (uint idx = 0; idx < walkersPerKernel; idx++)
     {
         h_energy[idx] = 0.0;
     }
@@ -420,7 +452,7 @@ void NMR_PFGSE::simulation_cuda()
         h_energyCollector[idx] = 0.0;
     }
 
-    for (uint idx = 0; idx < phaseArraySize; idx++)
+    for (uint idx = 0; idx < walkersPerKernel; idx++)
     {
         h_phase[idx] = 0.0;
     } 
@@ -439,7 +471,6 @@ void NMR_PFGSE::simulation_cuda()
 
         // Host data copy
         // copy original walkers' data to temporary host arrays
-        // #pragma omp parallel for
         tick = omp_get_wtime();
         if(this->NMR.rwNMR_config.getOpenMPUsage())
         {
@@ -448,7 +479,7 @@ void NMR_PFGSE::simulation_cuda()
             const int loop_size = walkersPerKernel;
             int loop_start, loop_finish;
 
-            #pragma omp parallel shared(packOffset, h_walker_x0, h_walker_y0, h_walker_z0, h_walker_px, h_walker_py, h_walker_pz, h_penalty, h_seed, h_energy, h_phase) private(loop_start, loop_finish) 
+            #pragma omp parallel shared(packOffset, h_walker_x0, h_walker_y0, h_walker_z0, h_walker_px, h_walker_py, h_walker_pz, h_collisions, h_penalty, h_seed, h_energy, h_phase) private(loop_start, loop_finish) 
             {
                 const int thread_id = omp_get_thread_num();
                 OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -460,11 +491,12 @@ void NMR_PFGSE::simulation_cuda()
                     h_walker_x0[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
                     h_walker_y0[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
                     h_walker_z0[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
-                    h_walker_px[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
-                    h_walker_py[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
-                    h_walker_pz[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
+                    h_walker_px[id] = this->NMR.walkers[id + packOffset].position_x;
+                    h_walker_py[id] = this->NMR.walkers[id + packOffset].position_y;
+                    h_walker_pz[id] = this->NMR.walkers[id + packOffset].position_z;
+                    h_collisions[id] = 0; // this->NMR.walkers[id + packOffset].collisions; // SERÁ?
                     h_penalty[id] = this->NMR.walkers[id + packOffset].decreaseFactor;
-                    h_seed[id] = this->NMR.walkers[id + packOffset].initialSeed;
+                    h_seed[id] = this->NMR.walkers[id + packOffset].currentSeed;
                     h_energy[id] = this->NMR.walkers[id + packOffset].energy;
                     h_phase[id] = this->NMR.walkers[id + packOffset].energy;
                 }
@@ -476,11 +508,12 @@ void NMR_PFGSE::simulation_cuda()
                 h_walker_x0[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
                 h_walker_y0[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
                 h_walker_z0[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
-                h_walker_px[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
-                h_walker_py[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
-                h_walker_pz[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
+                h_walker_px[id] = this->NMR.walkers[id + packOffset].position_x;
+                h_walker_py[id] = this->NMR.walkers[id + packOffset].position_y;
+                h_walker_pz[id] = this->NMR.walkers[id + packOffset].position_z;
+                h_collisions[id] = 0; //this->NMR.walkers[id + packOffset].collisions;
                 h_penalty[id] = this->NMR.walkers[id + packOffset].decreaseFactor;
-                h_seed[id] = this->NMR.walkers[id + packOffset].initialSeed;
+                h_seed[id] = this->NMR.walkers[id + packOffset].currentSeed;
                 h_energy[id] = this->NMR.walkers[id + packOffset].energy;
                 h_phase[id] = this->NMR.walkers[id + packOffset].energy;
             }
@@ -496,10 +529,11 @@ void NMR_PFGSE::simulation_cuda()
         cudaMemcpy(d_walker_px, h_walker_px, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_py, h_walker_py, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_pz, h_walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_collisions, h_collisions, walkersPerKernel * sizeof(uint), cudaMemcpyHostToDevice);
         cudaMemcpy(d_penalty, h_penalty, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_seed, h_seed, walkersPerKernel * sizeof(uint64_t), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_energy, h_energy, energyArraySize * sizeof(double), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_phase, h_phase, phaseArraySize * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_energy, h_energy, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_phase, h_phase, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
         copy_time += omp_get_wtime() - tick;
 
         // Launch kernel for GPU computation
@@ -507,31 +541,39 @@ void NMR_PFGSE::simulation_cuda()
         tick = omp_get_wtime();
         for(uint step = 0; step < steps.size(); step++)
         {
-            PFG_walk<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
-                                                           d_walker_py,
-                                                           d_walker_pz,
-                                                           d_penalty,
-                                                           d_energy,
-                                                           d_seed,
-                                                           d_bitBlock,
-                                                           bitBlockColumns,
-                                                           bitBlockRows,
-                                                           walkersPerKernel,
-                                                           energyArraySize,
-                                                           steps[step],
-                                                           map_columns,
-                                                           map_rows,
-                                                           map_depth,
-                                                           shiftConverter);
+            PFG_map_noflux<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                 d_walker_py,
+                                                                 d_walker_pz,
+                                                                 d_collisions,
+                                                                 d_seed,
+                                                                 d_bitBlock,
+                                                                 bitBlockColumns,
+                                                                 bitBlockRows,
+                                                                 walkersPerKernel,
+                                                                 steps[step],
+                                                                 map_columns,
+                                                                 map_rows,
+                                                                 map_depth,
+                                                                 shiftConverter);
             cudaDeviceSynchronize();  
         }
+
+        PFG_evaluate_energy<<<blocksPerKernel, threadsPerBlock>>>(d_collisions,
+                                                                  d_penalty, 
+                                                                  d_energy,
+                                                                  walkersPerKernel);
+        cudaDeviceSynchronize();
+
         kernel_time = omp_get_wtime() - tick;
 
         // recover last positions
         tick = omp_get_wtime();
         cudaMemcpy(h_walker_px, d_walker_px, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_walker_py, d_walker_py, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(h_walker_pz, d_walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);      
+        cudaMemcpy(h_walker_pz, d_walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);  
+        cudaMemcpy(h_collisions, d_collisions, walkersPerKernel * sizeof(uint), cudaMemcpyDeviceToHost);  
+        cudaMemcpy(h_energy, d_energy, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);    
+        cudaMemcpy(h_seed, d_seed, walkersPerKernel * sizeof(uint64_t), cudaMemcpyDeviceToHost);    
         copy_time = omp_get_wtime() - tick;
 
         tick = omp_get_wtime();
@@ -542,7 +584,7 @@ void NMR_PFGSE::simulation_cuda()
             const int loop_size = walkersPerKernel;
             int loop_start, loop_finish;
 
-            #pragma omp parallel shared(h_walker_px, h_walker_py, h_walker_pz, packOffset) private(loop_start, loop_finish) 
+            #pragma omp parallel shared(h_walker_px, h_walker_py, h_walker_pz, h_collisions, h_energy, h_seed, packOffset) private(loop_start, loop_finish) 
             {
                 const int thread_id = omp_get_thread_num();
                 OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -554,15 +596,21 @@ void NMR_PFGSE::simulation_cuda()
                     this->NMR.walkers[id + packOffset].position_x = h_walker_px[id];
                     this->NMR.walkers[id + packOffset].position_y = h_walker_py[id];
                     this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];
+                    this->NMR.walkers[id + packOffset].collisions += h_collisions[id];
+                    this->NMR.walkers[id + packOffset].energy = h_energy[id];
+                    this->NMR.walkers[id + packOffset].currentSeed = h_seed[id];
                 }
             }
         } else
         {
-            for (uint i = 0; i < walkersPerKernel; i++)
+            for (uint id = 0; id < walkersPerKernel; id++)
             {
-                this->NMR.walkers[i + packOffset].position_x = h_walker_px[i];
-                this->NMR.walkers[i + packOffset].position_y = h_walker_py[i];
-                this->NMR.walkers[i + packOffset].position_z = h_walker_pz[i];            
+                this->NMR.walkers[id + packOffset].position_x = h_walker_px[id];
+                this->NMR.walkers[id + packOffset].position_y = h_walker_py[id];
+                this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];            
+                this->NMR.walkers[id + packOffset].collisions += h_collisions[id];
+                this->NMR.walkers[id + packOffset].energy = h_energy[id];
+                this->NMR.walkers[id + packOffset].currentSeed = h_seed[id];
             }
         }
         buffer_time += omp_get_wtime() - tick;
@@ -570,10 +618,10 @@ void NMR_PFGSE::simulation_cuda()
         tick = omp_get_wtime();
         for(int point = 0; point < gradientPoints; point++)
         {
-            double k_X = compute_k(this->vecGradient[point].getX(), giromagneticRatio, pulseWidth);
-            double k_Y = compute_k(this->vecGradient[point].getY(), giromagneticRatio, pulseWidth);
-            double k_Z = compute_k(this->vecGradient[point].getZ(), giromagneticRatio, pulseWidth);
-
+            double k_X = this->vecK[point].getX();
+            double k_Y = this->vecK[point].getY();
+            double k_Z = this->vecK[point].getZ();
+            
             // kernel call to compute walkers individual phase
             PFG_measure<<<blocksPerKernel, threadsPerBlock>>>  (d_walker_x0,
                                                                 d_walker_y0, 
@@ -597,46 +645,27 @@ void NMR_PFGSE::simulation_cuda()
                              threadsPerBlock, 
                              threadsPerBlock * sizeof(double)>>>(d_phase,
                                                                  d_phaseCollector,  
-                                                                 phaseArraySize,
+                                                                 walkersPerKernel,
                                                                  phaseCollectorSize);       
-                cudaDeviceSynchronize();
-
-                // Kernel call to reduce walker final energies
-                // PFG_reduce<<<blocksPerKernel/2, 
-                //              threadsPerBlock, 
-                //              threadsPerBlock * sizeof(double)>>>(d_energy,
-                //                                                  d_energyCollector,
-                //                                                  energyArraySize,
-                //                                                  energyCollectorSize);     
                 cudaDeviceSynchronize();
 
                 // copy data from gatherer array
                 cudaMemcpy(h_phaseCollector, d_phaseCollector, phaseCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
-                // cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
 
                 // collector reductions
                 for(uint idx = 0; idx < phaseCollectorSize; idx++)
                 {
                     h_globalPhase[point] += h_phaseCollector[idx];
                 }
-                // for(uint idx = 0; idx < energyCollectorSize; idx++)
-                // {
-                //     h_globalEnergy[point] += h_energyCollector[idx];
-                // }
             } 
             else
             {    
 
-                cudaMemcpy(h_phase, d_phase, phaseArraySize * sizeof(double), cudaMemcpyDeviceToHost);
-                // cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);            
-                for(uint idx = 0; idx < phaseArraySize; idx++)
+                cudaMemcpy(h_phase, d_phase, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);          
+                for(uint idx = 0; idx < walkersPerKernel; idx++)
                 {
                     h_globalPhase[point] += h_phase[idx];
                 }
-                // for(uint idx = 0; idx < energyArraySize; idx++)
-                // {
-                //     h_globalEnergy[point] += h_energy[idx];
-                // } 
             }
         }   
 
@@ -649,7 +678,7 @@ void NMR_PFGSE::simulation_cuda()
                             threadsPerBlock, 
                             threadsPerBlock * sizeof(double)>>>(d_energy,
                                                                 d_energyCollector,
-                                                                energyArraySize,
+                                                                walkersPerKernel,
                                                                 energyCollectorSize);     
             cudaDeviceSynchronize();
 
@@ -664,8 +693,8 @@ void NMR_PFGSE::simulation_cuda()
         } 
         else
         {    
-            cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);            
-            for(uint idx = 0; idx < energyArraySize; idx++)
+            cudaMemcpy(h_energy, d_energy, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);            
+            for(uint idx = 0; idx < walkersPerKernel; idx++)
             {
                 h_globalEnergy += h_energy[idx];
             } 
@@ -689,7 +718,7 @@ void NMR_PFGSE::simulation_cuda()
             const int loop_size = lastWalkerPackSize;
             int loop_start, loop_finish;
 
-            #pragma omp parallel shared(packOffset, h_walker_x0, h_walker_y0, h_walker_z0, h_walker_px, h_walker_py, h_walker_pz, h_penalty, h_seed, h_energy, h_phase) private(loop_start, loop_finish) 
+            #pragma omp parallel shared(packOffset, h_walker_x0, h_walker_y0, h_walker_z0, h_walker_px, h_walker_py, h_walker_pz, h_collisions, h_penalty, h_seed, h_energy, h_phase) private(loop_start, loop_finish) 
             {
                 const int thread_id = omp_get_thread_num();
                 OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -701,11 +730,12 @@ void NMR_PFGSE::simulation_cuda()
                     h_walker_x0[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
                     h_walker_y0[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
                     h_walker_z0[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
-                    h_walker_px[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
-                    h_walker_py[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
-                    h_walker_pz[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
+                    h_walker_px[id] = this->NMR.walkers[id + packOffset].position_x;
+                    h_walker_py[id] = this->NMR.walkers[id + packOffset].position_y;
+                    h_walker_pz[id] = this->NMR.walkers[id + packOffset].position_z;
+                    h_collisions[id] = 0; // this->NMR.walkers[id + packOffset].collisions;
                     h_penalty[id] = this->NMR.walkers[id + packOffset].decreaseFactor;
-                    h_seed[id] = this->NMR.walkers[id + packOffset].initialSeed;
+                    h_seed[id] = this->NMR.walkers[id + packOffset].currentSeed;
                     h_energy[id] = this->NMR.walkers[id + packOffset].energy;
                     h_phase[id] = this->NMR.walkers[id + packOffset].energy;
                 }
@@ -717,11 +747,12 @@ void NMR_PFGSE::simulation_cuda()
                 h_walker_x0[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
                 h_walker_y0[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
                 h_walker_z0[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
-                h_walker_px[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
-                h_walker_py[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
-                h_walker_pz[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
+                h_walker_px[id] = this->NMR.walkers[id + packOffset].position_x;
+                h_walker_py[id] = this->NMR.walkers[id + packOffset].position_y;
+                h_walker_pz[id] = this->NMR.walkers[id + packOffset].position_z;
+                h_collisions[id] = 0; // this->NMR.walkers[id + packOffset].collisions;
                 h_penalty[id] = this->NMR.walkers[id + packOffset].decreaseFactor;
-                h_seed[id] = this->NMR.walkers[id + packOffset].initialSeed;
+                h_seed[id] = this->NMR.walkers[id + packOffset].currentSeed;
                 h_energy[id] = this->NMR.walkers[id + packOffset].energy;
                 h_phase[id] = this->NMR.walkers[id + packOffset].energy;
             }
@@ -746,35 +777,41 @@ void NMR_PFGSE::simulation_cuda()
         cudaMemcpy(d_walker_px, h_walker_px, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_py, h_walker_py, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_pz, h_walker_pz, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_collisions, h_collisions, lastWalkerPackSize * sizeof(uint), cudaMemcpyHostToDevice);
         cudaMemcpy(d_penalty, h_penalty, lastWalkerPackSize * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_seed, h_seed, lastWalkerPackSize * sizeof(uint64_t), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_energy, h_energy, energyArraySize * sizeof(double), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_phase, h_phase, phaseArraySize * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_energy, h_energy, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_phase, h_phase, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
         copy_time += omp_get_wtime() - tick;
 
         // Launch kernel for GPU computation
         // call "walk" method kernel
+
         tick = omp_get_wtime();
         for(uint step = 0; step < steps.size(); step++)
         {
-            PFG_walk<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
-                                                           d_walker_py,
-                                                           d_walker_pz,
-                                                           d_penalty,
-                                                           d_energy,
-                                                           d_seed,
-                                                           d_bitBlock,
-                                                           bitBlockColumns,
-                                                           bitBlockRows,
-                                                           lastWalkerPackSize,
-                                                           energyArraySize,
-                                                           steps[step],
-                                                           map_columns,
-                                                           map_rows,
-                                                           map_depth,
-                                                           shiftConverter);
+            PFG_map_noflux<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                 d_walker_py,
+                                                                 d_walker_pz,
+                                                                 d_collisions,
+                                                                 d_seed,
+                                                                 d_bitBlock,
+                                                                 bitBlockColumns,
+                                                                 bitBlockRows,
+                                                                 lastWalkerPackSize,
+                                                                 steps[step],
+                                                                 map_columns,
+                                                                 map_rows,
+                                                                 map_depth,
+                                                                 shiftConverter);
             cudaDeviceSynchronize();  
         }
+
+        PFG_evaluate_energy<<<blocksPerKernel, threadsPerBlock>>> (d_collisions,
+                                                                   d_penalty,
+                                                                   d_energy,
+                                                                   lastWalkerPackSize);
+        cudaDeviceSynchronize();
         kernel_time += omp_get_wtime() - tick;
 
         // recover last positions
@@ -782,6 +819,9 @@ void NMR_PFGSE::simulation_cuda()
         cudaMemcpy(h_walker_px, d_walker_px, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_walker_py, d_walker_py, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_walker_pz, d_walker_pz, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_collisions, d_collisions, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_energy, d_energy, lastWalkerPackSize * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_seed, d_seed, lastWalkerPackSize * sizeof(uint64_t), cudaMemcpyDeviceToHost);
         copy_time += omp_get_wtime() - tick;
 
         tick = omp_get_wtime();
@@ -792,7 +832,7 @@ void NMR_PFGSE::simulation_cuda()
             const int loop_size = lastWalkerPackSize;
             int loop_start, loop_finish;
 
-            #pragma omp parallel shared(h_walker_px, h_walker_py, h_walker_pz, packOffset) private(loop_start, loop_finish) 
+            #pragma omp parallel shared(h_walker_px, h_walker_py, h_walker_pz, h_collisions, h_energy, h_seed, packOffset) private(loop_start, loop_finish) 
             {
                 const int thread_id = omp_get_thread_num();
                 OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -804,6 +844,9 @@ void NMR_PFGSE::simulation_cuda()
                     this->NMR.walkers[id + packOffset].position_x = h_walker_px[id];
                     this->NMR.walkers[id + packOffset].position_y = h_walker_py[id];
                     this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];
+                    this->NMR.walkers[id + packOffset].collisions += h_collisions[id];
+                    this->NMR.walkers[id + packOffset].energy = h_energy[id];
+                    this->NMR.walkers[id + packOffset].currentSeed = h_seed[id];
                 }
             }
         } else
@@ -812,7 +855,10 @@ void NMR_PFGSE::simulation_cuda()
             {
                 this->NMR.walkers[id + packOffset].position_x = h_walker_px[id];
                 this->NMR.walkers[id + packOffset].position_y = h_walker_py[id];
-                this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];            
+                this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];
+                this->NMR.walkers[id + packOffset].collisions += h_collisions[id];
+                this->NMR.walkers[id + packOffset].energy = h_energy[id];    
+                this->NMR.walkers[id + packOffset].currentSeed = h_seed[id];        
             }
         }
         buffer_time += omp_get_wtime() - tick;
@@ -820,9 +866,9 @@ void NMR_PFGSE::simulation_cuda()
         tick = omp_get_wtime();
         for(int point = 0; point < this->gradientPoints; point++)
         {
-            double k_X = compute_k(this->vecGradient[point].getX(), giromagneticRatio, pulseWidth);
-            double k_Y = compute_k(this->vecGradient[point].getY(), giromagneticRatio, pulseWidth);
-            double k_Z = compute_k(this->vecGradient[point].getZ(), giromagneticRatio, pulseWidth);
+            double k_X = this->vecK[point].getX();
+            double k_Y = this->vecK[point].getY();
+            double k_Z = this->vecK[point].getZ();
 
             // kernel call to compute walkers individual phase
             PFG_measure<<<blocksPerKernel, threadsPerBlock>>>  (d_walker_x0,
@@ -848,48 +894,28 @@ void NMR_PFGSE::simulation_cuda()
                              threadsPerBlock, 
                              threadsPerBlock * sizeof(double)>>>(d_phase,
                                                                  d_phaseCollector,
-                                                                 phaseArraySize,
+                                                                 walkersPerKernel,
                                                                  phaseCollectorSize);
     
-                cudaDeviceSynchronize();
-    
-                // // Kernel call to reduce walker final energies
-                // PFG_reduce<<<blocksPerKernel/2, 
-                //              threadsPerBlock, 
-                //              threadsPerBlock * sizeof(double)>>>(d_energy,
-                //                                                  d_energyCollector,
-                //                                                  energyArraySize,
-                //                                                  energyCollectorSize);
-    
-                // cudaDeviceSynchronize();
+                cudaDeviceSynchronize();    
     
                 // copy data from gatherer array
                 cudaMemcpy(h_phaseCollector, d_phaseCollector, phaseCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
-                // cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
-    
+                
                 // collector reductions
                 for(uint idx = 0; idx < phaseCollectorSize; idx++)
                 {
                     h_globalPhase[point] += h_phaseCollector[idx];
-                }
-                // for(uint idx = 0; idx < energyCollectorSize; idx++)
-                // {
-                //     h_globalEnergy[point] += h_energyCollector[idx];
-                // }
+                }                
             }
             else
             {
-                cudaMemcpy(h_phase, d_phase, phaseArraySize * sizeof(double), cudaMemcpyDeviceToHost);
-                // cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);
+                cudaMemcpy(h_phase, d_phase, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);
                 
-                for(uint idx = 0; idx < phaseArraySize; idx++)
+                for(uint idx = 0; idx < walkersPerKernel; idx++)
                 {
                     h_globalPhase[point] += h_phase[idx];
                 }
-                // for(uint idx = 0; idx < energyArraySize; idx++)
-                // {
-                //     h_globalEnergy[point] += h_energy[idx];
-                // }
             }
         }
 
@@ -900,7 +926,7 @@ void NMR_PFGSE::simulation_cuda()
                             threadsPerBlock, 
                             threadsPerBlock * sizeof(double)>>>(d_energy,
                                                                 d_energyCollector,
-                                                                energyArraySize,
+                                                                walkersPerKernel,
                                                                 energyCollectorSize);
 
             cudaDeviceSynchronize();
@@ -915,8 +941,8 @@ void NMR_PFGSE::simulation_cuda()
         }
         else
         {
-            cudaMemcpy(h_energy, d_energy, energyArraySize * sizeof(double), cudaMemcpyDeviceToHost);                
-            for(uint idx = 0; idx < energyArraySize; idx++)
+            cudaMemcpy(h_energy, d_energy, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);                
+            for(uint idx = 0; idx < walkersPerKernel; idx++)
             {
                 h_globalEnergy += h_energy[idx];
             }
@@ -939,14 +965,6 @@ void NMR_PFGSE::simulation_cuda()
         this->Mkt.push_back((h_globalPhase[point]/h_globalEnergy));
     }
 
-    // normalize magnitudes - old
-    // if(this->LHS.size() > 0) this->LHS.clear();
-    // this->LHS.reserve(this->gradientPoints);
-    // for(int point = 0; point < this->gradientPoints; point++)
-    // {
-    //     this->LHS.push_back((h_globalPhase[point]/h_globalEnergy[point]));
-    // }
-
     // free pointers in host
     free(h_walker_x0);
     free(h_walker_y0);
@@ -954,26 +972,26 @@ void NMR_PFGSE::simulation_cuda()
     free(h_walker_px);
     free(h_walker_py);
     free(h_walker_pz);
+    free(h_collisions);
     free(h_penalty);
     free(h_seed);
     free(h_energy);
     free(h_energyCollector);
     free(h_phase);
     free(h_phaseCollector);
-    // free(h_globalEnergy);
     free(h_globalPhase);
 
     // and direct them to NULL
     h_walker_px = NULL;
     h_walker_py = NULL;
     h_walker_pz = NULL;
+    h_collisions = NULL;
     h_penalty = NULL;
     h_energy = NULL;
     h_energyCollector = NULL;
     h_seed = NULL;
     h_phase = NULL;
     h_phaseCollector = NULL;
-    // h_globalEnergy = NULL;
     h_globalPhase = NULL;
 
     // also direct the bitBlock pointer created in this context
@@ -987,6 +1005,746 @@ void NMR_PFGSE::simulation_cuda()
     cudaFree(d_walker_px);
     cudaFree(d_walker_py);
     cudaFree(d_walker_pz);
+    cudaFree(d_collisions);
+    cudaFree(d_penalty);
+    cudaFree(d_seed);
+    cudaFree(d_energy);
+    cudaFree(d_energyCollector);
+    cudaFree(d_phase);
+    cudaFree(d_phaseCollector);
+    cudaFree(d_bitBlock);
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+
+    float elapsedTime;
+    cudaEventElapsedTime(&elapsedTime, start, stop);
+    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
+    cudaDeviceReset();
+
+    if(time_verbose)
+    {
+        cout << "--- Time analysis ---" << endl;
+        cout << "cpu data buffer: " << buffer_time << " s" << endl;
+        cout << "gpu data copy: " << copy_time << " s" << endl;
+        cout << "gpu kernel launch: " << kernel_time << " s" << endl;
+        cout << "gpu reduce launch: " << reduce_time << " s" << endl;
+        cout << "---------------------" << endl;
+    }
+}
+
+// function to call GPU kernel to execute
+// walker's "walk" method in Graphics Processing Unit
+void NMR_PFGSE::simulation_cuda_periodic()
+{
+    cout << "initializing RW-PFG NMR simulation in GPU... ";
+
+    bool time_verbose = false;
+    double copy_time = 0.0;
+    double kernel_time = 0.0;
+    double buffer_time = 0.0;
+    double reduce_time = 0.0;
+
+    // CUDA event recorder to measure computation time in device
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start, 0);
+
+    // integer values for sizing issues
+    uint bitBlockColumns = this->NMR.bitBlock.blockColumns;
+    uint bitBlockRows = this->NMR.bitBlock.blockRows;
+    uint numberOfBitBlocks = this->NMR.bitBlock.numberOfBlocks;
+    uint numberOfWalkers = this->NMR.numberOfWalkers;
+    int map_columns = this->NMR.bitBlock.imageColumns;
+    int map_rows = this->NMR.bitBlock.imageRows;
+    int map_depth = this->NMR.bitBlock.imageDepth;
+    int shiftConverter = log2(this->NMR.voxelDivision);
+    double voxelResolution = this->NMR.imageVoxelResolution;
+    uint numberOfSteps = this->NMR.simulationSteps - this->stepsTaken;
+    this->stepsTaken += numberOfSteps;
+
+    // create a steps bucket
+    uint stepsLimit = this->NMR.rwNMR_config.getMaxRWSteps();
+    uint stepsSize = numberOfSteps/stepsLimit;
+    vector<uint> steps;
+    for(uint idx = 0; idx < stepsSize; idx++)
+    {
+        steps.push_back(stepsLimit);
+    }
+    // charge rebalance
+    if((numberOfSteps % stepsLimit) > 0)
+    {
+        stepsSize++;
+        steps.push_back(numberOfSteps%stepsLimit);
+    } 
+    
+
+    // define parameters for CUDA kernel launch: blockDim, gridDim etc
+    uint threadsPerBlock = this->NMR.rwNMR_config.getThreadsPerBlock();
+    uint blocksPerKernel = this->NMR.rwNMR_config.getBlocks();
+    uint walkersPerKernel = threadsPerBlock * blocksPerKernel;
+
+    // treat case when only one kernel is needed
+    if (numberOfWalkers < walkersPerKernel)
+    {
+        blocksPerKernel = (uint)ceil((double)(numberOfWalkers) / (double)(threadsPerBlock));
+
+        // blocks per kernel should be multiple of 2
+        if (blocksPerKernel % 2 == 1)
+        {
+            blocksPerKernel += 1;
+        }
+
+        walkersPerKernel = threadsPerBlock * blocksPerKernel;
+    }
+
+    // Walker packs == groups of walkers in the same kernel
+    // all threads in a pack represent a walker in the NMR simulation
+    // But, in the last pack, some threads may be idle
+    uint numberOfWalkerPacks = (numberOfWalkers / walkersPerKernel) + 1;
+    uint lastWalkerPackSize = numberOfWalkers % walkersPerKernel;
+    uint lastWalkerPackTail = walkersPerKernel - lastWalkerPackSize;
+
+
+    // signal  
+    uint energyCollectorSize = (blocksPerKernel / 2);
+    uint phaseCollectorSize = (blocksPerKernel / 2);
+
+    // Copy bitBlock3D data from host to device (only once)
+    // assign pointer to bitBlock datastructure
+    uint64_t *h_bitBlock;
+    h_bitBlock = this->NMR.bitBlock.blocks;
+
+    uint64_t *d_bitBlock;
+    cudaMalloc((void **)&d_bitBlock, numberOfBitBlocks * sizeof(uint64_t));
+    cudaMemcpy(d_bitBlock, h_bitBlock, numberOfBitBlocks * sizeof(uint64_t), cudaMemcpyHostToDevice);
+
+    // Host and Device memory data allocation
+    // pointers used in host array conversion
+    myAllocator arrayFactory;
+    int *h_walker_x0 = arrayFactory.getIntArray(walkersPerKernel);
+    int *h_walker_y0 = arrayFactory.getIntArray(walkersPerKernel);
+    int *h_walker_z0 = arrayFactory.getIntArray(walkersPerKernel);
+    int *h_walker_px = arrayFactory.getIntArray(walkersPerKernel);
+    int *h_walker_py = arrayFactory.getIntArray(walkersPerKernel);
+    int *h_walker_pz = arrayFactory.getIntArray(walkersPerKernel);
+    uint *h_collisions = arrayFactory.getUIntArray(walkersPerKernel);
+    double *h_penalty = arrayFactory.getDoubleArray(walkersPerKernel);
+    uint64_t *h_seed = arrayFactory.getUInt64Array(walkersPerKernel);
+
+    // magnetization and phase
+    double *h_energy = arrayFactory.getDoubleArray(walkersPerKernel);
+    double *h_energyCollector = arrayFactory.getDoubleArray(energyCollectorSize);
+    double h_globalEnergy = 0.0;
+    double *h_phase = arrayFactory.getDoubleArray(walkersPerKernel);
+    double *h_phaseCollector = arrayFactory.getDoubleArray(phaseCollectorSize);
+    double *h_globalPhase = arrayFactory.getDoubleArray(gradientPoints);
+
+    double tick = omp_get_wtime();
+    for (uint point = 0; point < gradientPoints; point++)
+    {
+        h_globalPhase[point] = 0.0;
+    }
+    buffer_time += omp_get_wtime() - tick;
+
+    // Declaration of pointers to device data arrays
+    int *d_walker_x0;
+    int *d_walker_y0;
+    int *d_walker_z0;
+    int *d_walker_px;
+    int *d_walker_py;
+    int *d_walker_pz;
+    uint *d_collisions;
+    double *d_penalty;
+    uint64_t *d_seed;
+
+    // magnetization & phase
+    double *d_energy;
+    double *d_energyCollector;   
+    double *d_phase;
+    double *d_phaseCollector;
+
+    // Memory allocation in device for data arrays
+    cudaMalloc((void **)&d_walker_x0, walkersPerKernel * sizeof(int));
+    cudaMalloc((void **)&d_walker_y0, walkersPerKernel * sizeof(int));
+    cudaMalloc((void **)&d_walker_z0, walkersPerKernel * sizeof(int));
+    cudaMalloc((void **)&d_walker_px, walkersPerKernel * sizeof(int));
+    cudaMalloc((void **)&d_walker_py, walkersPerKernel * sizeof(int));
+    cudaMalloc((void **)&d_walker_pz, walkersPerKernel * sizeof(int));
+    cudaMalloc((void **)&d_collisions, walkersPerKernel * sizeof(uint));
+    cudaMalloc((void **)&d_penalty, walkersPerKernel * sizeof(double));
+    cudaMalloc((void **)&d_seed, walkersPerKernel * sizeof(uint64_t));
+    cudaMalloc((void **)&d_energy, walkersPerKernel * sizeof(double));
+    cudaMalloc((void **)&d_energyCollector, energyCollectorSize * sizeof(double));
+    cudaMalloc((void **)&d_phase, walkersPerKernel * sizeof(double));
+    cudaMalloc((void **)&d_phaseCollector, phaseCollectorSize * sizeof(double));
+    
+    tick = omp_get_wtime();
+    for (uint idx = 0; idx < walkersPerKernel; idx++)
+    {
+        h_energy[idx] = 0.0;
+    }
+    
+    for(uint idx = 0; idx < energyCollectorSize; idx++)
+    {
+        h_energyCollector[idx] = 0.0;
+    }
+
+    for (uint idx = 0; idx < walkersPerKernel; idx++)
+    {
+        h_phase[idx] = 0.0;
+    } 
+
+    for(uint idx = 0; idx < phaseCollectorSize; idx++)
+    {
+        h_phaseCollector[idx] = 0.0;
+    }
+    buffer_time += omp_get_wtime() - tick;
+
+    // PFG main loop
+    for (uint packId = 0; packId < (numberOfWalkerPacks - 1); packId++)
+    {
+        // set offset in walkers vector
+        uint packOffset = packId * walkersPerKernel;
+
+        // Host data copy
+        // copy original walkers' data to temporary host arrays
+        tick = omp_get_wtime();
+        if(this->NMR.rwNMR_config.getOpenMPUsage())
+        {
+            // set omp variables for parallel loop throughout walker list
+            const int num_cpu_threads = omp_get_max_threads();
+            const int loop_size = walkersPerKernel;
+            int loop_start, loop_finish;
+
+            #pragma omp parallel shared(packOffset, h_walker_x0, h_walker_y0, h_walker_z0, h_walker_px, h_walker_py, h_walker_pz, h_collisions, h_penalty, h_seed, h_energy, h_phase) private(loop_start, loop_finish) 
+            {
+                const int thread_id = omp_get_thread_num();
+                OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+                loop_start = looper.getStart();
+                loop_finish = looper.getFinish(); 
+
+                for (uint id = loop_start; id < loop_finish; id++)
+                {
+                    h_walker_x0[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
+                    h_walker_y0[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
+                    h_walker_z0[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
+                    h_walker_px[id] = this->NMR.walkers[id + packOffset].position_x;
+                    h_walker_py[id] = this->NMR.walkers[id + packOffset].position_y;
+                    h_walker_pz[id] = this->NMR.walkers[id + packOffset].position_z;
+                    h_collisions[id] = 0; // this->NMR.walkers[id + packOffset].collisions; // SERÁ?
+                    h_penalty[id] = this->NMR.walkers[id + packOffset].decreaseFactor;
+                    h_seed[id] = this->NMR.walkers[id + packOffset].currentSeed;
+                    h_energy[id] = this->NMR.walkers[id + packOffset].energy;
+                    h_phase[id] = this->NMR.walkers[id + packOffset].energy;
+                }
+            }
+        } else
+        {
+            for (uint id = 0; id < walkersPerKernel; id++)
+            {
+                h_walker_x0[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
+                h_walker_y0[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
+                h_walker_z0[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
+                h_walker_px[id] = this->NMR.walkers[id + packOffset].position_x;
+                h_walker_py[id] = this->NMR.walkers[id + packOffset].position_y;
+                h_walker_pz[id] = this->NMR.walkers[id + packOffset].position_z;
+                h_collisions[id] = 0; //this->NMR.walkers[id + packOffset].collisions;
+                h_penalty[id] = this->NMR.walkers[id + packOffset].decreaseFactor;
+                h_seed[id] = this->NMR.walkers[id + packOffset].currentSeed;
+                h_energy[id] = this->NMR.walkers[id + packOffset].energy;
+                h_phase[id] = this->NMR.walkers[id + packOffset].energy;
+            }
+        }
+        buffer_time += omp_get_wtime() - tick;
+
+        // Device data copy
+        // copy host data to device
+        tick = omp_get_wtime();
+        cudaMemcpy(d_walker_x0, h_walker_x0, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_y0, h_walker_y0, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_z0, h_walker_z0, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_px, h_walker_px, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_py, h_walker_py, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_pz, h_walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_collisions, h_collisions, walkersPerKernel * sizeof(uint), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_penalty, h_penalty, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_seed, h_seed, walkersPerKernel * sizeof(uint64_t), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_energy, h_energy, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_phase, h_phase, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+        copy_time += omp_get_wtime() - tick;
+
+        // Launch kernel for GPU computation
+        // call "walk" method kernel
+        tick = omp_get_wtime();
+        for(uint step = 0; step < steps.size(); step++)
+        {
+            PFG_map_periodic<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                 d_walker_py,
+                                                                 d_walker_pz,
+                                                                 d_collisions,
+                                                                 d_seed,
+                                                                 d_bitBlock,
+                                                                 bitBlockColumns,
+                                                                 bitBlockRows,
+                                                                 walkersPerKernel,
+                                                                 steps[step],
+                                                                 map_columns,
+                                                                 map_rows,
+                                                                 map_depth,
+                                                                 shiftConverter);
+            cudaDeviceSynchronize();  
+        }
+
+        PFG_evaluate_energy<<<blocksPerKernel, threadsPerBlock>>>(d_collisions,
+                                                                  d_penalty, 
+                                                                  d_energy,
+                                                                  walkersPerKernel);
+        cudaDeviceSynchronize();
+
+        kernel_time = omp_get_wtime() - tick;
+
+        // recover last positions
+        tick = omp_get_wtime();
+        cudaMemcpy(h_walker_px, d_walker_px, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_walker_py, d_walker_py, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_walker_pz, d_walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);  
+        cudaMemcpy(h_collisions, d_collisions, walkersPerKernel * sizeof(uint), cudaMemcpyDeviceToHost);  
+        cudaMemcpy(h_energy, d_energy, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);    
+        cudaMemcpy(h_seed, d_seed, walkersPerKernel * sizeof(uint64_t), cudaMemcpyDeviceToHost);    
+        copy_time = omp_get_wtime() - tick;
+
+        tick = omp_get_wtime();
+        if(this->NMR.rwNMR_config.getOpenMPUsage())
+        {
+            // set omp variables for parallel loop throughout walker list
+            const int num_cpu_threads = omp_get_max_threads();
+            const int loop_size = walkersPerKernel;
+            int loop_start, loop_finish;
+
+            #pragma omp parallel shared(h_walker_px, h_walker_py, h_walker_pz, h_collisions, h_energy, h_seed, packOffset) private(loop_start, loop_finish) 
+            {
+                const int thread_id = omp_get_thread_num();
+                OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+                loop_start = looper.getStart();
+                loop_finish = looper.getFinish(); 
+
+                for (uint id = loop_start; id < loop_finish; id++)
+                {
+                    this->NMR.walkers[id + packOffset].position_x = h_walker_px[id];
+                    this->NMR.walkers[id + packOffset].position_y = h_walker_py[id];
+                    this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];
+                    this->NMR.walkers[id + packOffset].collisions += h_collisions[id];
+                    this->NMR.walkers[id + packOffset].energy = h_energy[id];
+                    this->NMR.walkers[id + packOffset].currentSeed = h_seed[id];
+                }
+            }
+        } else
+        {
+            for (uint id = 0; id < walkersPerKernel; id++)
+            {
+                this->NMR.walkers[id + packOffset].position_x = h_walker_px[id];
+                this->NMR.walkers[id + packOffset].position_y = h_walker_py[id];
+                this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];            
+                this->NMR.walkers[id + packOffset].collisions += h_collisions[id];
+                this->NMR.walkers[id + packOffset].energy = h_energy[id];
+                this->NMR.walkers[id + packOffset].currentSeed = h_seed[id];
+            }
+        }
+        buffer_time += omp_get_wtime() - tick;
+
+        tick = omp_get_wtime();
+        for(int point = 0; point < gradientPoints; point++)
+        {
+            double k_X = this->vecK[point].getX();
+            double k_Y = this->vecK[point].getY();
+            double k_Z = this->vecK[point].getZ();
+            
+            // kernel call to compute walkers individual phase
+            PFG_measure<<<blocksPerKernel, threadsPerBlock>>>  (d_walker_x0,
+                                                                d_walker_y0, 
+                                                                d_walker_z0,
+                                                                d_walker_px,
+                                                                d_walker_py,
+                                                                d_walker_pz,
+                                                                d_energy,
+                                                                d_phase,
+                                                                walkersPerKernel,
+                                                                voxelResolution,
+                                                                k_X,
+                                                                k_Y,
+                                                                k_Z);
+            cudaDeviceSynchronize();
+
+            if(this->NMR.rwNMR_config.getReduceInGPU())
+            {
+                // Kernel call to reduce walker final phases
+                PFG_reduce<<<blocksPerKernel/2, 
+                             threadsPerBlock, 
+                             threadsPerBlock * sizeof(double)>>>(d_phase,
+                                                                 d_phaseCollector,  
+                                                                 walkersPerKernel,
+                                                                 phaseCollectorSize);       
+                cudaDeviceSynchronize();
+
+                // copy data from gatherer array
+                cudaMemcpy(h_phaseCollector, d_phaseCollector, phaseCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
+
+                // collector reductions
+                for(uint idx = 0; idx < phaseCollectorSize; idx++)
+                {
+                    h_globalPhase[point] += h_phaseCollector[idx];
+                }
+            } 
+            else
+            {    
+
+                cudaMemcpy(h_phase, d_phase, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);          
+                for(uint idx = 0; idx < walkersPerKernel; idx++)
+                {
+                    h_globalPhase[point] += h_phase[idx];
+                }
+            }
+        }   
+
+    
+
+        if(this->NMR.rwNMR_config.getReduceInGPU())
+        {
+            // Kernel call to reduce walker final energies
+            PFG_reduce<<<blocksPerKernel/2, 
+                            threadsPerBlock, 
+                            threadsPerBlock * sizeof(double)>>>(d_energy,
+                                                                d_energyCollector,
+                                                                walkersPerKernel,
+                                                                energyCollectorSize);     
+            cudaDeviceSynchronize();
+
+            // copy data from gatherer array
+            cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
+
+            // collector reductions
+            for(uint idx = 0; idx < energyCollectorSize; idx++)
+            {
+                h_globalEnergy += h_energyCollector[idx];
+            }
+        } 
+        else
+        {    
+            cudaMemcpy(h_energy, d_energy, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);            
+            for(uint idx = 0; idx < walkersPerKernel; idx++)
+            {
+                h_globalEnergy += h_energy[idx];
+            } 
+        }
+    } 
+    reduce_time += omp_get_wtime() - tick;
+
+    if (lastWalkerPackSize > 0)
+    {
+        // last Walker pack is done explicitly
+        // set offset in walkers vector
+        uint packOffset = (numberOfWalkerPacks - 1) * walkersPerKernel;
+
+        // Host data copy
+        // copy original walkers' data to temporary host arrays
+        tick = omp_get_wtime();
+        if(this->NMR.rwNMR_config.getOpenMPUsage())
+        {
+            // set omp variables for parallel loop throughout walker list
+            const int num_cpu_threads = omp_get_max_threads();
+            const int loop_size = lastWalkerPackSize;
+            int loop_start, loop_finish;
+
+            #pragma omp parallel shared(packOffset, h_walker_x0, h_walker_y0, h_walker_z0, h_walker_px, h_walker_py, h_walker_pz, h_collisions, h_penalty, h_seed, h_energy, h_phase) private(loop_start, loop_finish) 
+            {
+                const int thread_id = omp_get_thread_num();
+                OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+                loop_start = looper.getStart();
+                loop_finish = looper.getFinish(); 
+
+                for (uint id = loop_start; id < loop_finish; id++)
+                {
+                    h_walker_x0[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
+                    h_walker_y0[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
+                    h_walker_z0[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
+                    h_walker_px[id] = this->NMR.walkers[id + packOffset].position_x;
+                    h_walker_py[id] = this->NMR.walkers[id + packOffset].position_y;
+                    h_walker_pz[id] = this->NMR.walkers[id + packOffset].position_z;
+                    h_collisions[id] = 0; // this->NMR.walkers[id + packOffset].collisions;
+                    h_penalty[id] = this->NMR.walkers[id + packOffset].decreaseFactor;
+                    h_seed[id] = this->NMR.walkers[id + packOffset].currentSeed;
+                    h_energy[id] = this->NMR.walkers[id + packOffset].energy;
+                    h_phase[id] = this->NMR.walkers[id + packOffset].energy;
+                }
+            }
+        } else
+        {
+            for (uint id = 0; id < lastWalkerPackSize; id++)
+            {
+                h_walker_x0[id] = this->NMR.walkers[id + packOffset].initialPosition.x;
+                h_walker_y0[id] = this->NMR.walkers[id + packOffset].initialPosition.y;
+                h_walker_z0[id] = this->NMR.walkers[id + packOffset].initialPosition.z;
+                h_walker_px[id] = this->NMR.walkers[id + packOffset].position_x;
+                h_walker_py[id] = this->NMR.walkers[id + packOffset].position_y;
+                h_walker_pz[id] = this->NMR.walkers[id + packOffset].position_z;
+                h_collisions[id] = 0; // this->NMR.walkers[id + packOffset].collisions;
+                h_penalty[id] = this->NMR.walkers[id + packOffset].decreaseFactor;
+                h_seed[id] = this->NMR.walkers[id + packOffset].currentSeed;
+                h_energy[id] = this->NMR.walkers[id + packOffset].energy;
+                h_phase[id] = this->NMR.walkers[id + packOffset].energy;
+            }
+        }
+
+        // complete energy array data
+        for (uint i = 0; i < lastWalkerPackTail; i++)
+        {
+            {
+                h_energy[i + lastWalkerPackSize] = 0.0;
+                h_phase[i + lastWalkerPackSize] = 0.0;
+            }
+        }
+        buffer_time += omp_get_wtime() - tick;
+
+        // Device data copy
+        // copy host data to device
+        tick = omp_get_wtime();
+        cudaMemcpy(d_walker_x0, h_walker_x0, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_y0, h_walker_y0, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_z0, h_walker_z0, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_px, h_walker_px, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_py, h_walker_py, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_walker_pz, h_walker_pz, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_collisions, h_collisions, lastWalkerPackSize * sizeof(uint), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_penalty, h_penalty, lastWalkerPackSize * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_seed, h_seed, lastWalkerPackSize * sizeof(uint64_t), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_energy, h_energy, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_phase, h_phase, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+        copy_time += omp_get_wtime() - tick;
+
+        // Launch kernel for GPU computation
+        // call "walk" method kernel
+
+        tick = omp_get_wtime();
+        for(uint step = 0; step < steps.size(); step++)
+        {
+            PFG_map_periodic<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                 d_walker_py,
+                                                                 d_walker_pz,
+                                                                 d_collisions,
+                                                                 d_seed,
+                                                                 d_bitBlock,
+                                                                 bitBlockColumns,
+                                                                 bitBlockRows,
+                                                                 lastWalkerPackSize,
+                                                                 steps[step],
+                                                                 map_columns,
+                                                                 map_rows,
+                                                                 map_depth,
+                                                                 shiftConverter);
+            cudaDeviceSynchronize();  
+        }
+
+        PFG_evaluate_energy<<<blocksPerKernel, threadsPerBlock>>> (d_collisions,
+                                                                   d_penalty,
+                                                                   d_energy,
+                                                                   lastWalkerPackSize);
+        cudaDeviceSynchronize();
+        kernel_time += omp_get_wtime() - tick;
+
+        // recover last positions
+        tick = omp_get_wtime();
+        cudaMemcpy(h_walker_px, d_walker_px, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_walker_py, d_walker_py, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_walker_pz, d_walker_pz, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_collisions, d_collisions, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_energy, d_energy, lastWalkerPackSize * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_seed, d_seed, lastWalkerPackSize * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+        copy_time += omp_get_wtime() - tick;
+
+        tick = omp_get_wtime();
+        if(this->NMR.rwNMR_config.getOpenMPUsage())
+        {
+            // set omp variables for parallel loop throughout walker list
+            const int num_cpu_threads = omp_get_max_threads();
+            const int loop_size = lastWalkerPackSize;
+            int loop_start, loop_finish;
+
+            #pragma omp parallel shared(h_walker_px, h_walker_py, h_walker_pz, h_collisions, h_energy, h_seed, packOffset) private(loop_start, loop_finish) 
+            {
+                const int thread_id = omp_get_thread_num();
+                OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+                loop_start = looper.getStart();
+                loop_finish = looper.getFinish(); 
+
+                for (uint id = loop_start; id < loop_finish; id++)
+                {
+                    this->NMR.walkers[id + packOffset].position_x = h_walker_px[id];
+                    this->NMR.walkers[id + packOffset].position_y = h_walker_py[id];
+                    this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];
+                    this->NMR.walkers[id + packOffset].collisions += h_collisions[id];
+                    this->NMR.walkers[id + packOffset].energy = h_energy[id];
+                    this->NMR.walkers[id + packOffset].currentSeed = h_seed[id];
+                }
+            }
+        } else
+        {
+            for (uint id = 0; id < lastWalkerPackSize; id++)
+            {
+                this->NMR.walkers[id + packOffset].position_x = h_walker_px[id];
+                this->NMR.walkers[id + packOffset].position_y = h_walker_py[id];
+                this->NMR.walkers[id + packOffset].position_z = h_walker_pz[id];
+                this->NMR.walkers[id + packOffset].collisions += h_collisions[id];
+                this->NMR.walkers[id + packOffset].energy = h_energy[id];    
+                this->NMR.walkers[id + packOffset].currentSeed = h_seed[id];        
+            }
+        }
+        buffer_time += omp_get_wtime() - tick;
+       
+        tick = omp_get_wtime();
+        for(int point = 0; point < this->gradientPoints; point++)
+        {
+            double k_X = this->vecK[point].getX();
+            double k_Y = this->vecK[point].getY();
+            double k_Z = this->vecK[point].getZ();
+
+            // kernel call to compute walkers individual phase
+            PFG_measure<<<blocksPerKernel, threadsPerBlock>>>  (d_walker_x0,
+                                                                d_walker_y0, 
+                                                                d_walker_z0,
+                                                                d_walker_px,
+                                                                d_walker_py,
+                                                                d_walker_pz,
+                                                                d_energy,
+                                                                d_phase,
+                                                                lastWalkerPackSize,
+                                                                voxelResolution,
+                                                                k_X,
+                                                                k_Y,
+                                                                k_Z);
+
+            cudaDeviceSynchronize();
+
+            if(this->NMR.rwNMR_config.getReduceInGPU())
+            {
+                // Kernel call to reduce walker final phases
+                PFG_reduce<<<blocksPerKernel/2, 
+                             threadsPerBlock, 
+                             threadsPerBlock * sizeof(double)>>>(d_phase,
+                                                                 d_phaseCollector,
+                                                                 walkersPerKernel,
+                                                                 phaseCollectorSize);
+    
+                cudaDeviceSynchronize();    
+    
+                // copy data from gatherer array
+                cudaMemcpy(h_phaseCollector, d_phaseCollector, phaseCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
+                
+                // collector reductions
+                for(uint idx = 0; idx < phaseCollectorSize; idx++)
+                {
+                    h_globalPhase[point] += h_phaseCollector[idx];
+                }                
+            }
+            else
+            {
+                cudaMemcpy(h_phase, d_phase, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);
+                
+                for(uint idx = 0; idx < walkersPerKernel; idx++)
+                {
+                    h_globalPhase[point] += h_phase[idx];
+                }
+            }
+        }
+
+        if(this->NMR.rwNMR_config.getReduceInGPU())
+        {
+            // Kernel call to reduce walker final energies
+            PFG_reduce<<<blocksPerKernel/2, 
+                            threadsPerBlock, 
+                            threadsPerBlock * sizeof(double)>>>(d_energy,
+                                                                d_energyCollector,
+                                                                walkersPerKernel,
+                                                                energyCollectorSize);
+
+            cudaDeviceSynchronize();
+
+            // copy data from gatherer array
+            cudaMemcpy(h_energyCollector, d_energyCollector, energyCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);    
+            // collector reductions
+            for(uint idx = 0; idx < energyCollectorSize; idx++)
+            {
+                h_globalEnergy += h_energyCollector[idx];
+            }
+        }
+        else
+        {
+            cudaMemcpy(h_energy, d_energy, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);                
+            for(uint idx = 0; idx < walkersPerKernel; idx++)
+            {
+                h_globalEnergy += h_energy[idx];
+            }
+        }
+        reduce_time += omp_get_wtime() - tick;
+
+    }
+
+    // collect energy data -- REVISE!!!!
+    for (uint point = 0; point < gradientPoints; point++)
+    {
+        this->NMR.globalEnergy.push_back(h_globalEnergy);
+    }
+
+    // get magnitudes M(k,t) - new
+    if(this->Mkt.size() > 0) this->Mkt.clear();
+    this->Mkt.reserve(this->gradientPoints);
+    for(int point = 0; point < this->gradientPoints; point++)
+    {
+        this->Mkt.push_back((h_globalPhase[point]/h_globalEnergy));
+    }
+
+    // free pointers in host
+    free(h_walker_x0);
+    free(h_walker_y0);
+    free(h_walker_z0);
+    free(h_walker_px);
+    free(h_walker_py);
+    free(h_walker_pz);
+    free(h_collisions);
+    free(h_penalty);
+    free(h_seed);
+    free(h_energy);
+    free(h_energyCollector);
+    free(h_phase);
+    free(h_phaseCollector);
+    free(h_globalPhase);
+
+    // and direct them to NULL
+    h_walker_px = NULL;
+    h_walker_py = NULL;
+    h_walker_pz = NULL;
+    h_collisions = NULL;
+    h_penalty = NULL;
+    h_energy = NULL;
+    h_energyCollector = NULL;
+    h_seed = NULL;
+    h_phase = NULL;
+    h_phaseCollector = NULL;
+    h_globalPhase = NULL;
+
+    // also direct the bitBlock pointer created in this context
+    // (original data is kept safe)
+    h_bitBlock = NULL;
+
+    // free device global memory
+    cudaFree(d_walker_x0);
+    cudaFree(d_walker_y0);
+    cudaFree(d_walker_z0);
+    cudaFree(d_walker_px);
+    cudaFree(d_walker_py);
+    cudaFree(d_walker_pz);
+    cudaFree(d_collisions);
     cudaFree(d_penalty);
     cudaFree(d_seed);
     cudaFree(d_energy);
@@ -1200,15 +1958,10 @@ __device__ bool checkIfBlockBitIsWall_PFG(uint64_t nextBlock, int nextBit)
 
 __device__ double compute_PFG_k_value(double gradientMagnitude, double pulse_width, double giromagneticRatio)
 {
-    return (pulse_width * 1.0e-03) * (TWO_PI * giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
+    return (pulse_width * 1.0e-03) * (giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
 }
 
-__host__ double compute_k(double gradientMagnitude, double pulse_width, double giromagneticRatio)
-{
-    return (pulse_width * 1.0e-03) * (TWO_PI * giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
-}
-
-__device__ uint convertLocalToGlobal(uint _localPos, uint _shiftConverter)
+__device__ uint convertLocalToGlobal(int _localPos, int _shiftConverter)
 {
     return (_localPos >> _shiftConverter);
 }

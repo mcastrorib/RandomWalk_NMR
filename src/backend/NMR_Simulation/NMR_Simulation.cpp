@@ -38,48 +38,6 @@
 using namespace cv;
 using namespace std;
 
-// Class NMR_Simulation setup methods
-
-// Class methods:
-//defaul constructor
-// NMR_Simulation::NMR_Simulation(string _name) : numberOfPores(0),
-//                                                porosity(0.0),
-//                                                walkerOccupancy(0.0),
-//                                                numberOfWalkers(0),
-//                                                diffusionCoefficient(DIFFUSION_COEFFICIENT),
-//                                                imageResolution(IMAGE_RESOLUTION),
-//                                                stepsPerEcho(STEPS_PER_ECHO),
-//                                                voxelDivision(VOXEL_DIVISIONS),
-//                                                voxelDivisionApplied(false),
-//                                                penalties(NULL),
-//                                                initialSeed(INITIAL_SEED),
-//                                                gpu_use(false),
-//                                                seedFlag(false),
-//                                                rwNMR_config(NULL),
-//                                                uCT_config(NULL)
-
-// {
-//     // init vector objects
-//     vector<Mat> binaryMap();
-//     vector<Pore> pores();
-//     vector<uint> walkersIDList();
-//     vector<Walker> walkers();
-//     vector<double> globalEnergy();
-//     vector<double> decayTimes();
-//     vector<double> T2_bins();
-//     vector<double> T2_input();
-//     vector<double> T2_simulated();
-//     vector<CollisionHistogram> histogramList();
-
-//     // set simulation name and directory to save results
-//     this->simulationName = _name;
-//     this->simulationDirectory = createDirectoryForResults();
-
-//     // set default time step measurement
-//     (*this).setImageVoxelResolution();
-//     (*this).setTimeInterval();    
-// }
-
 NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config, 
                                uct_config _uCT_config) : rwNMR_config(_rwNMR_config),
                                                          uCT_config(_uCT_config),
@@ -89,6 +47,7 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
                                                          width(0),
                                                          height(0),
                                                          depth(0),
+                                                         boundaryCondition("noflux"),
                                                          numberOfPores(0),
                                                          porosity(-1.0),
                                                          walkerOccupancy(-1.0),
@@ -133,6 +92,7 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
 
     // set default time step measurement
     (*this).setTimeInterval(); 
+    (*this).setBoundaryCondition(this->rwNMR_config.getBC());
 }
 
 // copy constructor
@@ -148,6 +108,7 @@ NMR_Simulation::NMR_Simulation(const NMR_Simulation &_otherSimulation)
     this->initialSeed = _otherSimulation.initialSeed;
     this->seedFlag = _otherSimulation.seedFlag;
     this->gpu_use = _otherSimulation.gpu_use;
+    this->boundaryCondition = _otherSimulation.boundaryCondition;
 
     this->numberOfPores = _otherSimulation.numberOfPores;
     this->porosity = _otherSimulation.porosity;
@@ -223,6 +184,11 @@ void NMR_Simulation::setInitialSeed(uint64_t _seed, bool _flag)
     this->seedFlag = _flag;
 }
 
+void NMR_Simulation::setBoundaryCondition(string _bc)
+{
+    this->boundaryCondition = _bc;
+}
+
 void NMR_Simulation::setFreeDiffusionCoefficient(double _bulk)
 {
     this->diffusionCoefficient = _bulk;
@@ -261,14 +227,6 @@ void NMR_Simulation::applyVoxelDivision(uint _shifts)
     (*this).setVoxelDivision(_shifts);
     (*this).setImageVoxelResolution();
 
-    // reset time framework
-    // double previousTime = (*this).getTimeInterval();
-    // (*this).setTimeInterval();
-    // double timeFactor = previousTime / (*this).getTimeInterval();
-    // (*this).setNumberOfStepsPerEcho((uint) (*this).getStepsPerEcho() * timeFactor);
-    // uint steps = (*this).getStepsPerEcho() * (*this).getNumberOfEchoes();
-    // (*this).setTimeFramework(steps);
-
     // // trying to maintain steps per echo
     (*this).setTimeInterval();
     uint steps = (*this).getStepsPerEcho() * (*this).getNumberOfEchoes();
@@ -280,15 +238,15 @@ void NMR_Simulation::applyVoxelDivision(uint _shifts)
         double shiftFactor = (*this).getVoxelDivision() / (double) previousDivision;
         uint indexExpansion = (uint) shiftFactor;
         if(indexExpansion < 1) indexExpansion = 1;
-        uint shiftX, shiftY, shiftZ;
+        int shiftX, shiftY, shiftZ;
         RandomIndex rIndex(0, indexExpansion);
         ProgressBar pBar((double) this->walkers.size());
         for(uint idx = 0; idx < this->walkers.size(); idx++)
         {   
             // randomly place walker in voxel sites
-            shiftX = ((uint) this->walkers[idx].initialPosition.x * shiftFactor) + rIndex();
-            shiftY = ((uint) this->walkers[idx].initialPosition.y * shiftFactor) + rIndex();
-            shiftZ = ((uint) this->walkers[idx].initialPosition.z * shiftFactor) + rIndex();
+            shiftX = ((int) this->walkers[idx].initialPosition.x * shiftFactor) + rIndex();
+            shiftY = ((int) this->walkers[idx].initialPosition.y * shiftFactor) + rIndex();
+            shiftZ = ((int) this->walkers[idx].initialPosition.z * shiftFactor) + rIndex();
             this->walkers[idx].placeWalker(shiftX, shiftY, shiftZ);
 
             // update collision penalty
@@ -688,19 +646,19 @@ void NMR_Simulation::countPoresInBinaryMap()
     double time = omp_get_wtime(); 
     cout << "counting ";
 
-    for (uint slice = 0; slice < this->numberOfImages; slice++)
+    for (int slice = 0; slice < this->numberOfImages; slice++)
     { // accept only char type matrices
         CV_Assert(binaryMap[slice].depth() == CV_8U);
 
         uint mapWidth = (uint)binaryMap[slice].cols;
         uchar *binaryMapPixel;
 
-        for (uint row = 0; row < height; ++row)
+        for (int row = 0; row < height; ++row)
         {
             // psosition pointer at first element in current row
             binaryMapPixel = binaryMap[slice].ptr<uchar>(row);
 
-            for (uint column = 0; column < mapWidth; column++)
+            for (int column = 0; column < mapWidth; column++)
             {
                 if (binaryMapPixel[column] == 0)
                 {
@@ -894,11 +852,11 @@ void NMR_Simulation::createPoreList()
     // Create progress bar object
     ProgressBar pBar((double) (this->bitBlock.imageDepth));   
 
-    for(uint z = 0; z < this->bitBlock.imageDepth; z++)
+    for(int z = 0; z < this->bitBlock.imageDepth; z++)
     {
-        for(uint y = 0; y < this->bitBlock.imageRows; y++)
+        for(int y = 0; y < this->bitBlock.imageRows; y++)
         {
-            for(uint x = 0; x < this->bitBlock.imageColumns; x++)
+            for(int x = 0; x < this->bitBlock.imageColumns; x++)
             {
                 int block, bit;
                 if(dim3 == true)
@@ -983,11 +941,11 @@ void NMR_Simulation::createPoreList(Point3D _vertex1, Point3D _vertex2)
 
     // Create progress bar object
     ProgressBar pBar((double) (zf-z0));
-    for(uint z = z0; z < zf; z++)
+    for(int z = z0; z < zf; z++)
     {
-        for(uint y = y0; y < yf; y++)
+        for(int y = y0; y < yf; y++)
         {
-            for(uint x = x0; x < xf; x++)
+            for(int x = x0; x < xf; x++)
             {
                 int block, bit;
                 if(dim3 == true)
@@ -1815,6 +1773,8 @@ void NMR_Simulation::printDetails()
     {
         cout << "OFF" << endl;
     }
+
+    cout << "BC: " << (*this).getBoundaryCondition() << endl;
 
     cout << "------------------------------------------------------" << endl;
     cout << endl;

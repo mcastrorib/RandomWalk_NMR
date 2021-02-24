@@ -36,6 +36,7 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
     this->D0 = otherConfig.D0; 
     this->STEPS_PER_ECHO = otherConfig.STEPS_PER_ECHO;
     this->SEED = otherConfig.SEED;
+    this->BC = otherConfig.BC;
 
     // SAVE MODE
     this->SAVE_IMG_INFO = otherConfig.SAVE_IMG_INFO;
@@ -105,6 +106,7 @@ void rwnmr_config::readConfigFile(const string configFile)
 			else if(token == "STEPS_PER_ECHO") (*this).readStepsPerEcho(content);
 			else if(token == "D0") (*this).readD0(content);
 			else if(token == "SEED") (*this).readSeed(content);
+			else if(token == "BC") (*this).readBC(content);
 			else if(token == "SAVE_IMG_INFO") (*this).readSaveImgInfo(content);
 			else if(token == "SAVE_BINIMG") (*this).readSaveBinImg(content);
 			else if(token == "HISTOGRAMS") (*this).readHistograms(content);
@@ -202,6 +204,12 @@ void rwnmr_config::readStepsPerEcho(string s)
 void rwnmr_config::readSeed(string s)
 {
 	this->SEED = std::stol(s);
+}
+
+void rwnmr_config::readBC(string s)
+{
+	if(s == "periodic") this->BC = "periodic";
+	else this->BC = "noflux";
 }
 
 // -- Saving

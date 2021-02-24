@@ -25,7 +25,7 @@ using namespace cv;
 // Class Point3D
 // Class methods
 Point3D::Point3D() : x(0), y(0), z(0) {}
-Point3D::Point3D(uint _x, uint _y, uint _z) : x(_x), y(_y), z(_z) {}
+Point3D::Point3D(int _x, int _y, int _z) : x(_x), y(_y), z(_z) {}
 
 // Class Pore3D
 // Class methods
@@ -79,17 +79,17 @@ Walker::Walker(bool _3rdDim) : position_x(0),
 }
 
 // default constructor with positions defined
-Walker::Walker(uint _x, uint _y, uint _z, bool _3rdDim) : position_x(_x),
-                                                          position_y(_y),
-                                                          position_z(_z),
-                                                          nextDirection(None),
-                                                          surfaceRelaxivity(WALKER_DEFAULT_RHO),
-                                                          energy(WALKER_INITIAL_ENERGY),
-                                                          decreaseFactor(1.0),
-                                                          collisions(0),
-                                                          tCollisions(0),
-                                                          initialSeed(0),
-                                                          currentSeed(0)
+Walker::Walker(int _x, int _y, int _z, bool _3rdDim) : position_x(_x),
+                                                       position_y(_y),
+                                                       position_z(_z),
+                                                       nextDirection(None),
+                                                       surfaceRelaxivity(WALKER_DEFAULT_RHO),
+                                                       energy(WALKER_INITIAL_ENERGY),
+                                                       decreaseFactor(1.0),
+                                                       collisions(0),
+                                                       tCollisions(0),
+                                                       initialSeed(0),
+                                                       currentSeed(0)
 {
     initialPosition.x = position_x;
     initialPosition.y = position_y;
