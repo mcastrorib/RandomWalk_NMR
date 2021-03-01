@@ -166,7 +166,7 @@ public:
             this->xi_rate = log10((double) this->collisions) / log10(steps);
         } else 
         {
-            this->xi_rate =  this->collisions / steps;
+            this->xi_rate =  (double) this->collisions / steps;
         }
     }
 
@@ -549,6 +549,7 @@ public:
     inline double getSurfaceRelaxivity() { return this->surfaceRelaxivity; }
     inline double getDecreaseFactor() { return this->decreaseFactor; }
     inline uint getCollisions() { return this->collisions; }
+    inline double getXIrate() { return this->xi_rate; }
     inline double getEnergy() { return this->energy; }
 
 private:

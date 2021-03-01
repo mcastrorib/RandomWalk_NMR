@@ -75,7 +75,7 @@ void fileHandler::writeImageInfo(string _imagePath, int _imageColumns, int _imag
     fileObject.close();
 }
 
-void fileHandler::writeIndividualCollisions(vector<Walker> walkers, uint _iterations)
+void fileHandler::writeIndividualCollisions(vector<Walker> &_walkers, uint _rwsteps)
 {
     ofstream fileObject;
     fileObject.open(this->filename, ios::out);
@@ -96,29 +96,31 @@ void fileHandler::writeIndividualCollisions(vector<Walker> walkers, uint _iterat
     fileObject << "XIRate, ";
     fileObject << "RNGSeed" << endl;
 
-    double xirate_factor = 1.0 / (double) _iterations;
+    // double xirate_factor = 1.0 / (double) _rwsteps;
     double xirate;
 
-    for (uint index = 0; index < walkers.size(); index++)
+    for (uint index = 0; index < _walkers.size(); index++)
     {
-        xirate = walkers[index].getCollisions() * xirate_factor;
+        // xirate = walkers[index].getCollisions() * xirate_factor;
+        // xirate = _walkers[index].getXIrate();
+        // cout << xirate << endl;
 
         fileObject << index << ", ";
-        fileObject << walkers[index].getInitialPositionX() << ", ";
-        fileObject << walkers[index].getInitialPositionY() << ", ";
-        fileObject << walkers[index].getInitialPositionZ() << ", ";
-        fileObject << walkers[index].getPositionX() << ", ";
-        fileObject << walkers[index].getPositionY() << ", ";
-        fileObject << walkers[index].getPositionZ() << ", ";        
-        fileObject << walkers[index].getCollisions() << ", ";
-        fileObject << xirate << ", ";
-        fileObject << walkers[index].getInitialSeed() << endl;
+        fileObject << _walkers[index].getInitialPositionX() << ", ";
+        fileObject << _walkers[index].getInitialPositionY() << ", ";
+        fileObject << _walkers[index].getInitialPositionZ() << ", ";
+        fileObject << _walkers[index].getPositionX() << ", ";
+        fileObject << _walkers[index].getPositionY() << ", ";
+        fileObject << _walkers[index].getPositionZ() << ", ";        
+        fileObject << _walkers[index].getCollisions() << ", ";
+        fileObject << _walkers[index].getXIrate() << ", ";
+        fileObject << _walkers[index].getInitialSeed() << endl;
     }
 
     fileObject.close();
 }
 
-void fileHandler::writeEnergyDecay(vector<double> _globalEnergy, vector<double> _timeDecay)
+void fileHandler::writeEnergyDecay(vector<double> &_globalEnergy, vector<double> &_timeDecay)
 {
     ofstream fileObject;
     fileObject.open(this->filename, ios::out);

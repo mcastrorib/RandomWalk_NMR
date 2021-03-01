@@ -117,6 +117,7 @@ Walker::Walker(const Walker &_walker)
     this->collisions = _walker.collisions;
     this->tCollisions = _walker.tCollisions;
     this->energy = _walker.energy;
+    this->xi_rate = _walker.xi_rate;
 
     this->mapPointer = _walker.mapPointer;
     this->walkPointer = _walker.walkPointer;

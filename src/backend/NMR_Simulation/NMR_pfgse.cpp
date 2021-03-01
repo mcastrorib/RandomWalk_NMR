@@ -34,6 +34,8 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   D_sat(0.0),
 										   D_msd(0.0),
 										   msd(0.0),
+										   vecMsd(0.0, 0.0, 0.0),
+										   vecDmsd(0.0, 0.0, 0.0),
 										   SVp(0.0),
 										   stepsTaken(0),
 										   mpi_rank(_mpi_rank),
@@ -84,7 +86,7 @@ void NMR_PFGSE::run()
 	{
 		(*this).setExposureTime((*this).getExposureTime(timeSample));
 		(*this).set();
-		(*this).run_sequence();
+		(*this).runSequence();
 
 		// apply threshold for D(t) extraction
 		string threshold_type = this->PFGSE_config.getThresholdType();
@@ -138,6 +140,38 @@ void NMR_PFGSE::resetNMR()
             this->NMR.walkers[id].resetPosition();
             this->NMR.walkers[id].resetSeed();
             this->NMR.walkers[id].resetEnergy();
+        }
+    }   
+}
+
+void NMR_PFGSE::updateWalkersXIrate(uint _rwsteps)
+{
+	// update walker's xirate with omp parallel for
+
+    if(this->NMR.rwNMR_config.getOpenMPUsage())
+    {
+        // set omp variables for parallel loop throughout walker list
+        const int num_cpu_threads = omp_get_max_threads();
+        const int loop_size = this->NMR.walkers.size();
+        int loop_start, loop_finish;
+
+        #pragma omp parallel private(loop_start, loop_finish) 
+        {
+            const int thread_id = omp_get_thread_num();
+            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+            loop_start = looper.getStart();
+            loop_finish = looper.getFinish(); 
+
+            for (uint id = loop_start; id < loop_finish; id++)
+            {
+                this->NMR.walkers[id].updateXIrate(_rwsteps);
+            }
+        }
+    } else
+    {
+        for (uint id = 0; id < this->NMR.walkers.size(); id++)
+        {
+            this->NMR.walkers[id].updateXIrate(_rwsteps);
         }
     }   
 }
@@ -228,11 +262,23 @@ void NMR_PFGSE::runInitialMapSimulation()
 	{	
 		cout << endl << "running PFGSE simulation:" << endl;
 		double longestTime = (*this).getExposureTime(this->exposureTimes.size() - 1);
-		this->NMR.setTimeFramework(longestTime);
-		cout << "PFGSE mapping time: " << longestTime << " ms";
-		cout << " (" << this->NMR.simulationSteps << " RW-steps)" << endl;
+		uint mapSteps = 40000;
+		bool mapByTime = false;
+		if(mapByTime) this->NMR.setTimeFramework(longestTime);
+		else this->NMR.setTimeFramework(mapSteps);
+		
+		cout << "PFGSE mapping time: ";
+		if(mapByTime) cout << longestTime << " ms ";
+		cout << "(" << this->NMR.simulationSteps << " RW-steps)" << endl;
 		this->NMR.mapSimulation();
+		(*this).updateWalkersXIrate(mapSteps);
 		// this->NMR.updateRelaxativity(); but what rho to adopt?
+
+		string path = this->NMR.rwNMR_config.getDBPath();
+		if(this->PFGSE_config.getSaveCollisions())
+	    {
+	        this->NMR.saveWalkerCollisions(path + this->NMR.simulationName);
+	    }
 	}
 }
 
@@ -327,7 +373,7 @@ double NMR_PFGSE::computeWaveVectorK(double gradientMagnitude, double pulse_widt
     return (pulse_width * 1.0e-03) *  (giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
 }
 
-void NMR_PFGSE::run_sequence()
+void NMR_PFGSE::runSequence()
 {
 	// run pfgse experiment -- this method will fill Mkt vector
 	(*this).simulation();
@@ -392,6 +438,7 @@ void NMR_PFGSE::recoverD_msd()
 	double X0, Y0, Z0;
 	double XF, YF, ZF;
 	double normalizedDisplacement;
+	double nDx = 0.0; double nDy = 0.0; double nDz = 0.0;
 	double resolution = this->NMR.getImageVoxelResolution();
 	double aliveWalkerFraction = 0.0;
 
@@ -414,8 +461,11 @@ void NMR_PFGSE::recoverD_msd()
 		Z0 = (double) particle.initialPosition.z;
 		ZF = (double) particle.position_z;
 		displacementZ = resolution * (ZF - Z0);
-		// displacementZ = 0.0;
-		
+
+		nDx += (particle.energy * displacementX * displacementX);
+		nDy += (particle.energy * displacementY * displacementY);
+		nDz += (particle.energy * displacementZ * displacementZ);
+
 		normalizedDisplacement = displacementX*displacementX + 
 								 displacementY*displacementY + 
 								 displacementZ*displacementZ;
@@ -426,11 +476,23 @@ void NMR_PFGSE::recoverD_msd()
 
 	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
 	squaredDisplacement = squaredDisplacement / aliveWalkerFraction;
-	(*this).setD_msd(squaredDisplacement/(6 * this->exposureTime));
+	(*this).setD_msd(squaredDisplacement/(6.0 * (*this).getExposureTime()));
 	(*this).setMsd(squaredDisplacement);
+
+	nDx /= aliveWalkerFraction;
+	nDy /= aliveWalkerFraction;
+	nDz /= aliveWalkerFraction;
+	(*this).setVecMsd(nDx, nDy, nDz);
+	(*this).setVecDmsd((nDx / (2.0 * (*this).getExposureTime())), 
+					   (nDy / (2.0 * (*this).getExposureTime())), 
+					   (nDz / (2.0 * (*this).getExposureTime()))); 
+
 	
 	cout << "Dnew (msd) = " << (*this).getD_msd();
 	cout << "\t(mean displacement): " << sqrt((*this).getMsd()) << " um" << endl;
+	cout << "Dxx = " << this->vecDmsd.getX() << ", \t";
+	cout << "Dyy = " << this->vecDmsd.getY() << ", \t";
+	cout << "Dzz = " << this->vecDmsd.getZ() << endl;
 }
 
 void NMR_PFGSE::recoverSVp(string method)
@@ -513,6 +575,7 @@ void NMR_PFGSE::writeResults()
 	(*this).writeParameters();
 	(*this).writeEchoes();
 	(*this).writeGvector();
+	(*this).writeMsd();
 }
 
 void NMR_PFGSE::writeEchoes()
@@ -620,6 +683,36 @@ void NMR_PFGSE::writeGvector()
         file << this->vecK[index].getY() << ", ";
         file << this->vecK[index].getZ() << endl;
     }
+
+    file.close();
+}
+
+void NMR_PFGSE::writeMsd()
+{
+	string filename = this->dir + "/PFGSE_msd.txt";
+
+	ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    file << "PFGSE - Mean squared displacement values" << endl;
+    file << "MSDx, ";
+    file << "MSDy, ";
+    file << "MSDz, ";
+    file << "Dmsd_x, ";
+    file << "Dmsd_y, ";
+    file << "Dmsd_z" << endl;
+
+    file << this->vecMsd.getX() << ", ";
+    file << this->vecMsd.getY() << ", ";
+    file << this->vecMsd.getZ() << ", ";
+    file << this->vecDmsd.getX() << ", ";
+    file << this->vecDmsd.getY() << ", ";
+    file << this->vecDmsd.getZ() << endl;  
 
     file.close();
 }

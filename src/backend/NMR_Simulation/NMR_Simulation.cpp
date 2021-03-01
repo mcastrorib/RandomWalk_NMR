@@ -236,8 +236,9 @@ void NMR_Simulation::applyVoxelDivision(uint _shifts)
     if(this->walkers.size() > 0)
     {
         double shiftFactor = (*this).getVoxelDivision() / (double) previousDivision;
-        uint indexExpansion = (uint) shiftFactor;
-        if(indexExpansion < 1) indexExpansion = 1;
+        uint indexExpansion = (uint) shiftFactor - 1;
+        if(indexExpansion < 0) indexExpansion = 0;
+        
         int shiftX, shiftY, shiftZ;
         RandomIndex rIndex(0, indexExpansion);
         ProgressBar pBar((double) this->walkers.size());

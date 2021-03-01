@@ -45,6 +45,8 @@ public:
 	double D_sat;
 	double D_msd;
 	double msd;
+	Vector3D vecMsd;
+	Vector3D vecDmsd;
 	double SVp;
 	uint stepsTaken;	
 
@@ -72,7 +74,7 @@ public:
 	double computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio);
 	void set();
 	void run();
-	void run_sequence();
+	void runSequence();
 	void simulation();
 	void recoverD(string _method = "sat");
 	void recoverD_sat();
@@ -80,6 +82,7 @@ public:
 	void recoverSVp(string _method = "sat");
 	void clear();
 	void resetNMR();
+	void updateWalkersXIrate(uint _rwsteps);
 	void reset(double _newBigDelta);
 	void reset();
 	void save();
@@ -87,6 +90,7 @@ public:
 	void writeParameters();
 	void writeEchoes();
 	void writeGvector();
+	void writeMsd();
 	void setName();
 	void createDirectoryForData();
 
@@ -97,6 +101,21 @@ public:
 	void setD_msd(double _value) { this->D_msd = _value; }
 	void setMsd(double _value) { this->msd = _value; }
 	void setSVp(double _value) { this->SVp = _value; }
+	void setVecMsd(double msdX, double msdY, double msdZ) 
+	{
+		this->vecMsd.setX(msdX);
+		this->vecMsd.setY(msdY);
+		this->vecMsd.setZ(msdZ);
+		this->vecMsd.setNorm();
+	}
+	void setVecDmsd(double DmsdX, double DmsdY, double DmsdZ) 
+	{
+		this->vecDmsd.setX(DmsdX);
+		this->vecDmsd.setY(DmsdY);
+		this->vecDmsd.setZ(DmsdZ);
+		this->vecDmsd.setNorm();
+	}
+
 
 	double getExposureTime() {return this->exposureTime; }
 	double getExposureTime(uint _idx) {return this->exposureTimes[_idx]; }
@@ -105,6 +124,8 @@ public:
 	double getD_sat() { return this->D_sat; }
 	double getD_msd() { return this->D_msd; }
 	double getMsd() { return this->msd; }
+	Vector3D getVecMsd() { return this->vecMsd; }
+	Vector3D getVecDmsd() { return this->vecDmsd; }
 	double getSVp() { return this->SVp; }
 	
 

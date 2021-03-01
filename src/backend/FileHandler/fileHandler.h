@@ -18,9 +18,9 @@ public:
 
     void writeImageInfo(string _imagePath, int _imageRows, int _imageColumns, int _imageDepth, double _imageResolution, double _imagePorosity);
 
-    void writeIndividualCollisions(vector<Walker> _walkers, uint _iterations);
+    void writeIndividualCollisions(vector<Walker> &_walkers, uint _iterations);
 
-    void writeEnergyDecay(vector<double> _globalEnergy, vector<double> _timeDecay);
+    void writeEnergyDecay(vector<double> &_globalEnergy, vector<double> &_timeDecay);
 
     void writeBitBlockObject2D(int _numberOfBlocks,
                                int _blockRows,
