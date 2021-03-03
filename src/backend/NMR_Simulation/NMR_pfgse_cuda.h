@@ -95,7 +95,7 @@ __device__ uint64_t xorShift64_PFG(struct xorshift64_state *state);
 __device__ uint64_t mod6_PFG(uint64_t a);
 
 __device__ double compute_PFG_k_value(double gradientMagnitude, double pulse_width, double giromagneticRatio);
-__device__ uint convertLocalToGlobal(int _localPos, int _shiftConverter);
+__device__ int convertLocalToGlobal(int _localPos, int _shiftConverter);
 __device__ double dotProduct(double vec1X, double vec1Y, double vec1Z, double vec2X, double vec2Y, double vec2Z);
 
 #endif

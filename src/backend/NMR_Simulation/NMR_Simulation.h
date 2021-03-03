@@ -225,6 +225,8 @@ private:
     void mapSimulation_CUDA_2D_histograms();
     void mapSimulation_CUDA_3D();
     void mapSimulation_CUDA_3D_histograms();
+    void mapSimulation_CUDA_3D_histograms_periodic();
+
 
 public:
     void mapSimulation(void)

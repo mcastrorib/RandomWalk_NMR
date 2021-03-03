@@ -17,6 +17,6 @@ int main(int argc, char *argv[])
 {    	
 	rwnmrApp app(argc, argv);
 	app.exec();
-
+	
     return 0;
 }

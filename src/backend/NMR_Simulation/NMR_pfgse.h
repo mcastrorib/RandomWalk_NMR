@@ -48,7 +48,8 @@ public:
 	Vector3D vecMsd;
 	Vector3D vecDmsd;
 	double SVp;
-	uint stepsTaken;	
+	uint stepsTaken;
+	int currentTime;	
 
 	NMR_PFGSE(NMR_Simulation &_NMR, 
 			  pfgse_config _pfgseConfig,
@@ -116,6 +117,8 @@ public:
 		this->vecDmsd.setNorm();
 	}
 
+	void resetCurrentTime() { this->currentTime = 0; }
+	void incrementCurrentTime() { this->currentTime++; }
 
 	double getExposureTime() {return this->exposureTime; }
 	double getExposureTime(uint _idx) {return this->exposureTimes[_idx]; }
@@ -127,6 +130,7 @@ public:
 	Vector3D getVecMsd() { return this->vecMsd; }
 	Vector3D getVecDmsd() { return this->vecDmsd; }
 	double getSVp() { return this->SVp; }
+	int getCurrentTime() { return this->currentTime; }
 	
 
 private:

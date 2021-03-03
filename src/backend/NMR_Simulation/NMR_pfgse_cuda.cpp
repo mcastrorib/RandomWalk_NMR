@@ -158,7 +158,10 @@ __global__ void PFG_map_periodic(int *walker_px,
         localPosZ = walker_pz[walkerId];
         localCollisions = collisions[walkerId];
         localSeed = seed[walkerId];
-        
+
+        // printf("\ngpu kernel pfgse_map_periodic() launched");
+        // printf("\ninitial: {%d, %d, %d} \n", localPosX, localPosY, localPosZ);
+            
         for(int step = 0; step < numberOfSteps; step++)
         {
             
@@ -171,6 +174,7 @@ __global__ void PFG_map_periodic(int *walker_px,
                                     localNextX,
                                     localNextY,
                                     localNextZ);
+            // printf("next: {%d, %d, %d} \t", localNextX, localNextY, localNextZ);
 
             // update img position
             imgPosX = convertLocalToGlobal(localNextX, shift_convert) % map_columns;
@@ -182,7 +186,7 @@ __global__ void PFG_map_periodic(int *walker_px,
             imgPosZ = convertLocalToGlobal(localNextZ, shift_convert) % map_depth;
             if(imgPosZ < 0) imgPosZ += map_depth;
 
-            // printf("%d, %d, %d \n", imgPosX, imgPosY, imgPosZ);
+            // printf("img: {%d, %d, %d} ", imgPosX, imgPosY, imgPosZ);
 
             if (checkNextPosition_PFG(imgPosX, 
                                       imgPosY, 
@@ -192,6 +196,7 @@ __global__ void PFG_map_periodic(int *walker_px,
                                       bitBlockRows))
             {
                 // update real position
+                // printf("Ok! \n");
                 localPosX = localNextX;
                 localPosY = localNextY;
                 localPosZ = localNextZ;                
@@ -200,6 +205,7 @@ __global__ void PFG_map_periodic(int *walker_px,
             {
                 // walker hits wall and comes back to the same position
                 // collisions count is incremented
+                // printf("Not ok, hit wall!\n");
                 localCollisions++;
             }
         }
@@ -324,6 +330,7 @@ void NMR_PFGSE::simulation_cuda_noflux()
     double voxelResolution = this->NMR.imageVoxelResolution;
     uint numberOfSteps = this->NMR.simulationSteps - this->stepsTaken;
     this->stepsTaken += numberOfSteps;
+    cout << "(" << numberOfSteps << " RW-steps) ";
 
     // create a steps bucket
     uint stepsLimit = this->NMR.rwNMR_config.getMaxRWSteps();
@@ -1063,6 +1070,7 @@ void NMR_PFGSE::simulation_cuda_periodic()
     double voxelResolution = this->NMR.imageVoxelResolution;
     uint numberOfSteps = this->NMR.simulationSteps - this->stepsTaken;
     this->stepsTaken += numberOfSteps;
+    cout << "(" << numberOfSteps << " RW-steps) ";
 
     // create a steps bucket
     uint stepsLimit = this->NMR.rwNMR_config.getMaxRWSteps();
@@ -1961,7 +1969,7 @@ __device__ double compute_PFG_k_value(double gradientMagnitude, double pulse_wid
     return (pulse_width * 1.0e-03) * (giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
 }
 
-__device__ uint convertLocalToGlobal(int _localPos, int _shiftConverter)
+__device__ int convertLocalToGlobal(int _localPos, int _shiftConverter)
 {
     return (_localPos >> _shiftConverter);
 }

@@ -38,6 +38,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   vecDmsd(0.0, 0.0, 0.0),
 										   SVp(0.0),
 										   stepsTaken(0),
+										   currentTime(0),
 										   mpi_rank(_mpi_rank),
 										   mpi_processes(_mpi_processes)
 {
@@ -81,6 +82,7 @@ void NMR_PFGSE::run()
 	// before everything, reset conditions and map with highest time value
 	(*this).runInitialMapSimulation();
 	(*this).resetNMR();
+	(*this).resetCurrentTime();
 
 	for(uint timeSample = 0; timeSample < this->exposureTimes.size(); timeSample++)
 	{
@@ -105,6 +107,7 @@ void NMR_PFGSE::run()
 		
 		// save results in disc
 		(*this).save(); 
+		(*this).incrementCurrentTime();
 	}
 }
 
@@ -131,6 +134,7 @@ void NMR_PFGSE::resetNMR()
                 this->NMR.walkers[id].resetPosition();
                 this->NMR.walkers[id].resetSeed();
                 this->NMR.walkers[id].resetEnergy();
+                this->NMR.walkers[id].resetCollisions();
             }
         }
     } else
@@ -140,6 +144,7 @@ void NMR_PFGSE::resetNMR()
             this->NMR.walkers[id].resetPosition();
             this->NMR.walkers[id].resetSeed();
             this->NMR.walkers[id].resetEnergy();
+            this->NMR.walkers[id].resetCollisions();
         }
     }   
 }
@@ -178,11 +183,12 @@ void NMR_PFGSE::updateWalkersXIrate(uint _rwsteps)
 
 void NMR_PFGSE::setName()
 {
-	string big_delta = std::to_string((int) this->exposureTime) + "-" 
-					   + std::to_string(((int) (this->exposureTime * 100)) % 100);
-	string tiny_delta = std::to_string((int) this->pulseWidth);
-	string gamma = std::to_string((int) this->giromagneticRatio);
-	this->name = "/NMR_pfgse_" + big_delta + "ms_" + tiny_delta + "ms_" + gamma + "_sT";
+	// string big_delta = std::to_string((int) this->exposureTime) + "-" 
+	// 				   + std::to_string(((int) (this->exposureTime * 100)) % 100);
+	// string tiny_delta = std::to_string((int) this->pulseWidth);
+	// string gamma = std::to_string((int) this->giromagneticRatio);
+	// this->name = "/NMR_pfgse_" + big_delta + "ms_" + tiny_delta + "ms_" + gamma + "_sT";
+	this->name = "/NMR_pfgse_timesample_" + std::to_string((*this).getCurrentTime());
 }
 
 void NMR_PFGSE::createDirectoryForData()
@@ -263,7 +269,7 @@ void NMR_PFGSE::runInitialMapSimulation()
 		cout << endl << "running PFGSE simulation:" << endl;
 		double longestTime = (*this).getExposureTime(this->exposureTimes.size() - 1);
 		uint mapSteps = 40000;
-		bool mapByTime = false;
+		bool mapByTime = true;
 		if(mapByTime) this->NMR.setTimeFramework(longestTime);
 		else this->NMR.setTimeFramework(mapSteps);
 		
@@ -271,7 +277,7 @@ void NMR_PFGSE::runInitialMapSimulation()
 		if(mapByTime) cout << longestTime << " ms ";
 		cout << "(" << this->NMR.simulationSteps << " RW-steps)" << endl;
 		this->NMR.mapSimulation();
-		(*this).updateWalkersXIrate(mapSteps);
+		(*this).updateWalkersXIrate(this->NMR.simulationSteps);
 		// this->NMR.updateRelaxativity(); but what rho to adopt?
 
 		string path = this->NMR.rwNMR_config.getDBPath();
@@ -442,6 +448,9 @@ void NMR_PFGSE::recoverD_msd()
 	double resolution = this->NMR.getImageVoxelResolution();
 	double aliveWalkerFraction = 0.0;
 
+	// debug
+	// int imgX, imgY, imgZ;
+
 	for(uint idx = 0; idx < this->NMR.numberOfWalkers; idx++)
 	{
 		Walker particle(this->NMR.walkers[idx]);
@@ -472,7 +481,26 @@ void NMR_PFGSE::recoverD_msd()
 
 		squaredDisplacement += (particle.energy * normalizedDisplacement);
 		aliveWalkerFraction += particle.energy;
-	}
+
+		// debug
+		// imgX = particle.position_x % this->NMR.bitBlock.imageColumns;
+		// if(imgX < 0) imgX += this->NMR.bitBlock.imageColumns;
+		
+		// imgY = particle.position_y % this->NMR.bitBlock.imageRows;
+		// if(imgY < 0) imgY += this->NMR.bitBlock.imageRows;
+		
+		// imgZ = particle.position_z % this->NMR.bitBlock.imageDepth;
+		// if(imgZ < 0) imgZ += this->NMR.bitBlock.imageDepth;
+
+
+		// cout << "- walkerID: " << idx << endl;
+		// cout << "initial position: {" << X0 << ",\t" << Y0 << ",\t" << Z0 << "}\t";
+		// cout << "{" << particle.initialPosition.x << ",\t" << particle.initialPosition.y << ",\t" << particle.initialPosition.z << "}" << endl;
+		// cout << "final position: {" << XF << ",\t" << YF << ",\t" << ZF << "}\t";
+		// cout << "{" << particle.position_x << ",\t" << particle.position_y << ",\t" << particle.position_z << "}" << endl;
+		// cout << "image position: {" << imgX << ",\t" << imgY << ",\t" << imgZ << "}" << endl;
+
+ 	}
 
 	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
 	squaredDisplacement = squaredDisplacement / aliveWalkerFraction;

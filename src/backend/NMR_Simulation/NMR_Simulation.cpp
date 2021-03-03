@@ -1617,7 +1617,10 @@ void NMR_Simulation::associateMapSimulation()
         }
         else
         {
-            mapSimulationPointer = &NMR_Simulation::mapSimulation_CUDA_3D_histograms;
+            if((*this).getBoundaryCondition() == "periodic") 
+                mapSimulationPointer = &NMR_Simulation::mapSimulation_CUDA_3D_histograms_periodic;
+            else
+                mapSimulationPointer = &NMR_Simulation::mapSimulation_CUDA_3D_histograms;
         }
     }
     else
