@@ -80,6 +80,7 @@ void NMR_PFGSE::set()
 void NMR_PFGSE::run()
 {
 	// before everything, reset conditions and map with highest time value
+	double tick = omp_get_wtime();
 	(*this).runInitialMapSimulation();
 	(*this).resetNMR();
 	(*this).resetCurrentTime();
@@ -109,6 +110,9 @@ void NMR_PFGSE::run()
 		(*this).save(); 
 		(*this).incrementCurrentTime();
 	}
+
+	double time = omp_get_wtime() - tick;
+	cout << endl << "pfgse_time: " << time << " sec." << endl;
 }
 
 void NMR_PFGSE::resetNMR()
