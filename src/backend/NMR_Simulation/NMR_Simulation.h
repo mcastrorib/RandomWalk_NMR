@@ -50,6 +50,8 @@ public:
 
     uint numberOfPores;
     double porosity;
+    uint interfacePoreMatrix;
+    double SVp;
     double walkerOccupancy;
     uint numberOfWalkers;
 
@@ -184,6 +186,8 @@ public:
     void countPoresInBitBlock();
     void countPoresInCubicSpace(Point3D _vertex1, Point3D _vertex2);
     void updatePorosity();
+    void countInterfacePoreMatrix();
+    void updateSVp();
     void updateNumberOfPores();
     void createPoreList();
     void createPoreList(Point3D _vertex1, Point3D _vertex2);

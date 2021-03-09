@@ -50,7 +50,13 @@ void fileHandler::readFromFile(NMR_Simulation _outputData)
     fileObject.close();
 }
 
-void fileHandler::writeImageInfo(string _imagePath, int _imageColumns, int _imageRows, int _imageDepth, double _imageResolution, double _imagePorosity)
+void fileHandler::writeImageInfo(string _imagePath, 
+                                 int _imageColumns, 
+                                 int _imageRows, 
+                                 int _imageDepth, 
+                                 double _imageResolution, 
+                                 double _imagePorosity,
+                                 double _SVp)
 {
     // file object init
     ofstream fileObject;
@@ -69,7 +75,8 @@ void fileHandler::writeImageInfo(string _imagePath, int _imageColumns, int _imag
     fileObject << "height(y): " << _imageRows << endl;
     fileObject << "depth(z): " << _imageDepth << endl;
     fileObject << "resolution: " << _imageResolution << endl;
-    fileObject << "porosity: " << _imagePorosity;
+    fileObject << "porosity: " << _imagePorosity << endl;
+    fileObject << "SVp: " << _SVp << endl;
 
     // close file
     fileObject.close();

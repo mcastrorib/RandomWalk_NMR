@@ -16,7 +16,7 @@ public:
     void writeInFile(NMR_Simulation _inputData);
     void readFromFile(NMR_Simulation _outputData);
 
-    void writeImageInfo(string _imagePath, int _imageRows, int _imageColumns, int _imageDepth, double _imageResolution, double _imagePorosity);
+    void writeImageInfo(string _imagePath, int _imageRows, int _imageColumns, int _imageDepth, double _imageResolution, double _imagePorosity, double _SVp);
 
     void writeIndividualCollisions(vector<Walker> &_walkers, uint _iterations);
 

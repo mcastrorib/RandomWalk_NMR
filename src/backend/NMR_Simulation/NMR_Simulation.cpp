@@ -50,6 +50,8 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
                                                          boundaryCondition("noflux"),
                                                          numberOfPores(0),
                                                          porosity(-1.0),
+                                                         interfacePoreMatrix(0),
+                                                         SVp(-1.0),
                                                          walkerOccupancy(-1.0),
                                                          voxelDivisionApplied(false),
                                                          penalties(NULL)
@@ -340,6 +342,7 @@ void NMR_Simulation::readImage()
 
     (*this).createBitBlockMap();
     (*this).countPoresInBitBlock();
+    (*this).countInterfacePoreMatrix();
 }
 
 void NMR_Simulation::setWalkers(void)
@@ -822,6 +825,105 @@ void NMR_Simulation::countPoresInCubicSpace(Point3D _vertex1, Point3D _vertex2)
     cout << " in " << time << " seconds." << endl; 
     cout << this->numberOfPores << " pore voxel(s) in cubic space identified." << endl; 
     cout << "porosity: " << this->porosity << endl; 
+}
+
+void NMR_Simulation::countInterfacePoreMatrix()
+{
+    double time = omp_get_wtime(); 
+    cout << "- counting pore-matrix interface voxels in rock image:" << endl;
+
+    // consider 2 or 3 dimensions
+    bool dim3 = false; 
+    if(this->bitBlock.imageDepth > 1) 
+        dim3 = true;
+
+    // Create progress bar object
+    ProgressBar pBar((double) (this->bitBlock.imageDepth));
+
+    // first, count all pores in image
+    this->interfacePoreMatrix = 0;
+    for(int z = 0; z < this->bitBlock.imageDepth; z++)
+    {
+        // neighbor Z location
+        int nextZ = (z + 1) % this->bitBlock.imageDepth;
+
+        for(int y = 0; y < this->bitBlock.imageRows; y++)
+        {
+            // neighbor Y location
+            int nextY = (y + 1) % this->bitBlock.imageRows;
+
+            for(int x = 0; x < this->bitBlock.imageColumns; x++)
+            {
+                // neighbor X location
+                int nextX = (x + 1) % this->bitBlock.imageColumns;
+
+                int currentBlock, currentBit;
+                int xBlock, xBit;
+                int yBlock, yBit;
+                int zBlock, zBit;              
+
+                if(dim3 == true)
+                {
+                    currentBlock = this->bitBlock.findBlock(x, y, z);
+                    currentBit = this->bitBlock.findBitInBlock(x, y, z);
+
+                    xBlock = this->bitBlock.findBlock(nextX, y, z);
+                    xBit = this->bitBlock.findBitInBlock(nextX, y, z);
+                    
+                    yBlock = this->bitBlock.findBlock(x, nextY, z);
+                    yBit = this->bitBlock.findBitInBlock(x, nextY, z);
+                    
+                    zBlock = this->bitBlock.findBlock(x, y, nextZ);
+                    zBit = this->bitBlock.findBitInBlock(x, y, nextZ);
+
+
+                } else
+                {
+                    currentBlock = this->bitBlock.findBlock(x, y);
+                    currentBit = this->bitBlock.findBitInBlock(x, y);
+
+                    xBlock = this->bitBlock.findBlock(nextX, y);
+                    xBit = this->bitBlock.findBitInBlock(nextX, y);
+                    
+                    yBlock = this->bitBlock.findBlock(x, nextY);
+                    yBit = this->bitBlock.findBitInBlock(x, nextY);
+                                                            
+                }
+
+                // Check if neighbor bit values are different
+                if (this->bitBlock.checkIfBitIsWall(currentBlock, currentBit) != this->bitBlock.checkIfBitIsWall(xBlock, xBit))
+                {
+                    this->interfacePoreMatrix++;
+                }
+
+                if (this->bitBlock.checkIfBitIsWall(currentBlock, currentBit) != this->bitBlock.checkIfBitIsWall(yBlock, yBit))
+                {
+                    this->interfacePoreMatrix++;
+                }
+
+                if (dim3 == true and this->bitBlock.checkIfBitIsWall(currentBlock, currentBit) != this->bitBlock.checkIfBitIsWall(yBlock, yBit))
+                {
+                    this->interfacePoreMatrix++;
+                }
+            }
+        } 
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();      
+    }
+
+    (*this).updateSVp();
+
+    time = omp_get_wtime() - time;
+    cout << " in " << time << " seconds." << endl; 
+    cout << this->interfacePoreMatrix << " interface pore-matrix voxel(s) identified. " ;
+    cout << "S/Vp: " << this->SVp << endl;
+}
+
+void NMR_Simulation::updateSVp()
+{
+    this->SVp = ((double) this->interfacePoreMatrix) / ((double) this->numberOfPores);
 }
 
 void NMR_Simulation::updatePorosity()
@@ -1689,7 +1791,8 @@ void NMR_Simulation::saveImageInfo(string filedir)
                                  this->bitBlock.imageRows, 
                                  this->bitBlock.imageDepth, 
                                  this->imageVoxelResolution,
-                                 this->porosity);
+                                 this->porosity,
+                                 this->SVp);
 }
 
 void NMR_Simulation::saveEnergyDecay(string filePath)
