@@ -505,6 +505,7 @@ def read_pfgse_data_from_rwnmr_file(file):
 	D0 = 0.0
 	D_sat = 0.0
 	D_msd = 0.0
+	Msd = 0.0
 	SVp = 0.0
 	rhs_threshold = 0.0
 	
@@ -532,8 +533,9 @@ def read_pfgse_data_from_rwnmr_file(file):
 		D0 = float(line[4])
 		D_sat = float(line[5])
 		D_msd = float(line[6])
-		SVp = float(line[7])
-		rhs_threshold = float(line[8])
+		Msd = float(line[7])
+		SVp = float(line[8])
+		rhs_threshold = float(line[9])
 
 	# read echoes file
 	with open(file[1], 'r') as txt_file:
@@ -566,6 +568,7 @@ def read_pfgse_data_from_rwnmr_file(file):
 		"D0": D0,
 		"D_sat": D_sat,
 		"D_msd": D_msd,
+		"Msd": Msd,
 		"SVp": SVp,
 		"rhs_threshold": rhs_threshold,
 		"gradient": gradient,
@@ -575,6 +578,46 @@ def read_pfgse_data_from_rwnmr_file(file):
 	}	
 
 	return pfgse_data
+
+def read_msd_data_from_rwnmr_file(file):
+	
+	# scallar data
+	msdX = 0.0
+	msdY = 0.0
+	msdZ = 0.0
+	DmsdX = 0.0
+	DmsdY = 0.0
+	DmsdZ = 0.0
+
+	# read params file
+	with open(file, 'r') as txt_file:
+		# ignore header 
+		next(txt_file)
+
+		# ignore variable naming line
+		next(txt_file)
+
+		# read and split next line
+		line = txt_file.readline().split(',')
+		msdX = float(line[0])
+		msdY = float(line[1])
+		msdZ = float(line[2])
+		DmsdX = float(line[3])
+		DmsdY = float(line[4])
+		DmsdZ = float(line[5])
+
+	# data assembly to dictionary object
+	msd_data = {
+		"msdX": msdX,
+		"msdY": msdY,
+		"msdZ": msdZ,
+		"DmsdX": DmsdX,
+		"DmsdY": DmsdY,
+		"DmsdZ": DmsdZ
+	}	
+
+	return msd_data
+
 
 def count_points_to_apply_lhs_threshold(pfgse_lhs, threshold):
 	log_threshold = np.log(threshold)
