@@ -207,9 +207,9 @@ void NMR_PFGSE::correctExposureTimes()
 			stepsPerExpTime += stepsPerExpTime % (uint) stepsPerEcho;
 		}
 
-		cout << "time (original) = " << this->exposureTimes[time] << ",\t";
-		cout << "time (corrected) = " << stepsPerExpTime * timePerStep << "; \t";
-		cout << stepsPerExpTime << " rw-steps." << endl;
+		// cout << "time (original) = " << this->exposureTimes[time] << ",\t";
+		// cout << "time (corrected) = " << stepsPerExpTime * timePerStep << "; \t";
+		// cout << stepsPerExpTime << " rw-steps." << endl;
 
 		this->exposureTimes[time] = stepsPerExpTime * timePerStep;
 	}
