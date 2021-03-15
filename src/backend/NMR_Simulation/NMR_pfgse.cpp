@@ -81,9 +81,12 @@ void NMR_PFGSE::run()
 {
 	// before everything, reset conditions and map with highest time value
 	double tick = omp_get_wtime();
+	cout << endl << "-- Pre-processing:" << endl;
+	(*this).resetCurrentTime();
+	(*this).correctExposureTimes();
 	(*this).runInitialMapSimulation();
 	(*this).resetNMR();
-	(*this).resetCurrentTime();
+	cout << "-- Done" << endl;
 
 	for(uint timeSample = 0; timeSample < this->exposureTimes.size(); timeSample++)
 	{
@@ -102,6 +105,7 @@ void NMR_PFGSE::run()
 		}
 
 		// D(t) extraction
+		cout << "-- Results:" << endl;
 		(*this).recoverD("sat");
 		(*this).recoverD("msd");
 		(*this).recoverSVp();
@@ -109,15 +113,17 @@ void NMR_PFGSE::run()
 		// save results in disc
 		(*this).save(); 
 		(*this).incrementCurrentTime();
+		cout << "-- Done" << endl << endl;
 	}
 
 	double time = omp_get_wtime() - tick;
-	cout << endl << "pfgse_time: " << time << " sec." << endl;
+	cout << endl << "pfgse_time: " << time << " seconds." << endl;
 }
 
 void NMR_PFGSE::resetNMR()
 {
 	// reset walker's initial state with omp parallel for
+	cout << "- Reseting walker initial state" << endl;
 
     if(this->NMR.rwNMR_config.getOpenMPUsage())
     {
@@ -183,6 +189,31 @@ void NMR_PFGSE::updateWalkersXIrate(uint _rwsteps)
             this->NMR.walkers[id].updateXIrate(_rwsteps);
         }
     }   
+}
+
+void NMR_PFGSE::correctExposureTimes()
+{
+	
+	cout << "- Correcting time samples to rw parameters" << endl;
+	double timePerStep = this->NMR.getTimeInterval();
+	double stepsPerEcho = (double) this->NMR.getStepsPerEcho();
+	uint stepsPerExpTime;
+	for(int time = 0; time < this->exposureTimes.size(); time++)
+	{
+		stepsPerExpTime = this->exposureTimes[time] / timePerStep;
+		if(stepsPerExpTime < 1) stepsPerExpTime = 1;
+		if(stepsPerExpTime % (uint) stepsPerEcho != 0) 
+		{
+			stepsPerExpTime += stepsPerExpTime % (uint) stepsPerEcho;
+		}
+
+		cout << "time (original) = " << this->exposureTimes[time] << ",\t";
+		cout << "time (corrected) = " << stepsPerExpTime * timePerStep << "; \t";
+		cout << stepsPerExpTime << " rw-steps." << endl;
+
+		this->exposureTimes[time] = stepsPerExpTime * timePerStep;
+	}
+	// cout << "-- Done" << endl;
 }
 
 void NMR_PFGSE::setName()
@@ -260,26 +291,24 @@ void NMR_PFGSE::setVectorK()
 
 void NMR_PFGSE::setNMRTimeFramework()
 {
-	cout << endl << "running PFGSE simulation:" << endl;
+	cout << endl << "-- Exposure time: " << this->exposureTime << " ms";
 	this->NMR.setTimeFramework(this->exposureTime);
-	cout << "PFGSE exposure time: " << this->exposureTime << " ms";
-	cout << " (" << this->NMR.simulationSteps << " RW-steps)" << endl;
+	cout << " [" << this->NMR.simulationSteps << " RW-steps]" << endl;
 }
 
 void NMR_PFGSE::runInitialMapSimulation()
 {
 	if(this->exposureTimes.size() > 0)
 	{	
-		cout << endl << "running PFGSE simulation:" << endl;
 		double longestTime = (*this).getExposureTime(this->exposureTimes.size() - 1);
 		uint mapSteps = 40000;
 		bool mapByTime = true;
 		if(mapByTime) this->NMR.setTimeFramework(longestTime);
 		else this->NMR.setTimeFramework(mapSteps);
 		
-		cout << "PFGSE mapping time: ";
+		cout << "- Initial map time: ";
 		if(mapByTime) cout << longestTime << " ms ";
-		cout << "(" << this->NMR.simulationSteps << " RW-steps)" << endl;
+		cout << "[" << this->NMR.simulationSteps << " RW-steps]" << endl;
 		this->NMR.mapSimulation();
 		(*this).updateWalkersXIrate(this->NMR.simulationSteps);
 		// this->NMR.updateRelaxativity(); but what rho to adopt?
@@ -434,6 +463,7 @@ void NMR_PFGSE::recoverD(string _method)
 
 void NMR_PFGSE::recoverD_sat()
 {
+	cout << "- Stejskal-Tanner (s&t):" << endl;
 	LeastSquareAdjust lsa(this->RHS, this->LHS);
 	lsa.setThreshold(this->RHS_threshold);
 	lsa.solve();
@@ -443,6 +473,7 @@ void NMR_PFGSE::recoverD_sat()
 
 void NMR_PFGSE::recoverD_msd()
 {
+	cout << "- Mean squared displacement (msd):" << endl;
 	double squaredDisplacement = 0.0;
 	double displacementX, displacementY, displacementZ;
 	double X0, Y0, Z0;
@@ -529,6 +560,7 @@ void NMR_PFGSE::recoverD_msd()
 
 void NMR_PFGSE::recoverSVp(string method)
 {
+	cout << "- Pore surface-volume ratio (SVp):" << endl;
 	double Dt;
 	if(method == "sat") Dt = (*this).getD_sat();
 	else Dt = (*this).getD_msd();
@@ -540,7 +572,7 @@ void NMR_PFGSE::recoverSVp(string method)
 	Sv = (1.0 - (Dt / D0));
 	Sv *= 2.25 * sqrt((0.5*TWO_PI) / (D0 * (*this).getExposureTime()));
 	(*this).setSVp(Sv);
-	cout << "S/V ~= " << (*this).getSVp() << endl;
+	cout << "SVp ~= " << (*this).getSVp() << endl;
 }
 
 void NMR_PFGSE::reset(double newBigDelta)
@@ -570,7 +602,7 @@ void NMR_PFGSE::clear()
 void NMR_PFGSE::save()
 {
 	double time = omp_get_wtime();
-    cout << "saving results...";
+    cout << "- saving results...";
     
     if(this->PFGSE_config.getSaveDecay()) 
     {

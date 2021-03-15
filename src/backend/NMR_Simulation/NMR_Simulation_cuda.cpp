@@ -102,7 +102,7 @@ __global__ void map_2D( int *walker_px,
 // walker's "map" method in Graphics Processing Unit
 void NMR_Simulation::mapSimulation_CUDA_2D()
 {
-    cout << "initializing mapping simulation in GPU... ";
+    cout << "- starting RW-Mapping simulation (in GPU)... ";
     // reset walkers
     for (uint id = 0; id < this->walkers.size(); id++)
     {
@@ -239,12 +239,12 @@ void NMR_Simulation::mapSimulation_CUDA_2D()
 
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
+    cout << "Done.\nCPU/GPU elapsed time: " << elapsedTime * 1.0e-3 << " seconds" << endl;
 }
 
 void NMR_Simulation::mapSimulation_CUDA_2D_histograms()
 {
-    cout << "initializing mapping simulation in GPU... ";
+    cout << "- starting RW-Mapping simulation (in GPU)... ";
     // reset walkers
     for (uint id = 0; id < this->walkers.size(); id++)
     {
@@ -409,7 +409,7 @@ void NMR_Simulation::mapSimulation_CUDA_2D_histograms()
     cudaEventSynchronize(stop);
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
+    cout << "Done.\nCPU/GPU elapsed time: " << elapsedTime * 1.0e-3 << " seconds" << endl;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -740,7 +740,7 @@ __global__ void map_3D_periodic(int *walker_px,
 // walker's "map" method in Graphics Processing Unit
 void NMR_Simulation::mapSimulation_CUDA_3D()
 {
-    cout << "initializing mapping simulation 3D in GPU... ";
+    cout << "- starting 3DRW-Mapping simulation (in GPU)... ";
     // reset walkers
     for (uint id = 0; id < this->walkers.size(); id++)
     {
@@ -998,14 +998,14 @@ void NMR_Simulation::mapSimulation_CUDA_3D()
     cudaEventSynchronize(stop); 
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
+    cout << "Done.\nCPU/GPU elapsed time: " << elapsedTime * 1.0e-3 << " seconds" << endl;
 }
 
 // function to call GPU kernel to execute
 // walker's "walk" method in Graphics Processing Unit
 void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
 {
-    cout << "initializing mapping simulation 3D in GPU... ";
+    cout << "- starting 3DRW-Mapping simulation (in GPU)... ";
     // reset walkers
     if(this->rwNMR_config.getOpenMPUsage())
     {
@@ -1465,14 +1465,14 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
     cudaEventSynchronize(stop); 
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
+    cout << "Done.\nelapsed time: " << elapsedTime * 1.0e-3 << " seconds" << endl;
 }
 
 // function to call GPU kernel to execute
 // walker's "walk" method in Graphics Processing Unit
 void NMR_Simulation::mapSimulation_CUDA_3D_histograms_periodic()
 {
-    cout << "initializing mapping simulation 3D in GPU (bc = periodic)... ";
+    cout << "- starting 3DRW-Mapping simulation in GPU...";
     // reset walkers
     if(this->rwNMR_config.getOpenMPUsage())
     {
@@ -1932,7 +1932,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms_periodic()
     cudaEventSynchronize(stop); 
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
+    cout << "Done.\nCPU/GPU elapsed time: " << elapsedTime * 1.0e-3 << " seconds" << endl;
 }
 
 

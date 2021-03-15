@@ -59,6 +59,7 @@ public:
 	virtual ~NMR_PFGSE(){};
 
 	void setNMRTimeFramework();
+	void correctExposureTimes();
 	void runInitialMapSimulation();
 	void setGradientVector(double _GF, int _GPoints);
 	void setGradientVector();

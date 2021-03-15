@@ -304,7 +304,7 @@ __global__ void PFG_reduce(double *data,
 // walker's "walk" method in Graphics Processing Unit
 void NMR_PFGSE::simulation_cuda_noflux()
 {
-    cout << "initializing RW-PFG NMR simulation in GPU... ";
+    cout << "- starting RW-PFGSE simulation (in GPU) ";
 
     bool time_verbose = false;
     double copy_time = 0.0;
@@ -330,7 +330,7 @@ void NMR_PFGSE::simulation_cuda_noflux()
     double voxelResolution = this->NMR.imageVoxelResolution;
     uint numberOfSteps = this->NMR.simulationSteps - this->stepsTaken;
     this->stepsTaken += numberOfSteps;
-    cout << "(" << numberOfSteps << " RW-steps) ";
+    cout << "[" << numberOfSteps << " RW-steps]... ";
 
     // create a steps bucket
     uint stepsLimit = this->NMR.rwNMR_config.getMaxRWSteps();
@@ -1026,7 +1026,7 @@ void NMR_PFGSE::simulation_cuda_noflux()
 
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
+    cout << "Done.\nCpu/Gpu elapsed time: " << elapsedTime * 1.0e-3 << " s" << endl;
     cudaDeviceReset();
 
     if(time_verbose)
@@ -1044,7 +1044,7 @@ void NMR_PFGSE::simulation_cuda_noflux()
 // walker's "walk" method in Graphics Processing Unit
 void NMR_PFGSE::simulation_cuda_periodic()
 {
-    cout << "initializing RW-PFG NMR simulation in GPU... ";
+    cout << "- starting RW-PFGSE simulation (in GPU) ";
 
     bool time_verbose = false;
     double copy_time = 0.0;
@@ -1070,7 +1070,7 @@ void NMR_PFGSE::simulation_cuda_periodic()
     double voxelResolution = this->NMR.imageVoxelResolution;
     uint numberOfSteps = this->NMR.simulationSteps - this->stepsTaken;
     this->stepsTaken += numberOfSteps;
-    cout << "(" << numberOfSteps << " RW-steps) ";
+    cout << "[" << numberOfSteps << " RW-steps]... ";
 
     // create a steps bucket
     uint stepsLimit = this->NMR.rwNMR_config.getMaxRWSteps();
@@ -1766,7 +1766,7 @@ void NMR_PFGSE::simulation_cuda_periodic()
 
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
+    cout << "Done.\nCpu/Gpu elapsed time: " << elapsedTime * 1.0e-3 << " s" << endl;
     cudaDeviceReset();
 
     if(time_verbose)
