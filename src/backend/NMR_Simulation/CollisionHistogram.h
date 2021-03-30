@@ -1,5 +1,5 @@
-#ifndef NMR_HISTOGRAM_H_
-#define NMR_HISTOGRAM_H_
+#ifndef COLLISION_HISTOGRAM_H_
+#define COLLISION_HISTOGRAM_H_
 
 // include string stream manipulation functions
 #include <sstream>

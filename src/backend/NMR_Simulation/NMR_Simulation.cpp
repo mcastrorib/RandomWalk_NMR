@@ -29,10 +29,12 @@
 #include "../Laplace/tikhonov.h"
 #include "../Laplace/include/nmrinv_core.h"
 #include "NMR_Simulation.h"
+#include "ChordLengthHistogram.h"
 #include "../Utils/OMPLoopEnabler.h"
 #include "../Utils/ImagePath.h"
 #include "../Utils/ProgressBar.h"
 #include "../RNG/randomIndex.h"
+
 
 
 using namespace cv;
@@ -343,6 +345,8 @@ void NMR_Simulation::readImage()
     (*this).createBitBlockMap();
     (*this).countPoresInBitBlock();
     (*this).countInterfacePoreMatrix();
+
+    ChordLengthHistogram chordsHistogram(this->bitBlock);
 }
 
 void NMR_Simulation::setWalkers(void)
