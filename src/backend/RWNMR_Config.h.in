@@ -13,3 +13,5 @@
 #cmakedefine USE_CONFIGFILES
 #cmakedefine USE_MATH
 #cmakedefine USE_UTILS
+
+#define PROJECT_ROOT_DIR "${PROJECT_SOURCE_DIR}/../../"

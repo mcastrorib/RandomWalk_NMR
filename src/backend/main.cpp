@@ -8,14 +8,12 @@
 // include interface header files
 #include "rwnmrApp.h"
 
-#include "randomIndex.h"
-
 using namespace std;
 
 // Main program
 int main(int argc, char *argv[])
 {    	
-	rwnmrApp app(argc, argv);
+	rwnmrApp app(argc, argv, PROJECT_ROOT_DIR);
 	app.exec();
 	
     return 0;

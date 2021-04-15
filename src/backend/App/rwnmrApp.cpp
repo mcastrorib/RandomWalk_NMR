@@ -21,13 +21,15 @@
 // include class header file
 #include "rwnmrApp.h"
 
-rwnmrApp::rwnmrApp(int argc, char *argv[]) : config_root(CONFIG_ROOT), args(argc, argv), NMR(NULL)
+rwnmrApp::rwnmrApp(int argc, char *argv[], string _root) : project_root(_root), args(argc, argv), NMR(NULL)
 {
+    (*this).setConfigRoot((*this).getProjectRoot() + CONFIG_ROOT);
     (*this).buildEssentials(); 
 }
 
-rwnmrApp::rwnmrApp(ArgsParser _args) : config_root(CONFIG_ROOT), args(_args), NMR(NULL)
+rwnmrApp::rwnmrApp(ArgsParser _args, string _root) : project_root(_root), args(_args), NMR(NULL)
 {
+    (*this).setConfigRoot((*this).getProjectRoot() + CONFIG_ROOT);
     (*this).buildEssentials(); 
 }
 
@@ -50,7 +52,7 @@ void rwnmrApp::buildEssentials()
     // // -----
 
     // -- Create NMR_Simulation object
-    this->NMR = new NMR_Simulation(rwNMR_Config, uCT_Config);
+    this->NMR = new NMR_Simulation(rwNMR_Config, uCT_Config, (*this).getProjectRoot());
     
     // Read digital rock image
     cout << "-- Loading uCT-image" << endl;

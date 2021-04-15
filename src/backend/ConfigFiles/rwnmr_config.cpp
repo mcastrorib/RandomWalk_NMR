@@ -27,7 +27,6 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
 {
 	this->config_filepath = otherConfig.config_filepath;
     this->NAME = otherConfig.NAME;
-    this->DB_PATH = otherConfig.DB_PATH;
     this->WALKERS = otherConfig.WALKERS;
     this->WALKERS_PLACEMENT = otherConfig.WALKERS_PLACEMENT;
     this->PLACEMENT_DEVIATION = otherConfig.PLACEMENT_DEVIATION;
@@ -97,7 +96,6 @@ void rwnmr_config::readConfigFile(const string configFile)
 			s.erase(0, pos + delimiter.length());
 
 			if(token == "NAME")	(*this).readName(content);
-			else if(token == "DB_PATH") (*this).readDBPath(content);
 			else if(token == "WALKERS") (*this).readWalkers(content);
 			else if(token == "WALKERS_PLACEMENT") (*this).readWalkersPlacement(content);
 			else if(token == "PLACEMENT_DEVIATION") (*this).readPlacementDeviation(content);
@@ -136,11 +134,6 @@ void rwnmr_config::readConfigFile(const string configFile)
 void rwnmr_config::readName(string s)
 {
 	this->NAME = s;
-}
-
-void rwnmr_config::readDBPath(string s)
-{
-	this->DB_PATH = s;
 }
 
 void rwnmr_config::readWalkers(string s)

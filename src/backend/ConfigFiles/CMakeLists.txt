@@ -4,10 +4,10 @@ add_library(ConfigFiles rwnmr_config.cpp
 						pfgse_config.cpp
 						ga_config.cpp)
 
+
 target_include_directories(ConfigFiles
           INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
           )
-
 
 install(TARGETS ConfigFiles DESTINATION lib)
 install(FILES configFiles_defs.h

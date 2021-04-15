@@ -14,7 +14,6 @@ class rwnmr_config
 public:
     string config_filepath;
     string NAME;
-    string DB_PATH;
     uint WALKERS;
     string WALKERS_PLACEMENT;
     uint PLACEMENT_DEVIATION;
@@ -74,7 +73,6 @@ public:
     // Read methods
     // -- RW Params
     void readName(string s);
-    void readDBPath(string s);
     void readWalkers(string s);
     void readWalkersPlacement(string s);
     void readPlacementDeviation(string s);
@@ -119,7 +117,6 @@ public:
     // -- RW Params
     string getConfigFilepath() {return this->config_filepath; }
     string getName(){ return this->NAME;}
-    string getDBPath(){ return this->DB_PATH;}
     uint getWalkers(){ return this->WALKERS;}
     string getWalkersPlacement(){ return this->WALKERS_PLACEMENT;}
     uint getPlacementDeviation(){ return this->PLACEMENT_DEVIATION;}

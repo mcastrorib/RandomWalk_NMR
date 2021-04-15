@@ -62,7 +62,7 @@ void NMR_cpmg::setName()
 
 void NMR_cpmg::createDirectoryForData()
 {
-	string path = this->NMR.rwNMR_config.getDBPath();
+	string path = this->NMR.getDBPath();
     createDirectory(path, this->NMR.simulationName + "/" + this->name);
     this->dir = (path + this->NMR.simulationName + "/" + this->name);
 }

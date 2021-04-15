@@ -41,6 +41,7 @@ public:
     // RW simulation parameters
     string simulationName;
     string simulationDirectory;
+    string DBPath;
     uint simulationSteps;
     uint stepsPerEcho;
     uint numberOfEchoes;
@@ -90,11 +91,59 @@ public:
 
     // NMR_3D methods:
     // default constructors
-    NMR_Simulation(string _Name){};
-    NMR_Simulation(rwnmr_config _rwNMR_config, uct_config _uCT_config);
+    NMR_Simulation(rwnmr_config _rwNMR_config, uct_config _uCT_config, string _project_root);
 
     //copy constructors
-    NMR_Simulation(const NMR_Simulation &_otherImage);
+    // copy constructor
+    NMR_Simulation(const NMR_Simulation &_otherSimulation)
+    {
+        this->rwNMR_config = _otherSimulation.rwNMR_config;
+        this->uCT_config = _otherSimulation.uCT_config;
+        this->simulationName = _otherSimulation.simulationName;
+        this->simulationDirectory = _otherSimulation.simulationDirectory;
+        this->simulationSteps = _otherSimulation.simulationSteps;
+        this->stepsPerEcho = _otherSimulation.stepsPerEcho;
+        this->numberOfEchoes = _otherSimulation.numberOfEchoes;
+        this->initialSeed = _otherSimulation.initialSeed;
+        this->seedFlag = _otherSimulation.seedFlag;
+        this->gpu_use = _otherSimulation.gpu_use;
+        this->boundaryCondition = _otherSimulation.boundaryCondition;
+
+        this->numberOfPores = _otherSimulation.numberOfPores;
+        this->porosity = _otherSimulation.porosity;
+        this->walkerOccupancy = _otherSimulation.walkerOccupancy;
+        this->numberOfWalkers = _otherSimulation.numberOfWalkers;
+
+        // vectors attributes copy pointers to otherImage's vectors
+        // should be tested if it works or if it should be done explicitly
+        this->pores = _otherSimulation.pores;
+        this->walkersIDList = _otherSimulation.walkersIDList;
+        this->walkers = _otherSimulation.walkers;
+        this->globalEnergy = _otherSimulation.globalEnergy;
+        this->decayTimes = _otherSimulation.decayTimes;
+
+        this->timeInterval = _otherSimulation.timeInterval;
+        this->diffusionCoefficient = _otherSimulation.diffusionCoefficient;
+
+        this->imagePath = _otherSimulation.imagePath;
+        this->numberOfImages = _otherSimulation.numberOfImages;
+        this->imageResolution = _otherSimulation.imageResolution;
+        this->imageVoxelResolution = _otherSimulation.imageVoxelResolution;
+        this->voxelDivision = _otherSimulation.voxelDivision;
+        this->voxelDivisionApplied = _otherSimulation.voxelDivisionApplied;
+        this->height = _otherSimulation.height;
+        this->width = _otherSimulation.width;
+        this->depth = _otherSimulation.depth;
+        this->binaryMap = _otherSimulation.binaryMap;
+        this->bitBlock = _otherSimulation.bitBlock;
+
+        this->histogram = _otherSimulation.histogram;
+        this->histogramList = _otherSimulation.histogramList;
+        this->penalties = _otherSimulation.penalties;
+
+        // pointers-to-method
+        this->mapSimulationPointer = _otherSimulation.mapSimulationPointer;
+    }
 
     // default destructor
     virtual ~NMR_Simulation()
@@ -256,6 +305,7 @@ public:
 
     // 'get' inline methods
     // simulation parameters
+    inline string getDBPath() { return this->DBPath; }
     inline uint getSimulationSteps() { return this->simulationSteps; }
     inline uint getStepsPerEcho() { return this->stepsPerEcho; }
     inline uint getNumberOfEchoes() { return this->numberOfEchoes; }
@@ -296,7 +346,7 @@ public:
     }
 
     // output generation class methods
-    string createDirectoryForResults();
+    string createDirectoryForResults(string _root);
     void saveImageInfo(string filedir);
     void saveEnergyDecay(string filedir);
     void saveWalkerCollisions(string filedir);

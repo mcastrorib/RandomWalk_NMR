@@ -228,7 +228,7 @@ void NMR_PFGSE::setName()
 
 void NMR_PFGSE::createDirectoryForData()
 {
-	string path = this->NMR.rwNMR_config.getDBPath();
+	string path = this->NMR.getDBPath();
     createDirectory(path, this->NMR.simulationName + "/" + this->name);
     this->dir = (path + this->NMR.simulationName + "/" + this->name);
 }
@@ -313,7 +313,7 @@ void NMR_PFGSE::runInitialMapSimulation()
 		(*this).updateWalkersXIrate(this->NMR.simulationSteps);
 		// this->NMR.updateRelaxativity(); but what rho to adopt?
 
-		string path = this->NMR.rwNMR_config.getDBPath();
+		string path = this->NMR.getDBPath();
 		if(this->PFGSE_config.getSaveCollisions())
 	    {
 	        this->NMR.saveWalkerCollisions(path + this->NMR.simulationName);

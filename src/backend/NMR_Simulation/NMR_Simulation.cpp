@@ -41,7 +41,8 @@ using namespace cv;
 using namespace std;
 
 NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config, 
-                               uct_config _uCT_config) : rwNMR_config(_rwNMR_config),
+                               uct_config _uCT_config,
+                               string _project_root) :   rwNMR_config(_rwNMR_config),
                                                          uCT_config(_uCT_config),
                                                          simulationSteps(0),
                                                          numberOfEchoes(0),
@@ -71,8 +72,9 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
     vector<CollisionHistogram> histogramList();
 
     // set simulation name and directory to save results
+    this->DBPath = _project_root + "./db/";
     this->simulationName = this->rwNMR_config.getName();
-    this->simulationDirectory = (*this).createDirectoryForResults();
+    this->simulationDirectory = (*this).createDirectoryForResults(this->DBPath);
 
     // assign attributes from rwnmr config files
     (*this).setNumberOfWalkers(this->rwNMR_config.getWalkers());
@@ -97,57 +99,6 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
     // set default time step measurement
     (*this).setTimeInterval(); 
     (*this).setBoundaryCondition(this->rwNMR_config.getBC());
-}
-
-// copy constructor
-NMR_Simulation::NMR_Simulation(const NMR_Simulation &_otherSimulation)
-{
-    this->rwNMR_config = _otherSimulation.rwNMR_config;
-    this->uCT_config = _otherSimulation.uCT_config;
-    this->simulationName = _otherSimulation.simulationName;
-    this->simulationDirectory = _otherSimulation.simulationDirectory;
-    this->simulationSteps = _otherSimulation.simulationSteps;
-    this->stepsPerEcho = _otherSimulation.stepsPerEcho;
-    this->numberOfEchoes = _otherSimulation.numberOfEchoes;
-    this->initialSeed = _otherSimulation.initialSeed;
-    this->seedFlag = _otherSimulation.seedFlag;
-    this->gpu_use = _otherSimulation.gpu_use;
-    this->boundaryCondition = _otherSimulation.boundaryCondition;
-
-    this->numberOfPores = _otherSimulation.numberOfPores;
-    this->porosity = _otherSimulation.porosity;
-    this->walkerOccupancy = _otherSimulation.walkerOccupancy;
-    this->numberOfWalkers = _otherSimulation.numberOfWalkers;
-
-    // vectors attributes copy pointers to otherImage's vectors
-    // should be tested if it works or if it should be done explicitly
-    this->pores = _otherSimulation.pores;
-    this->walkersIDList = _otherSimulation.walkersIDList;
-    this->walkers = _otherSimulation.walkers;
-    this->globalEnergy = _otherSimulation.globalEnergy;
-    this->decayTimes = _otherSimulation.decayTimes;
-
-    this->timeInterval = _otherSimulation.timeInterval;
-    this->diffusionCoefficient = _otherSimulation.diffusionCoefficient;
-
-    this->imagePath = _otherSimulation.imagePath;
-    this->numberOfImages = _otherSimulation.numberOfImages;
-    this->imageResolution = _otherSimulation.imageResolution;
-    this->imageVoxelResolution = _otherSimulation.imageVoxelResolution;
-    this->voxelDivision = _otherSimulation.voxelDivision;
-    this->voxelDivisionApplied = _otherSimulation.voxelDivisionApplied;
-    this->height = _otherSimulation.height;
-    this->width = _otherSimulation.width;
-    this->depth = _otherSimulation.depth;
-    this->binaryMap = _otherSimulation.binaryMap;
-    this->bitBlock = _otherSimulation.bitBlock;
-
-    this->histogram = _otherSimulation.histogram;
-    this->histogramList = _otherSimulation.histogramList;
-    this->penalties = _otherSimulation.penalties;
-
-    // pointers-to-method
-    this->mapSimulationPointer = _otherSimulation.mapSimulationPointer;
 }
 
 void NMR_Simulation::setImage(ImagePath _path, uint _images)
@@ -1778,11 +1729,10 @@ void NMR_Simulation::assemblyImagePath()
      (*this).setImage(input, input.images);
 }
 
-string NMR_Simulation::createDirectoryForResults()
+string NMR_Simulation::createDirectoryForResults(string _path)
 {
-    string path = this->rwNMR_config.getDBPath();
-    createDirectory(path, this->simulationName);
-    return (path + this->simulationName);
+    createDirectory(_path, this->simulationName);
+    return (_path + this->simulationName);
 }
 
 void NMR_Simulation::saveImageInfo(string filedir)
@@ -1855,7 +1805,7 @@ void NMR_Simulation::printDetails()
     cout << "------------------------------------------------------" << endl;
     cout << ">>> NMR SIMULATION 3D PARAMETERS: " << this->simulationName << endl;
     cout << "------------------------------------------------------" << endl;
-    cout << "Data path: " << this->rwNMR_config.getDBPath() + this->simulationName << endl;
+    cout << "Data path: " << this->DBPath + this->simulationName << endl;
     cout << "Image path: " << this->imagePath.completePath << endl;
     cout << "Image resolution (um/voxel): " << this->imageVoxelResolution << endl;
     cout << "Diffusion coefficient (um^2/ms): " << this->diffusionCoefficient << endl;
