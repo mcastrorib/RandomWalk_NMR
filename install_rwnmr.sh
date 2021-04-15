@@ -18,7 +18,7 @@ cmake -S ${SRC_DIR} -B ${RELEASE_DIR} -D CMAKE_BUILD_TYPE=Release
 # Actually build the binaries
 cmake --build build/release -j${procs}
 # Create symbolic link in root directory
-ln -sf ${RELEASE_DIR}/RWNMR run_rwnmr
+ln -sf ${RELEASE_DIR}/RWNMR RWNMR
 
 ## BUILDING DEBUG VERSION
 # Build directories path
