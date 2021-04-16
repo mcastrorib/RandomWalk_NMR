@@ -490,7 +490,6 @@ void NMR_PFGSE::recoverD_msd()
 
 	// debug
 	// int imgX, imgY, imgZ;
-
 	for(uint idx = 0; idx < this->NMR.numberOfWalkers; idx++)
 	{
 		Walker particle(this->NMR.walkers[idx]);
@@ -538,7 +537,6 @@ void NMR_PFGSE::recoverD_msd()
 
 	
 	cout << "Dnew (msd) = " << (*this).getD_msd();
-	cout << "\t(mean displacement): " << sqrt((*this).getMsd()) << " um" << endl;
 	cout << "Dxx = " << this->vecDmsd.getX() << ", \t";
 	cout << "Dyy = " << this->vecDmsd.getY() << ", \t";
 	cout << "Dzz = " << this->vecDmsd.getZ() << endl;
