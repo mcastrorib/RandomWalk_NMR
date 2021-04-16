@@ -78,14 +78,14 @@ void ChordLengthHistogram::readImageInfo()
 
 void ChordLengthHistogram::applyChords()
 {
-	cout << endl << "*** applying chords length estimation ***" << endl;
+	cout << endl << "- applying chords length estimation:" << endl;
 	double time = omp_get_wtime();
 	
     if(this->bitBlock->imageDepth == 1) (*this).applyChords2D();
     else (*this).applyChords3D();
 
     time = omp_get_wtime() - time;
-	cout << "in " << time << " seconds." << endl;
+	cout << "(100%) in " << time << " seconds." << endl;
 }
 
 void ChordLengthHistogram::applyChords2D()
@@ -271,28 +271,5 @@ void ChordLengthHistogram::createAmpsVector()
 	
 	// fill chords Z
 	for(uint idx = 0; idx < this->chordsZ.size(); idx++) 
-		this->ampsZ[chordsZ[idx] - 1] += 1.0;
-
-	cout << "ampsX = {";
-    for(int i = 0; i < this->ampsX.size(); i++)
-    {
-    	cout << ampsX[i] << " ";
-    }
-    cout << "}" << endl;
-
-    cout << "ampsY = {";
-    for(int i = 0; i < this->ampsX.size(); i++)
-    {
-    	cout << ampsY[i] << " ";
-    }
-    cout << "}" << endl;
-
-    cout << "ampsZ = {";
-    for(int i = 0; i < this->ampsX.size(); i++)
-    {
-    	cout << ampsZ[i] << " ";
-    }
-    cout << "}" << endl;
-
-	
+		this->ampsZ[chordsZ[idx] - 1] += 1.0;	
 }

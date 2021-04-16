@@ -86,10 +86,12 @@ void NMR_PFGSE::run()
 	(*this).correctExposureTimes();
 	(*this).runInitialMapSimulation();
 	(*this).resetNMR();
-	cout << "-- Done" << endl;
+	cout << "-- Done in " << omp_get_wtime() - tick << " seconds." << endl;
 
+	double interiorTick;
 	for(uint timeSample = 0; timeSample < this->exposureTimes.size(); timeSample++)
 	{
+		interiorTick = omp_get_wtime();
 		(*this).setExposureTime((*this).getExposureTime(timeSample));
 		(*this).set();
 		(*this).runSequence();
@@ -113,7 +115,7 @@ void NMR_PFGSE::run()
 		// save results in disc
 		(*this).save(); 
 		(*this).incrementCurrentTime();
-		cout << "-- Done" << endl << endl;
+		cout << "-- Done in " << omp_get_wtime() - interiorTick << " seconds." << endl << endl;
 	}
 
 	double time = omp_get_wtime() - tick;
@@ -463,16 +465,19 @@ void NMR_PFGSE::recoverD(string _method)
 
 void NMR_PFGSE::recoverD_sat()
 {
+	double time = omp_get_wtime();
 	cout << "- Stejskal-Tanner (s&t):" << endl;
 	LeastSquareAdjust lsa(this->RHS, this->LHS);
 	lsa.setThreshold(this->RHS_threshold);
 	lsa.solve();
 	(*this).setD_sat(lsa.getB());
 	cout << "Dnew (s&t) = " << (*this).getD_sat() << endl;
+	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 
 void NMR_PFGSE::recoverD_msd()
 {
+	double time = omp_get_wtime();
 	cout << "- Mean squared displacement (msd):" << endl;
 	double squaredDisplacement = 0.0;
 	double displacementX, displacementY, displacementZ;
@@ -516,25 +521,6 @@ void NMR_PFGSE::recoverD_msd()
 
 		squaredDisplacement += (particle.energy * normalizedDisplacement);
 		aliveWalkerFraction += particle.energy;
-
-		// debug
-		// imgX = particle.position_x % this->NMR.bitBlock.imageColumns;
-		// if(imgX < 0) imgX += this->NMR.bitBlock.imageColumns;
-		
-		// imgY = particle.position_y % this->NMR.bitBlock.imageRows;
-		// if(imgY < 0) imgY += this->NMR.bitBlock.imageRows;
-		
-		// imgZ = particle.position_z % this->NMR.bitBlock.imageDepth;
-		// if(imgZ < 0) imgZ += this->NMR.bitBlock.imageDepth;
-
-
-		// cout << "- walkerID: " << idx << endl;
-		// cout << "initial position: {" << X0 << ",\t" << Y0 << ",\t" << Z0 << "}\t";
-		// cout << "{" << particle.initialPosition.x << ",\t" << particle.initialPosition.y << ",\t" << particle.initialPosition.z << "}" << endl;
-		// cout << "final position: {" << XF << ",\t" << YF << ",\t" << ZF << "}\t";
-		// cout << "{" << particle.position_x << ",\t" << particle.position_y << ",\t" << particle.position_z << "}" << endl;
-		// cout << "image position: {" << imgX << ",\t" << imgY << ",\t" << imgZ << "}" << endl;
-
  	}
 
 	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
@@ -556,6 +542,7 @@ void NMR_PFGSE::recoverD_msd()
 	cout << "Dxx = " << this->vecDmsd.getX() << ", \t";
 	cout << "Dyy = " << this->vecDmsd.getY() << ", \t";
 	cout << "Dzz = " << this->vecDmsd.getZ() << endl;
+	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 
 void NMR_PFGSE::recoverSVp(string method)
