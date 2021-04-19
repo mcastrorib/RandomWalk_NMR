@@ -33,9 +33,13 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   M0(0.0),
 										   D_sat(0.0),
 										   D_msd(0.0),
+										   D_msd_stdev(0.0),
 										   msd(0.0),
+										   msd_stdev(0.0),
 										   vecMsd(0.0, 0.0, 0.0),
+										   vecMsd_stdev(0.0, 0.0, 0.0),
 										   vecDmsd(0.0, 0.0, 0.0),
+										   vecDmsd_stdev(0.0, 0.0, 0.0),
 										   SVp(0.0),
 										   stepsTaken(0),
 										   currentTime(0),
@@ -453,7 +457,10 @@ void NMR_PFGSE::recoverD(string _method)
 	{
 		if(_method == "msd")
 		{
-			(*this).recoverD_msd();
+			if(this->PFGSE_config.getAllowWalkerSampling())
+			{
+				(*this).recoverD_msd_withSampling();
+			} else	(*this).recoverD_msd();
 		}
 	}
 }
@@ -467,7 +474,7 @@ void NMR_PFGSE::recoverD_sat()
 	lsa.setThreshold(this->RHS_threshold);
 	lsa.solve();
 	(*this).setD_sat(lsa.getB());
-	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << ") {s&t} = " << (*this).getD_sat() << endl;
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat() << endl;
 
 	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
@@ -534,7 +541,7 @@ void NMR_PFGSE::recoverD_msd()
 					   (nDz / (2.0 * (*this).getExposureTime()))); 
 
 	
-	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << ") {msd} = " << (*this).getD_msd();
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {msd} = " << (*this).getD_msd() << endl;
 	cout << "Dxx = " << this->vecDmsd.getX() << ", \t";
 	cout << "Dyy = " << this->vecDmsd.getY() << ", \t";
 	cout << "Dzz = " << this->vecDmsd.getZ() << endl;
@@ -546,68 +553,112 @@ void NMR_PFGSE::recoverD_msd_withSampling()
 {
 	double time = omp_get_wtime();
 	cout << "- Mean squared displacement (msd) [with sampling]:" << endl;
-	double squaredDisplacement = 0.0;
+	int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;
+	double squaredDisplacement;
 	double displacementX, displacementY, displacementZ;
 	double X0, Y0, Z0;
 	double XF, YF, ZF;
 	double normalizedDisplacement;
-	double nDx = 0.0; double nDy = 0.0; double nDz = 0.0;
+	double nDx, nDy, nDz;
 	double resolution = this->NMR.getImageVoxelResolution();
-	double aliveWalkerFraction = 0.0;
+	double aliveWalkerFraction;
 
-	// debug
-	// int imgX, imgY, imgZ;
-	for(uint idx = 0; idx < this->NMR.numberOfWalkers; idx++)
-	{
-		Walker particle(this->NMR.walkers[idx]);
+	vector<double> Dmsd; Dmsd.reserve(this->NMR.walkerSamples);
+	vector<double> DmsdX; DmsdX.reserve(this->NMR.walkerSamples);
+	vector<double> DmsdY; DmsdY.reserve(this->NMR.walkerSamples);
+	vector<double> DmsdZ; DmsdZ.reserve(this->NMR.walkerSamples);
+	vector<double> msd; msd.reserve(this->NMR.walkerSamples);
+	vector<double> msdX; msdX.reserve(this->NMR.walkerSamples);
+	vector<double> msdY; msdY.reserve(this->NMR.walkerSamples);
+	vector<double> msdZ; msdZ.reserve(this->NMR.walkerSamples);
 
-		// Get walker displacement
-		// X:
-		X0 = (double) particle.initialPosition.x;
-		XF = (double) particle.position_x;
-		displacementX = resolution * (XF - X0);
-		
-		// Y:
-		Y0 = (double) particle.initialPosition.y;
-		YF = (double) particle.position_y;
-		displacementY = resolution * (YF - Y0);
-		
-		// Z:
-		Z0 = (double) particle.initialPosition.z;
-		ZF = (double) particle.position_z;
-		displacementZ = resolution * (ZF - Z0);
+	// measure msd and Dmsd for each sample of walkers
+	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+	{	
+		squaredDisplacement = 0.0;
+		nDx = 0.0; nDy = 0.0; nDz = 0.0;
+		aliveWalkerFraction = 0.0;
 
-		nDx += (particle.energy * displacementX * displacementX);
-		nDy += (particle.energy * displacementY * displacementY);
-		nDz += (particle.energy * displacementZ * displacementZ);
+		for(uint idx = 0; idx < walkersPerSample; idx++)
+		{
+			int offset = sample * walkersPerSample;
+			Walker particle(this->NMR.walkers[idx + offset]);
 
-		normalizedDisplacement = displacementX*displacementX + 
-								 displacementY*displacementY + 
-								 displacementZ*displacementZ;
+			// Get walker displacement
+			// X:
+			X0 = (double) particle.initialPosition.x;
+			XF = (double) particle.position_x;
+			displacementX = resolution * (XF - X0);
+			
+			// Y:
+			Y0 = (double) particle.initialPosition.y;
+			YF = (double) particle.position_y;
+			displacementY = resolution * (YF - Y0);
+			
+			// Z:
+			Z0 = (double) particle.initialPosition.z;
+			ZF = (double) particle.position_z;
+			displacementZ = resolution * (ZF - Z0);
 
-		squaredDisplacement += (particle.energy * normalizedDisplacement);
-		aliveWalkerFraction += particle.energy;
- 	}
+			nDx += (particle.energy * displacementX * displacementX);
+			nDy += (particle.energy * displacementY * displacementY);
+			nDz += (particle.energy * displacementZ * displacementZ);
 
-	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
-	squaredDisplacement = squaredDisplacement / aliveWalkerFraction;
-	(*this).setD_msd(squaredDisplacement/(6.0 * (*this).getExposureTime()));
-	(*this).setMsd(squaredDisplacement);
+			normalizedDisplacement = displacementX*displacementX + 
+									 displacementY*displacementY + 
+									 displacementZ*displacementZ;
 
-	nDx /= aliveWalkerFraction;
-	nDy /= aliveWalkerFraction;
-	nDz /= aliveWalkerFraction;
-	(*this).setVecMsd(nDx, nDy, nDz);
-	(*this).setVecDmsd((nDx / (2.0 * (*this).getExposureTime())), 
-					   (nDy / (2.0 * (*this).getExposureTime())), 
-					   (nDz / (2.0 * (*this).getExposureTime()))); 
+			squaredDisplacement += (particle.energy * normalizedDisplacement);
+			aliveWalkerFraction += particle.energy;
+	 	}
 
+		// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
+		squaredDisplacement = squaredDisplacement / aliveWalkerFraction;
+		Dmsd.push_back(squaredDisplacement/(6.0 * (*this).getExposureTime()));
+		msd.push_back(squaredDisplacement);
+
+		nDx /= aliveWalkerFraction;
+		nDy /= aliveWalkerFraction;
+		nDz /= aliveWalkerFraction;
+
+		msdX.push_back(nDx);
+		msdY.push_back(nDy);
+		msdZ.push_back(nDz);
+		DmsdX.push_back((nDx / (2.0 * (*this).getExposureTime())));
+		DmsdY.push_back((nDy / (2.0 * (*this).getExposureTime())));
+		DmsdZ.push_back((nDz / (2.0 * (*this).getExposureTime())));
+
+	}
+
+	// measure mean value among all the samples
+	double meanDmsd = (*this).mean(Dmsd);
+	double meanDmsdX = (*this).mean(DmsdX);
+	double meanDmsdY = (*this).mean(DmsdY);
+	double meanDmsdZ = (*this).mean(DmsdZ);
+	double meanMsd = (*this).mean(msd);
+	double meanMsdX = (*this).mean(msdX);
+	double meanMsdY = (*this).mean(msdY);
+	double meanMsdZ = (*this).mean(msdZ);
 	
-	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << ") {msd} = " << (*this).getD_msd();
-	cout << "Dxx = " << this->vecDmsd.getX() << ", \t";
-	cout << "Dyy = " << this->vecDmsd.getY() << ", \t";
-	cout << "Dzz = " << this->vecDmsd.getZ() << endl;
+	// set mean value among all the samples
+	(*this).setMsd(meanMsd);
+	(*this).setD_msd(meanDmsd);
+	(*this).setVecMsd(meanMsdX, meanMsdY, meanMsdZ);
+	(*this).setVecDmsd(meanDmsdX, meanDmsdY, meanDmsdZ);
 
+	// set std deviation among all the samples
+	(*this).setD_msd_StdDev((*this).stdDev(Dmsd, meanDmsd));
+	(*this).setMsdStdDev((*this).stdDev(msd, meanMsd));
+	(*this).setVecDmsdStdDev((*this).stdDev(DmsdX, meanDmsdX), (*this).stdDev(DmsdY, meanDmsdY), (*this).stdDev(DmsdZ, meanDmsdZ));
+	(*this).setVecMsdStdDev((*this).stdDev(msdX, meanMsdX), (*this).stdDev(msdY, meanMsdY), (*this).stdDev(msdZ, meanMsdZ));
+	
+	// print results
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {msd} = " << (*this).getD_msd();
+	cout << " +/- " << (*this).getD_msd_stdev() << endl;
+	cout << "Dxx = " << this->vecDmsd.getX() << " +/- " << this->vecDmsd_stdev.getX() << endl;
+	cout << "Dyy = " << this->vecDmsd.getY() << " +/- " << this->vecDmsd_stdev.getY() << endl;
+	cout << "Dzz = " << this->vecDmsd.getZ() << " +/- " << this->vecDmsd_stdev.getZ() << endl;
+	
 	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 
@@ -816,20 +867,24 @@ void NMR_PFGSE::writeMsd()
         exit(1);
     }
 
-    file << "PFGSE - Mean squared displacement values" << endl;
-    file << "MSDx, ";
-    file << "MSDy, ";
-    file << "MSDz, ";
-    file << "Dmsd_x, ";
-    file << "Dmsd_y, ";
-    file << "Dmsd_z" << endl;
+	int walkersPerSample = this->NMR.numberOfWalkers;
+	if(this->PFGSE_config.getAllowWalkerSampling())
+		walkersPerSample /= this->NMR.walkerSamples;
+    
+	file << "PFGSE - Mean squared displacement values - " << this->NMR.walkerSamples << " samples of " << walkersPerSample << " walkers" << endl;
+    file << "msdX[mean, stdDev], ";
+    file << "msdX[mean, stdDev], ";
+    file << "msdZ[mean, stdDev], ";
+    file << "DmsdX[mean, stdDev], ";
+    file << "DmsdY[mean, stdDev], ";
+    file << "DmsdZ[mean, stdDev]" << endl;
 
-    file << this->vecMsd.getX() << ", ";
-    file << this->vecMsd.getY() << ", ";
-    file << this->vecMsd.getZ() << ", ";
-    file << this->vecDmsd.getX() << ", ";
-    file << this->vecDmsd.getY() << ", ";
-    file << this->vecDmsd.getZ() << endl;  
+    file << this->vecMsd.getX() << ", " << this->vecMsd_stdev.getX() << ", ";
+    file << this->vecMsd.getY() << ", " << this->vecMsd_stdev.getY() << ", ";
+    file << this->vecMsd.getZ() << ", " << this->vecMsd_stdev.getZ() << ", ";
+    file << this->vecDmsd.getX() << ", " << this->vecDmsd_stdev.getX() << ", ";
+    file << this->vecDmsd.getY() << ", " << this->vecDmsd_stdev.getY() << ", ";
+    file << this->vecDmsd.getZ() << ", " << this->vecDmsd_stdev.getZ();  
 
     file.close();
 }
@@ -994,3 +1049,35 @@ void NMR_PFGSE::simulation_omp()
     cout << "Completed."; printElapsedTime(begin_time, finish_time);
     return;
 }
+
+double NMR_PFGSE::mean(vector<double> &_vec)
+{
+	double sum = 0;
+	double size = (double) _vec.size();
+
+    for (uint id = 0; id < _vec.size(); id++)
+    {
+        sum += _vec[id];
+    }
+
+    return (sum / size);
+}
+
+double NMR_PFGSE::stdDev(vector<double> &_vec)
+{
+    return (*this).stdDev(_vec, (*this).mean(_vec));
+}
+
+double NMR_PFGSE::stdDev(vector<double> &_vec, double mean)
+{
+	double sum = 0.0;
+    int size = _vec.size();
+
+    for(uint idx = 0; idx < _vec.size(); idx++)
+    {
+        sum += (_vec[idx] - mean) * (_vec[idx] - mean); 
+    }
+
+    return sqrt(sum/((double) size));
+}
+

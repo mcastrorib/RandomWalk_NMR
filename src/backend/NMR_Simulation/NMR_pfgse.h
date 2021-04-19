@@ -44,9 +44,13 @@ public:
 	double RHS_threshold;
 	double D_sat;
 	double D_msd;
+	double D_msd_stdev;
 	double msd;
+	double msd_stdev;
 	Vector3D vecMsd;
+	Vector3D vecMsd_stdev;	
 	Vector3D vecDmsd;
+	Vector3D vecDmsd_stdev;
 	double SVp;
 	uint stepsTaken;
 	int currentTime;	
@@ -102,8 +106,13 @@ public:
 	void setGiromagneticRatio(double _value){ this->giromagneticRatio = _value; }
 	void setD_sat(double _value) { this->D_sat = _value; }
 	void setD_msd(double _value) { this->D_msd = _value; }
+	void setD_msd_StdDev(double _value) { this->D_msd_stdev = _value; }
+	
 	void setMsd(double _value) { this->msd = _value; }
+	void setMsdStdDev(double _value) { this->D_msd_stdev = _value; }
+	
 	void setSVp(double _value) { this->SVp = _value; }
+
 	void setVecMsd(double msdX, double msdY, double msdZ) 
 	{
 		this->vecMsd.setX(msdX);
@@ -118,6 +127,20 @@ public:
 		this->vecDmsd.setZ(DmsdZ);
 		this->vecDmsd.setNorm();
 	}
+	void setVecMsdStdDev(double msdX_stdev, double msdY_stdev, double msdZ_stdev) 
+	{
+		this->vecMsd_stdev.setX(msdX_stdev);
+		this->vecMsd_stdev.setY(msdY_stdev);
+		this->vecMsd_stdev.setZ(msdZ_stdev);
+		this->vecMsd_stdev.setNorm();
+	}
+	void setVecDmsdStdDev(double DmsdX_stdev, double DmsdY_stdev, double DmsdZ_stdev) 
+	{
+		this->vecDmsd_stdev.setX(DmsdX_stdev);
+		this->vecDmsd_stdev.setY(DmsdY_stdev);
+		this->vecDmsd_stdev.setZ(DmsdZ_stdev);
+		this->vecDmsd_stdev.setNorm();
+	}
 
 	void resetCurrentTime() { this->currentTime = 0; }
 	void incrementCurrentTime() { this->currentTime++; }
@@ -128,9 +151,13 @@ public:
 	double getGiromagneticRatio() {return this->giromagneticRatio; }
 	double getD_sat() { return this->D_sat; }
 	double getD_msd() { return this->D_msd; }
+	double getD_msd_stdev() { return this->D_msd_stdev; }
 	double getMsd() { return this->msd; }
+	double getMsd_stdev() { return this->msd_stdev; }
 	Vector3D getVecMsd() { return this->vecMsd; }
+	Vector3D getVecMsd_stdev() { return this->vecMsd_stdev; }
 	Vector3D getVecDmsd() { return this->vecDmsd; }
+	Vector3D getVecDmsd_stdev() { return this->vecDmsd_stdev; }
 	double getSVp() { return this->SVp; }
 	int getCurrentTime() { return this->currentTime; }
 	
@@ -143,6 +170,9 @@ private:
 	void simulation_cuda_noflux();
 	void simulation_cuda_periodic();
 	void simulation_omp();
+	double mean(vector<double> &_vec);
+	double stdDev(vector<double> &_vec);
+	double stdDev(vector<double> &_vec, double mean);
 };
 
 #endif

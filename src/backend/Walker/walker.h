@@ -202,7 +202,7 @@ public:
     inline void computeDecreaseFactor(double _walkerStepLength,
                                       double _diffusionCoefficient)
     {
-        // A factor: see ref. Bergman 1995
+        // A factor: see ref. Bergman 1995 -- 1.e-3 is used to convert surface relaxivity measure from um/s to um/ms
         double Afactor = 2.0 / 3.0;
         this->decreaseFactor = 1.0 - Afactor * ((this->surfaceRelaxivity * _walkerStepLength) / (_diffusionCoefficient * 1e03));
     };

@@ -51,6 +51,7 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
 
     // --- Wave-vector 'k' computation.
     this->USE_WAVEVECTOR_TWOPI = otherConfig.USE_WAVEVECTOR_TWOPI;
+    this->ALLOW_WALKER_SAMPLING = otherConfig.ALLOW_WALKER_SAMPLING;
 
     // --- PFGSE SAVE. 
     this->SAVE_MODE = otherConfig.SAVE_MODE;
@@ -102,6 +103,7 @@ void pfgse_config::readConfigFile(const string configFile)
             else if(token == "THRESHOLD_TYPE") (*this).readThresholdType(content);
             else if(token == "THRESHOLD_VALUE") (*this).readThresholdValue(content);
             else if(token == "USE_WAVEVECTOR_TWOPI") (*this).readUseWaveVectorTwoPi(content);
+            else if(token == "ALLOW_WALKER_SAMPLING") (*this).readAllowWalkerSampling(content);
             else if(token == "SAVE_MODE") (*this).readSaveMode(content);
             else if(token == "SAVE_PFGSE") (*this).readSavePFGSE(content);
             else if(token == "SAVE_COLLISIONS") (*this).readSaveCollisions(content);
@@ -282,6 +284,12 @@ void pfgse_config::readUseWaveVectorTwoPi(string s)
 {
     if(s == "true") this->USE_WAVEVECTOR_TWOPI = true;
     else this->USE_WAVEVECTOR_TWOPI = false;
+}
+
+void pfgse_config::readAllowWalkerSampling(string s)
+{
+    if(s == "true") this->ALLOW_WALKER_SAMPLING = true;
+    else this->ALLOW_WALKER_SAMPLING = false;
 }
 
 void pfgse_config::readSaveMode(string s)
