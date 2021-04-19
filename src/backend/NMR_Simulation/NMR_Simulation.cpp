@@ -78,6 +78,7 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
 
     // assign attributes from rwnmr config files
     (*this).setNumberOfWalkers(this->rwNMR_config.getWalkers());
+    (*this).setWalkerSamples(this->rwNMR_config.getWalkerSamples());
     (*this).setFreeDiffusionCoefficient(this->rwNMR_config.getD0());
     (*this).setNumberOfStepsPerEcho(this->rwNMR_config.getStepsPerEcho());
     (*this).setGPU(this->rwNMR_config.getGPUUsage());
@@ -297,7 +298,8 @@ void NMR_Simulation::readImage()
     (*this).countPoresInBitBlock();
     (*this).countInterfacePoreMatrix();
 
-    // ChordLengthHistogram chordsHistogram(this->bitBlock);
+    ChordLengthHistogram chordsHistogram(this->bitBlock);
+    chordsHistogram.save(this->simulationDirectory);
 }
 
 void NMR_Simulation::setWalkers(void)
@@ -1038,6 +1040,11 @@ void NMR_Simulation::setNumberOfWalkers(uint _numberOfWalkers)
     this->numberOfWalkers = _numberOfWalkers;
 }
 
+void NMR_Simulation::setWalkerSamples(uint _samples)
+{   
+    this->walkerSamples = _samples;
+}
+
 void NMR_Simulation::updateWalkerOccupancy()
 {   
     this->walkerOccupancy = (this->numberOfWalkers / ((double) this->numberOfPores)); 
@@ -1737,7 +1744,7 @@ string NMR_Simulation::createDirectoryForResults(string _path)
 
 void NMR_Simulation::saveImageInfo(string filedir)
 {
-    string filename = filedir + "/NMR_imageInfo.txt";
+    string filename = filedir + "/ImageInfo.txt";
 
     fileHandler external_file(filename);
     external_file.writeImageInfo(this->imagePath.completePath, 

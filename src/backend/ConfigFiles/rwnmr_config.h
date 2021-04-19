@@ -15,6 +15,7 @@ public:
     string config_filepath;
     string NAME;
     uint WALKERS;
+    uint WALKER_SAMPLES;
     string WALKERS_PLACEMENT;
     uint PLACEMENT_DEVIATION;
     string RHO_TYPE;
@@ -74,6 +75,7 @@ public:
     // -- RW Params
     void readName(string s);
     void readWalkers(string s);
+    void readWalkerSamples(string s);
     void readWalkersPlacement(string s);
     void readPlacementDeviation(string s);
     void readRhoType(string s);
@@ -118,6 +120,7 @@ public:
     string getConfigFilepath() {return this->config_filepath; }
     string getName(){ return this->NAME;}
     uint getWalkers(){ return this->WALKERS;}
+    uint getWalkerSamples(){ return this->WALKER_SAMPLES;}
     string getWalkersPlacement(){ return this->WALKERS_PLACEMENT;}
     uint getPlacementDeviation(){ return this->PLACEMENT_DEVIATION;}
     string getRhoType(){ return this->RHO_TYPE;}

@@ -1,6 +1,7 @@
 // include C++ standard libraries
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <math.h>
 
@@ -272,4 +273,33 @@ void ChordLengthHistogram::createAmpsVector()
 	// fill chords Z
 	for(uint idx = 0; idx < this->chordsZ.size(); idx++) 
 		this->ampsZ[chordsZ[idx] - 1] += 1.0;	
+}
+
+void ChordLengthHistogram::save(string path)
+{
+    string filename = path + "/ChordsLengthHistogram.txt";
+
+    ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    file << "NMR - Chords Length histogram" << endl;
+    file << "Chord length, ";
+    file << "Occur(x), ";
+    file << "Occur(y), ";
+    file << "Occur(z)" << endl;
+
+    for (uint index = 0; index < this->size; index++)
+    {
+        file << this->bins[index] << ", ";
+        file << this->ampsX[index] << ", ";
+        file << this->ampsY[index] << ", ";
+        file << this->ampsZ[index] << endl;
+    }
+
+    file.close();
 }

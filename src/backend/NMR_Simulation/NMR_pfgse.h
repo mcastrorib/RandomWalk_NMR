@@ -81,6 +81,7 @@ public:
 	void recoverD(string _method = "sat");
 	void recoverD_sat();
 	void recoverD_msd();
+	void recoverD_msd_withSampling();	
 	void recoverSVp(string _method = "sat");
 	void clear();
 	void resetNMR();

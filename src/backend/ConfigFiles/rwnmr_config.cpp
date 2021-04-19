@@ -12,7 +12,7 @@
 using namespace std;
 
 // default constructors
-rwnmr_config::rwnmr_config(const string configFile) : config_filepath(configFile)
+rwnmr_config::rwnmr_config(const string configFile) : config_filepath(configFile), WALKER_SAMPLES(1)
 {
 	vector<double> RHO();
 	
@@ -28,6 +28,7 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
 	this->config_filepath = otherConfig.config_filepath;
     this->NAME = otherConfig.NAME;
     this->WALKERS = otherConfig.WALKERS;
+    this->WALKER_SAMPLES = otherConfig.WALKER_SAMPLES;
     this->WALKERS_PLACEMENT = otherConfig.WALKERS_PLACEMENT;
     this->PLACEMENT_DEVIATION = otherConfig.PLACEMENT_DEVIATION;
     this->RHO_TYPE = otherConfig.RHO_TYPE;
@@ -97,6 +98,7 @@ void rwnmr_config::readConfigFile(const string configFile)
 
 			if(token == "NAME")	(*this).readName(content);
 			else if(token == "WALKERS") (*this).readWalkers(content);
+			else if(token == "WALKER_SAMPLES") (*this).readWalkerSamples(content);
 			else if(token == "WALKERS_PLACEMENT") (*this).readWalkersPlacement(content);
 			else if(token == "PLACEMENT_DEVIATION") (*this).readPlacementDeviation(content);
 			else if(token == "RHO_TYPE") (*this).readRhoType(content);
@@ -139,6 +141,11 @@ void rwnmr_config::readName(string s)
 void rwnmr_config::readWalkers(string s)
 {
 	this->WALKERS = std::stoi(s);
+}
+
+void rwnmr_config::readWalkerSamples(string s)
+{
+	this->WALKER_SAMPLES = std::stoi(s);
 }
 
 void rwnmr_config::readWalkersPlacement(string s)

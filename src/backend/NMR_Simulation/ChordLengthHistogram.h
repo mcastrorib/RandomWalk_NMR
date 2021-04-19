@@ -4,6 +4,7 @@
 // include string stream manipulation functions
 #include <sstream>
 #include <iomanip>
+#include <string>
 #include <vector>
 #include "NMR_defs.h"
 #include "../BitBlock/bitBlock.h"
@@ -61,7 +62,7 @@ public:
 	void setSize(int _size) { this->size = _size; }
 	void setGap(double _gap) { this->gap = _gap; }
 	void setBitBlock(BitBlock &_bitBlock) { this->bitBlock = &_bitBlock; }
-	
+	void save(string path);
 };
 
 #endif

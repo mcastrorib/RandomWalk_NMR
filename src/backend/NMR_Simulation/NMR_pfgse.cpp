@@ -209,13 +209,8 @@ void NMR_PFGSE::correctExposureTimes()
 			stepsPerExpTime += stepsPerExpTime % (uint) stepsPerEcho;
 		}
 
-		// cout << "time (original) = " << this->exposureTimes[time] << ",\t";
-		// cout << "time (corrected) = " << stepsPerExpTime * timePerStep << "; \t";
-		// cout << stepsPerExpTime << " rw-steps." << endl;
-
 		this->exposureTimes[time] = stepsPerExpTime * timePerStep;
 	}
-	// cout << "-- Done" << endl;
 }
 
 void NMR_PFGSE::setName()
@@ -466,18 +461,21 @@ void NMR_PFGSE::recoverD(string _method)
 void NMR_PFGSE::recoverD_sat()
 {
 	double time = omp_get_wtime();
+	
 	cout << "- Stejskal-Tanner (s&t):" << endl;
 	LeastSquareAdjust lsa(this->RHS, this->LHS);
 	lsa.setThreshold(this->RHS_threshold);
 	lsa.solve();
 	(*this).setD_sat(lsa.getB());
-	cout << "Dnew (s&t) = " << (*this).getD_sat() << endl;
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << ") {s&t} = " << (*this).getD_sat() << endl;
+
 	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 
 void NMR_PFGSE::recoverD_msd()
 {
 	double time = omp_get_wtime();
+
 	cout << "- Mean squared displacement (msd):" << endl;
 	double squaredDisplacement = 0.0;
 	double displacementX, displacementY, displacementZ;
@@ -536,10 +534,80 @@ void NMR_PFGSE::recoverD_msd()
 					   (nDz / (2.0 * (*this).getExposureTime()))); 
 
 	
-	cout << "Dnew (msd) = " << (*this).getD_msd();
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << ") {msd} = " << (*this).getD_msd();
 	cout << "Dxx = " << this->vecDmsd.getX() << ", \t";
 	cout << "Dyy = " << this->vecDmsd.getY() << ", \t";
 	cout << "Dzz = " << this->vecDmsd.getZ() << endl;
+
+	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
+}
+
+void NMR_PFGSE::recoverD_msd_withSampling()
+{
+	double time = omp_get_wtime();
+	cout << "- Mean squared displacement (msd) [with sampling]:" << endl;
+	double squaredDisplacement = 0.0;
+	double displacementX, displacementY, displacementZ;
+	double X0, Y0, Z0;
+	double XF, YF, ZF;
+	double normalizedDisplacement;
+	double nDx = 0.0; double nDy = 0.0; double nDz = 0.0;
+	double resolution = this->NMR.getImageVoxelResolution();
+	double aliveWalkerFraction = 0.0;
+
+	// debug
+	// int imgX, imgY, imgZ;
+	for(uint idx = 0; idx < this->NMR.numberOfWalkers; idx++)
+	{
+		Walker particle(this->NMR.walkers[idx]);
+
+		// Get walker displacement
+		// X:
+		X0 = (double) particle.initialPosition.x;
+		XF = (double) particle.position_x;
+		displacementX = resolution * (XF - X0);
+		
+		// Y:
+		Y0 = (double) particle.initialPosition.y;
+		YF = (double) particle.position_y;
+		displacementY = resolution * (YF - Y0);
+		
+		// Z:
+		Z0 = (double) particle.initialPosition.z;
+		ZF = (double) particle.position_z;
+		displacementZ = resolution * (ZF - Z0);
+
+		nDx += (particle.energy * displacementX * displacementX);
+		nDy += (particle.energy * displacementY * displacementY);
+		nDz += (particle.energy * displacementZ * displacementZ);
+
+		normalizedDisplacement = displacementX*displacementX + 
+								 displacementY*displacementY + 
+								 displacementZ*displacementZ;
+
+		squaredDisplacement += (particle.energy * normalizedDisplacement);
+		aliveWalkerFraction += particle.energy;
+ 	}
+
+	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
+	squaredDisplacement = squaredDisplacement / aliveWalkerFraction;
+	(*this).setD_msd(squaredDisplacement/(6.0 * (*this).getExposureTime()));
+	(*this).setMsd(squaredDisplacement);
+
+	nDx /= aliveWalkerFraction;
+	nDy /= aliveWalkerFraction;
+	nDz /= aliveWalkerFraction;
+	(*this).setVecMsd(nDx, nDy, nDz);
+	(*this).setVecDmsd((nDx / (2.0 * (*this).getExposureTime())), 
+					   (nDy / (2.0 * (*this).getExposureTime())), 
+					   (nDz / (2.0 * (*this).getExposureTime()))); 
+
+	
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << ") {msd} = " << (*this).getD_msd();
+	cout << "Dxx = " << this->vecDmsd.getX() << ", \t";
+	cout << "Dyy = " << this->vecDmsd.getY() << ", \t";
+	cout << "Dzz = " << this->vecDmsd.getZ() << endl;
+
 	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 

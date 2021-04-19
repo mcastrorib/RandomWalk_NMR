@@ -55,6 +55,7 @@ public:
     double SVp;
     double walkerOccupancy;
     uint numberOfWalkers;
+    uint walkerSamples;
 
     // vector objects
     vector<Pore> pores;
@@ -113,6 +114,7 @@ public:
         this->porosity = _otherSimulation.porosity;
         this->walkerOccupancy = _otherSimulation.walkerOccupancy;
         this->numberOfWalkers = _otherSimulation.numberOfWalkers;
+        this->walkerSamples = _otherSimulation.walkerSamples;
 
         // vectors attributes copy pointers to otherImage's vectors
         // should be tested if it works or if it should be done explicitly
@@ -242,6 +244,7 @@ public:
     void createPoreList(Point3D _vertex1, Point3D _vertex2);
     void freePoreList(){ if(this->pores.size() > 0) this->pores.clear();}
     void setNumberOfWalkers(uint _numberOfWalkers = 0);
+    void setWalkerSamples(uint _samples);
     void updateWalkerOccupancy();
     void createWalkersIDList();
     uint removeRandomIndexFromPool(vector<uint> &_pool, uint _randomIndex);
@@ -318,6 +321,7 @@ public:
     inline uint getNumberOfPores() { return this->numberOfPores; }
     inline double getWalkerOccupancy() { return this->walkerOccupancy; }
     inline uint getNumberOfWalkers() { return this->numberOfWalkers; }
+    inline uint getWalkerSamples() { return this->walkerSamples; }
     inline vector<Pore> getPores() { return this->pores; }
     inline vector<Walker> getWalkers() { return this->walkers; }
     inline vector<double> getGlobalEnergy() { return this->globalEnergy; }
