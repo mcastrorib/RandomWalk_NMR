@@ -109,7 +109,7 @@ public:
 	void setD_msd_StdDev(double _value) { this->D_msd_stdev = _value; }
 	
 	void setMsd(double _value) { this->msd = _value; }
-	void setMsdStdDev(double _value) { this->D_msd_stdev = _value; }
+	void setMsdStdDev(double _value) { this->msd_stdev = _value; }
 	
 	void setSVp(double _value) { this->SVp = _value; }
 
