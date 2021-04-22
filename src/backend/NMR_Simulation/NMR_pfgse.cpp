@@ -40,7 +40,6 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   vecMsd_stdev(0.0, 0.0, 0.0),
 										   vecDmsd(0.0, 0.0, 0.0),
 										   vecDmsd_stdev(0.0, 0.0, 0.0),
-										   SVp(0.0),
 										   stepsTaken(0),
 										   currentTime(0),
 										   mpi_rank(_mpi_rank),
@@ -49,9 +48,11 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	// vectors object init
 	vector<double> exposureTimes();
 	vector<double> gradient();
-	vector<double> LHS();
 	vector<double> RHS();
 	vector<double> Mkt();
+	vector<double> Mkt_stdev();
+	vector<double> LHS();
+	vector<double> LHS_stdev();
 	vector<Vector3D> vecGradient();
 	vector<Vector3D> vecK();
 
@@ -114,7 +115,6 @@ void NMR_PFGSE::run()
 		cout << "-- Results:" << endl;
 		(*this).recoverD("sat");
 		(*this).recoverD("msd");
-		(*this).recoverSVp();
 		
 		// save results in disc
 		(*this).save(); 
@@ -245,6 +245,9 @@ void NMR_PFGSE::setVectorMkt()
 {
 	if(this->Mkt.size() > 0) this->Mkt.clear();
 	this->Mkt.reserve(this->gradientPoints);
+
+	if(this->Mkt_stdev.size() > 0) this->Mkt_stdev.clear();
+	this->Mkt_stdev.reserve(this->gradientPoints);
 }
 
 void NMR_PFGSE::setGradientVector()
@@ -401,11 +404,16 @@ void NMR_PFGSE::setVectorLHS()
 {
 	if(this->LHS.size() > 0) this->LHS.clear();
 	this->LHS.reserve(this->gradientPoints);
+
+	if(this->LHS_stdev.size() > 0) this->LHS_stdev.clear();
+	this->LHS_stdev.reserve(this->gradientPoints);
 }
 
 double NMR_PFGSE::computeLHS(double _Mg, double _M0)
 {
 	return log(fabs(_Mg/_M0));
+	// return log(fabs(_Mg));
+
 }
 
 double NMR_PFGSE::computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio)
@@ -418,6 +426,18 @@ void NMR_PFGSE::runSequence()
 	// run pfgse experiment -- this method will fill Mkt vector
 	(*this).simulation();
 
+	if(this->PFGSE_config.getAllowWalkerSampling())
+	{
+		(*this).runSequenceWithoutSampling();
+		(*this).runSequenceWithSampling();
+	} else
+	{
+		(*this).runSequenceWithoutSampling();
+	}
+}
+
+void NMR_PFGSE::runSequenceWithoutSampling()
+{
 	// get M0 (reference value)
 	int idx_begin = 0;
 	int idx_end = this->gradientPoints;	
@@ -432,6 +452,144 @@ void NMR_PFGSE::runSequence()
 		lhs_value = (*this).computeLHS(this->Mkt[point], M0);
 		this->LHS.push_back(lhs_value);
 	}
+
+	// fill standard deviation vectors with null values
+	for(uint point = 0; point < this->gradientPoints; point++)
+	{
+		this->Mkt_stdev.push_back(0.0);
+		this->LHS_stdev.push_back(0.0);
+	}
+}
+
+void NMR_PFGSE::runSequenceWithSampling()
+{
+	double time = omp_get_wtime();
+	cout << "- Getting magnetization levels [with sampling]:" << endl;
+	int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;
+	double resolution = this->NMR.getImageVoxelResolution();
+	double dX, dY, dZ;
+	double phase, magnitude;
+
+	/* 
+		alloc table for Mkt data each row will represent a wavevector K value, 
+		while each column represent a sample of random walkers
+	*/
+	double **Mkt_samples;
+	Mkt_samples = new double*[this->gradientPoints];
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		Mkt_samples[kIdx] = new double[this->NMR.walkerSamples];
+	} 	
+
+	// initialize each element in table with zeros
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+		{
+			Mkt_samples[kIdx][sample] = 0.0;
+		}
+	}	
+
+	// measure msd and Dmsd for each sample of walkers
+	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+	{			
+		for(uint idx = 0; idx < walkersPerSample; idx++)
+		{
+			int offset = sample * walkersPerSample;
+			Walker particle(this->NMR.walkers[idx + offset]);
+
+			// Get walker displacement
+			dX = ((double) particle.initialPosition.x - (double) particle.position_x);
+			dY = ((double) particle.initialPosition.y - (double) particle.position_y);
+			dZ = ((double) particle.initialPosition.z - (double) particle.position_z);
+			Vector3D dR(resolution * dX, resolution * dY, resolution * dZ);
+			
+			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+			{
+				phase = this->vecK[kIdx].dotProduct(dR);
+				magnitude = cos(phase) * particle.energy;
+				Mkt_samples[kIdx][sample] += magnitude;	
+			}
+		}		 
+	}
+
+	// Normalize for k=0
+	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+	{
+		double M0t = Mkt_samples[0][sample];
+		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+		{
+			Mkt_samples[kIdx][sample] /= M0t;
+		}
+	}
+
+	/* 
+		alloc table for LHS data each row will represent a wavevector K value, 
+		while each column represent a sample of random walkers
+	*/
+	double **LHS_samples;
+	LHS_samples = new double*[this->gradientPoints];
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		LHS_samples[kIdx] = new double[this->NMR.walkerSamples];
+	} 	
+
+	// get M0 (reference value)
+	double lhs_value;
+	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+	{
+		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+		{	
+			LHS_samples[kIdx][sample] = (*this).computeLHS(Mkt_samples[kIdx][sample], Mkt_samples[0][sample]);
+		}
+	}
+
+	// get data statistics 
+	vector<double> meanMkt; meanMkt.reserve(this->gradientPoints);
+	vector<double> stDevMkt; stDevMkt.reserve(this->gradientPoints);
+	vector<double> meanLHS; meanLHS.reserve(this->gradientPoints);
+	vector<double> stDevLHS; stDevLHS.reserve(this->gradientPoints);
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		meanMkt.push_back((*this).mean(Mkt_samples[kIdx], this->NMR.walkerSamples));
+		stDevMkt.push_back((*this).stdDev(Mkt_samples[kIdx], this->NMR.walkerSamples, meanMkt[kIdx]));
+		meanLHS.push_back((*this).mean(LHS_samples[kIdx], this->NMR.walkerSamples));
+		stDevLHS.push_back((*this).stdDev(LHS_samples[kIdx], this->NMR.walkerSamples, meanLHS[kIdx]));
+	}
+
+	// console log for debug
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{	
+		cout << "M(" << this->vecK[kIdx].getNorm() << "," << (*this).getExposureTime((*this).getCurrentTime()) << ") = ";
+		cout << meanMkt[kIdx] << " +/- " << stDevMkt[kIdx] << ", ";
+		cout << "LHS: " << meanLHS[kIdx] << " +/- " << stDevLHS[kIdx] << endl;
+	}
+
+	// copy data to class members
+	// this->Mkt = meanMkt;
+	// this->Mkt_stdev = stDevMkt;
+	// this->LHS = meanLHS;
+	// this->LHS_stdev = stDevLHS;
+
+	// free data for Mkt_samples
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		delete [] Mkt_samples[kIdx];
+		Mkt_samples[kIdx] = NULL;
+	}
+	delete [] Mkt_samples;
+	Mkt_samples = NULL; 
+
+	// free data for LHS_samples
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		delete [] LHS_samples[kIdx];
+		LHS_samples[kIdx] = NULL;
+	}
+	delete [] LHS_samples;
+	LHS_samples = NULL; 
+
+	cout << "in " << omp_get_wtime() - time << " seconds." << endl;	
 }
 
 void NMR_PFGSE::simulation()
@@ -452,20 +610,20 @@ void NMR_PFGSE::recoverD(string _method)
 {
 	if(_method == "sat")
 	{
-		(*this).recoverD_sat();
+		(*this).recoverDsat();
 	} else
 	{
 		if(_method == "msd")
 		{
 			if(this->PFGSE_config.getAllowWalkerSampling())
 			{
-				(*this).recoverD_msd_withSampling();
-			} else	(*this).recoverD_msd();
+				(*this).recoverDmsdWithSampling();
+			} else	(*this).recoverDmsdWithoutSampling();
 		}
 	}
 }
 
-void NMR_PFGSE::recoverD_sat()
+void NMR_PFGSE::recoverDsat()
 {
 	double time = omp_get_wtime();
 	
@@ -479,7 +637,7 @@ void NMR_PFGSE::recoverD_sat()
 	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 
-void NMR_PFGSE::recoverD_msd()
+void NMR_PFGSE::recoverDmsdWithoutSampling()
 {
 	double time = omp_get_wtime();
 
@@ -549,7 +707,7 @@ void NMR_PFGSE::recoverD_msd()
 	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 
-void NMR_PFGSE::recoverD_msd_withSampling()
+void NMR_PFGSE::recoverDmsdWithSampling()
 {
 	double time = omp_get_wtime();
 	cout << "- Mean squared displacement (msd) [with sampling]:" << endl;
@@ -660,23 +818,6 @@ void NMR_PFGSE::recoverD_msd_withSampling()
 	cout << "Dzz = " << this->vecDmsd.getZ() << " +/- " << this->vecDmsd_stdev.getZ() << endl;
 	
 	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
-}
-
-void NMR_PFGSE::recoverSVp(string method)
-{
-	cout << "- Pore surface-volume ratio (SVp):" << endl;
-	double Dt;
-	if(method == "sat") Dt = (*this).getD_sat();
-	else Dt = (*this).getD_msd();
-
-	double D0 = this->NMR.getDiffusionCoefficient();
-
-	// recover S/V for short observation times (see ref. Sorland)
-	double Sv;
-	Sv = (1.0 - (Dt / D0));
-	Sv *= 2.25 * sqrt((0.5*TWO_PI) / (D0 * (*this).getExposureTime()));
-	(*this).setSVp(Sv);
-	cout << "SVp ~= " << (*this).getSVp() << endl;
 }
 
 void NMR_PFGSE::reset(double newBigDelta)
@@ -803,7 +944,6 @@ void NMR_PFGSE::writeParameters()
     file << "D_sat, ";
     file << "D_msd, ";
     file << "Msd, ";
-	file << "SVp, ";
     file << "RHS Threshold" << endl;
     file << this->gradientPoints << ", ";
     file << this->exposureTime << ", ";
@@ -813,7 +953,6 @@ void NMR_PFGSE::writeParameters()
     file << this->D_sat << ", ";
     file << this->D_msd << ", ";
     file << this->msd << ", ";
-    file << this->SVp << ", ";
     file << threshold << endl << endl;    
 
     file.close();
@@ -1063,6 +1202,18 @@ double NMR_PFGSE::mean(vector<double> &_vec)
     return (sum / size);
 }
 
+double NMR_PFGSE::mean(double *_vec, int _size)
+{
+	double sum = 0;
+
+    for (uint id = 0; id < _size; id++)
+    {
+        sum += _vec[id];
+    }
+
+    return (sum / (double) _size);
+}
+
 double NMR_PFGSE::stdDev(vector<double> &_vec)
 {
     return (*this).stdDev(_vec, (*this).mean(_vec));
@@ -1081,3 +1232,19 @@ double NMR_PFGSE::stdDev(vector<double> &_vec, double mean)
     return sqrt(sum/((double) size));
 }
 
+double NMR_PFGSE::stdDev(double *_vec, int _size)
+{
+    return (*this).stdDev(_vec, _size, (*this).mean(_vec, _size));
+}
+
+double NMR_PFGSE::stdDev(double *_vec, int _size, double mean)
+{
+	double sum = 0.0;
+
+    for(uint idx = 0; idx < _size; idx++)
+    {
+        sum += (_vec[idx] - mean) * (_vec[idx] - mean); 
+    }
+
+    return sqrt(sum/((double) _size));
+}

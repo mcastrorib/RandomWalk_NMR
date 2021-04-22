@@ -263,7 +263,7 @@ __global__ void PFG_measure(int *walker_x0,
 
         double local_phase = dotProduct(k_X, k_Y, k_Z, dX, dY, dZ) * voxelResolution; 
         double magnitude_real_value = cos(local_phase);
-        double magnitude_imag_value = sin(local_phase);
+        // double magnitude_imag_value = sin(local_phase);
     
         // update global value 
         phase[walkerId] = magnitude_real_value * energy[walkerId];
@@ -1046,7 +1046,7 @@ void NMR_PFGSE::simulation_cuda_periodic()
 {
     cout << "- starting RW-PFGSE simulation (in GPU) ";
 
-    bool time_verbose = false;
+    bool time_verbose = true;
     double copy_time = 0.0;
     double kernel_time = 0.0;
     double buffer_time = 0.0;

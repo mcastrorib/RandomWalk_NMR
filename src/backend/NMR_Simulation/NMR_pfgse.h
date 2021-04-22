@@ -30,16 +30,20 @@ public:
 	double gradient_Z;
 	vector<Vector3D> vecGradient;
 	vector<Vector3D> vecK;
-
+	vector<double> RHS;
+	
 	int gradientPoints;
 	vector<double> exposureTimes;
 	double exposureTime;
 	double pulseWidth;
 	double giromagneticRatio;
 
-	vector<double> LHS;
-	vector<double> RHS;
+
 	vector<double> Mkt;
+	vector<double> Mkt_stdev;
+	vector<double> LHS;
+	vector<double> LHS_stdev;
+
 	double M0;
 	double RHS_threshold;
 	double D_sat;
@@ -51,7 +55,6 @@ public:
 	Vector3D vecMsd_stdev;	
 	Vector3D vecDmsd;
 	Vector3D vecDmsd_stdev;
-	double SVp;
 	uint stepsTaken;
 	int currentTime;	
 
@@ -81,12 +84,13 @@ public:
 	void set();
 	void run();
 	void runSequence();
+	void runSequenceWithoutSampling();
+	void runSequenceWithSampling();
 	void simulation();
 	void recoverD(string _method = "sat");
-	void recoverD_sat();
-	void recoverD_msd();
-	void recoverD_msd_withSampling();	
-	void recoverSVp(string _method = "sat");
+	void recoverDsat();
+	void recoverDmsdWithoutSampling();
+	void recoverDmsdWithSampling();	
 	void clear();
 	void resetNMR();
 	void updateWalkersXIrate(uint _rwsteps);
@@ -109,10 +113,7 @@ public:
 	void setD_msd_StdDev(double _value) { this->D_msd_stdev = _value; }
 	
 	void setMsd(double _value) { this->msd = _value; }
-	void setMsdStdDev(double _value) { this->msd_stdev = _value; }
-	
-	void setSVp(double _value) { this->SVp = _value; }
-
+	void setMsdStdDev(double _value) { this->msd_stdev = _value; }	
 	void setVecMsd(double msdX, double msdY, double msdZ) 
 	{
 		this->vecMsd.setX(msdX);
@@ -158,7 +159,6 @@ public:
 	Vector3D getVecMsd_stdev() { return this->vecMsd_stdev; }
 	Vector3D getVecDmsd() { return this->vecDmsd; }
 	Vector3D getVecDmsd_stdev() { return this->vecDmsd_stdev; }
-	double getSVp() { return this->SVp; }
 	int getCurrentTime() { return this->currentTime; }
 	
 
@@ -171,8 +171,11 @@ private:
 	void simulation_cuda_periodic();
 	void simulation_omp();
 	double mean(vector<double> &_vec);
+	double mean(double *_vec, int _size);
 	double stdDev(vector<double> &_vec);
 	double stdDev(vector<double> &_vec, double mean);
+	double stdDev(double *_vec, int _size);
+	double stdDev(double *_vec, int _size, double mean);
 };
 
 #endif
