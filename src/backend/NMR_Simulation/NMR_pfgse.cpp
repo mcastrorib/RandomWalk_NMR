@@ -32,6 +32,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   PFGSE_config(_pfgseConfig),
 										   M0(0.0),
 										   D_sat(0.0),
+										   D_sat_stdev(0.0),
 										   D_msd(0.0),
 										   D_msd_stdev(0.0),
 										   msd(0.0),
@@ -42,6 +43,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   vecDmsd_stdev(0.0, 0.0, 0.0),
 										   stepsTaken(0),
 										   currentTime(0),
+										   DsatAdjustSamples(0),
 										   mpi_rank(_mpi_rank),
 										   mpi_processes(_mpi_processes)
 {
@@ -67,7 +69,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	this->giromagneticRatio = this->PFGSE_config.getGiromagneticRatio();
 	if(this->PFGSE_config.getUseWaveVectorTwoPi()) this->giromagneticRatio *= TWO_PI;
 
-	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
+	(*this).setThresholdFromSamples(this->gradientPoints);
 	(*this).setGradientVector();
 	(*this).setVectorK();
 }
@@ -101,20 +103,10 @@ void NMR_PFGSE::run()
 		(*this).set();
 		(*this).runSequence();
 
-		// apply threshold for D(t) extraction
-		string threshold_type = this->PFGSE_config.getThresholdType();
-		double threshold = this->PFGSE_config.getThresholdValue();
-		if(threshold_type != "none")
-		{
-			if(threshold_type == "lhs") (*this).setThresholdFromLHSValue(threshold);
-			else if(threshold_type == "rhs") (*this).setThresholdFromRHSValue(threshold);
-			else if(threshold_type == "samples") (*this).setThresholdFromSamples(int(threshold));
-		}
-
 		// D(t) extraction
 		cout << "-- Results:" << endl;
-		(*this).recoverD("sat");
-		(*this).recoverD("msd");
+		(*this).recoverDsat();
+		(*this).recoverDmsd();
 		
 		// save results in disc
 		(*this).save(); 
@@ -124,6 +116,16 @@ void NMR_PFGSE::run()
 
 	double time = omp_get_wtime() - tick;
 	cout << endl << "pfgse_time: " << time << " seconds." << endl;
+}
+
+void NMR_PFGSE::applyThreshold()
+{
+	// apply threshold for D(t) extraction
+	string threshold_type = this->PFGSE_config.getThresholdType();
+	double threshold = this->PFGSE_config.getThresholdValue();
+	if(threshold_type == "lhs") (*this).setThresholdFromLHSValue(threshold);
+	else if(threshold_type == "samples") (*this).setThresholdFromSamples(int(threshold));
+	else (*this).setThresholdFromSamples(this->gradientPoints);
 }
 
 void NMR_PFGSE::resetNMR()
@@ -337,14 +339,6 @@ void NMR_PFGSE::setVectorRHS()
 	}
 }
 
-void NMR_PFGSE::setThresholdFromRHSValue(double _value)
-{
-	if(this->RHS.size() > 0 && _value > fabs(this->RHS.back()))
-		_value = fabs(this->RHS.back());
-
-	this->RHS_threshold = _value;			
-}
-
 void NMR_PFGSE::setThresholdFromLHSValue(double _value)
 {
 	if(this->LHS.size() == 0) 
@@ -369,26 +363,18 @@ void NMR_PFGSE::setThresholdFromLHSValue(double _value)
 		}
 
 		if(isGreater) idx--;
-		this->RHS_threshold = fabs(this->RHS[idx]);
+		this->DsatAdjustSamples = idx;
 	}
 }
 
 void NMR_PFGSE::setThresholdFromSamples(int _samples)
 {
-	if(_samples < this->RHS.size() && _samples > 1)	
-		this->RHS_threshold = fabs(this->RHS[_samples]);
-}
-
-void NMR_PFGSE::setThresholdFromFraction(double _fraction)
-{
-	if(_fraction > 0.0 && _fraction < 1.0)
+	if(_samples <= this->gradientPoints && _samples > 1)	
 	{
-		int samples = (int) (_fraction * (double) this->gradientPoints);
-		if(samples < 2) samples = 2;	
-		this->RHS_threshold = fabs(this->RHS[samples]);
-
+		this->DsatAdjustSamples = _samples;
 	}
 }
+
 
 double NMR_PFGSE::computeRHS(double _Gvalue)
 {
@@ -425,19 +411,61 @@ void NMR_PFGSE::runSequence()
 {
 	// run pfgse experiment -- this method will fill Mkt vector
 	(*this).simulation();
+}
 
-	if(this->PFGSE_config.getAllowWalkerSampling())
+void NMR_PFGSE::simulation()
+{
+	if(this->NMR.gpu_use == true)
 	{
-		(*this).runSequenceWithoutSampling();
-		(*this).runSequenceWithSampling();
-	} else
+		if(this->NMR.getBoundaryCondition() == "noflux") (*this).simulation_cuda_noflux();
+		else if(this->NMR.getBoundaryCondition() == "periodic") (*this).simulation_cuda_periodic();
+		else cout << "error: BC not set" << endl;
+	}
+	else
 	{
-		(*this).runSequenceWithoutSampling();
+		(*this).simulation_omp();
 	}
 }
 
-void NMR_PFGSE::runSequenceWithoutSampling()
+void NMR_PFGSE::recoverDsat()
 {
+	cout << "- Stejskal-Tanner (s&t) ";
+	double time = omp_get_wtime();
+
+	if(this->PFGSE_config.getAllowWalkerSampling())
+	{
+		cout << "with sampling:" <<  endl;
+		(*this).recoverDsatWithSampling();
+	} else	
+	{
+		cout << "without sampling:" <<  endl;
+		(*this).recoverDsatWithoutSampling();
+	}
+
+	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
+}
+
+void NMR_PFGSE::recoverDmsd()
+{
+	cout << "- Mean squared displacement (msd) " << endl;
+	double time = omp_get_wtime();
+
+	if(this->PFGSE_config.getAllowWalkerSampling())
+	{
+		cout << "with sampling:" <<  endl;
+		(*this).recoverDmsdWithSampling();
+	} else	
+	{
+		cout << "without sampling:" <<  endl;
+		(*this).recoverDmsdWithoutSampling();
+	}
+
+	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
+}
+
+void NMR_PFGSE::recoverDsatWithoutSampling()
+{
+	// Get magnetization levels 
 	// get M0 (reference value)
 	int idx_begin = 0;
 	int idx_end = this->gradientPoints;	
@@ -459,12 +487,28 @@ void NMR_PFGSE::runSequenceWithoutSampling()
 		this->Mkt_stdev.push_back(0.0);
 		this->LHS_stdev.push_back(0.0);
 	}
+
+	(*this).applyThreshold();
+	cout << "points to sample: " << this->DsatAdjustSamples << endl;
+	vector<double> RHS_buffer; RHS_buffer.reserve(this->DsatAdjustSamples);
+	vector<double> LHS_buffer; LHS_buffer.reserve(this->DsatAdjustSamples);
+	// fill RHS data buffer only once
+	for(int point = 0; point < this->DsatAdjustSamples; point++)
+	{
+		RHS_buffer.push_back(this->RHS[point]);
+		LHS_buffer.push_back(this->LHS[point]);
+	}
+	LeastSquareAdjust lsa(RHS_buffer, LHS_buffer);
+	lsa.setPoints(this->DsatAdjustSamples);
+	lsa.solve();
+	(*this).setD_sat(lsa.getB());
+
+	// log results
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat() << endl;	
 }
 
-void NMR_PFGSE::runSequenceWithSampling()
+void NMR_PFGSE::recoverDsatWithSampling()
 {
-	double time = omp_get_wtime();
-	cout << "- Getting magnetization levels [with sampling]:" << endl;
 	int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;
 	double resolution = this->NMR.getImageVoxelResolution();
 	double dX, dY, dZ;
@@ -490,7 +534,7 @@ void NMR_PFGSE::runSequenceWithSampling()
 		}
 	}	
 
-	// measure msd and Dmsd for each sample of walkers
+	// measure dR for each sample of walkers
 	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
 	{			
 		for(uint idx = 0; idx < walkersPerSample; idx++)
@@ -544,7 +588,9 @@ void NMR_PFGSE::runSequenceWithSampling()
 		}
 	}
 
-	// get data statistics 
+	/*
+		 get data statistics 
+	*/
 	vector<double> meanMkt; meanMkt.reserve(this->gradientPoints);
 	vector<double> stDevMkt; stDevMkt.reserve(this->gradientPoints);
 	vector<double> meanLHS; meanLHS.reserve(this->gradientPoints);
@@ -557,19 +603,52 @@ void NMR_PFGSE::runSequenceWithSampling()
 		stDevLHS.push_back((*this).stdDev(LHS_samples[kIdx], this->NMR.walkerSamples, meanLHS[kIdx]));
 	}
 
-	// console log for debug
-	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
-	{	
-		cout << "M(" << this->vecK[kIdx].getNorm() << "," << (*this).getExposureTime((*this).getCurrentTime()) << ") = ";
-		cout << meanMkt[kIdx] << " +/- " << stDevMkt[kIdx] << ", ";
-		cout << "LHS: " << meanLHS[kIdx] << " +/- " << stDevLHS[kIdx] << endl;
+	
+	// copy data to class members
+	this->Mkt = meanMkt;
+	this->Mkt_stdev = stDevMkt;
+	this->LHS = meanLHS;
+	this->LHS_stdev = stDevLHS;
+
+	// cout << "- Stejskal-Tanner (s&t):" << endl;
+	vector<double> Dsat; Dsat.reserve(this->NMR.walkerSamples);
+	(*this).applyThreshold();
+	cout << "points to sample: " << this->DsatAdjustSamples << endl;
+
+	vector<double> RHS_buffer; RHS_buffer.reserve(this->DsatAdjustSamples);
+	vector<double> LHS_buffer; LHS_buffer.reserve(this->DsatAdjustSamples);
+	// fill RHS data buffer only once
+	for(int point = 0; point < this->DsatAdjustSamples; point++)
+	{
+		RHS_buffer.push_back(this->RHS[point]);
 	}
 
-	// copy data to class members
-	// this->Mkt = meanMkt;
-	// this->Mkt_stdev = stDevMkt;
-	// this->LHS = meanLHS;
-	// this->LHS_stdev = stDevLHS;
+	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+	{
+		// fill LHS data buffer for each sample
+		if(LHS_buffer.size() > 0)
+		{
+			LHS_buffer.clear();
+		}
+		for(int point = 0; point < this->DsatAdjustSamples; point++)
+		{
+			LHS_buffer.push_back(LHS_samples[point][sample]);
+		}
+
+		LeastSquareAdjust lsa(RHS_buffer, LHS_buffer);
+		lsa.setPoints(this->DsatAdjustSamples);
+		lsa.solve();
+		Dsat.push_back(lsa.getB());		
+	}	
+
+	// 
+	double meanDsat = (*this).mean(Dsat);
+	(*this).setD_sat(meanDsat);
+	(*this).setD_sat_StdDev(((*this).stdDev(Dsat, meanDsat)));
+
+	// log results	
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat();
+	cout << " +/- " << (*this).getD_sat_stdev() << endl;
 
 	// free data for Mkt_samples
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
@@ -588,60 +667,10 @@ void NMR_PFGSE::runSequenceWithSampling()
 	}
 	delete [] LHS_samples;
 	LHS_samples = NULL; 
-
-	cout << "in " << omp_get_wtime() - time << " seconds." << endl;	
-}
-
-void NMR_PFGSE::simulation()
-{
-	if(this->NMR.gpu_use == true)
-	{
-		if(this->NMR.getBoundaryCondition() == "noflux") (*this).simulation_cuda_noflux();
-		else if(this->NMR.getBoundaryCondition() == "periodic") (*this).simulation_cuda_periodic();
-		else cout << "error: BC not set" << endl;
-	}
-	else
-	{
-		(*this).simulation_omp();
-	}
-}
-
-void NMR_PFGSE::recoverD(string _method)
-{
-	if(_method == "sat")
-	{
-		(*this).recoverDsat();
-	} else
-	{
-		if(_method == "msd")
-		{
-			if(this->PFGSE_config.getAllowWalkerSampling())
-			{
-				(*this).recoverDmsdWithSampling();
-			} else	(*this).recoverDmsdWithoutSampling();
-		}
-	}
-}
-
-void NMR_PFGSE::recoverDsat()
-{
-	double time = omp_get_wtime();
-	
-	cout << "- Stejskal-Tanner (s&t):" << endl;
-	LeastSquareAdjust lsa(this->RHS, this->LHS);
-	lsa.setThreshold(this->RHS_threshold);
-	lsa.solve();
-	(*this).setD_sat(lsa.getB());
-	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat() << endl;
-
-	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 
 void NMR_PFGSE::recoverDmsdWithoutSampling()
 {
-	double time = omp_get_wtime();
-
-	cout << "- Mean squared displacement (msd):" << endl;
 	double squaredDisplacement = 0.0;
 	double displacementX, displacementY, displacementZ;
 	double X0, Y0, Z0;
@@ -703,14 +732,11 @@ void NMR_PFGSE::recoverDmsdWithoutSampling()
 	cout << "Dxx = " << this->vecDmsd.getX() << ", \t";
 	cout << "Dyy = " << this->vecDmsd.getY() << ", \t";
 	cout << "Dzz = " << this->vecDmsd.getZ() << endl;
-
-	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
 }
 
 void NMR_PFGSE::recoverDmsdWithSampling()
 {
 	double time = omp_get_wtime();
-	cout << "- Mean squared displacement (msd) [with sampling]:" << endl;
 	int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;
 	double squaredDisplacement;
 	double displacementX, displacementY, displacementZ;
@@ -815,9 +841,7 @@ void NMR_PFGSE::recoverDmsdWithSampling()
 	cout << " +/- " << (*this).getD_msd_stdev() << endl;
 	cout << "Dxx = " << this->vecDmsd.getX() << " +/- " << this->vecDmsd_stdev.getX() << endl;
 	cout << "Dyy = " << this->vecDmsd.getY() << " +/- " << this->vecDmsd_stdev.getY() << endl;
-	cout << "Dzz = " << this->vecDmsd.getZ() << " +/- " << this->vecDmsd_stdev.getZ() << endl;
-	
-	cout << "in " << omp_get_wtime() - time << " seconds." << endl;
+	cout << "Dzz = " << this->vecDmsd.getZ() << " +/- " << this->vecDmsd_stdev.getZ() << endl;	
 }
 
 void NMR_PFGSE::reset(double newBigDelta)
@@ -825,14 +849,14 @@ void NMR_PFGSE::reset(double newBigDelta)
 	(*this).clear();
 	(*this).setExposureTime(newBigDelta);
 	(*this).set();
-	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
+	(*this).setThresholdFromSamples(this->gradientPoints);
 }
 
 void NMR_PFGSE::reset()
 {
 	(*this).clear();
 	(*this).set();
-	(*this).setThresholdFromRHSValue(numeric_limits<double>::max());
+	(*this).setThresholdFromSamples(this->gradientPoints);
 }
 
 
@@ -902,8 +926,8 @@ void NMR_PFGSE::writeEchoes()
     file << "PFGSE - Echoes and Stejskal-Tanner equation terms" << endl;
     file << "id, ";
     file << "Gradient, ";
-    file << "M(k,t), ";
-    file << "LHS, ";
+    file << "M(k,t) [mean, std], ";
+    file << "LHS [mean, std], ";
     file << "RHS" << endl;
 
     uint size = this->gradientPoints;
@@ -912,7 +936,9 @@ void NMR_PFGSE::writeEchoes()
         file << index << ", ";
         file << this->gradient[index] << ", ";
         file << this->Mkt[index] << ", ";
+        file << this->Mkt_stdev[index] << ", ";
         file << this->LHS[index] << ", ";
+        file << this->LHS_stdev[index] << ", ";
         file << this->RHS[index] << endl;
     }
 
@@ -931,29 +957,19 @@ void NMR_PFGSE::writeParameters()
         exit(1);
     }
 
-    double threshold = fabs(this->RHS.back());
-    if(this->RHS_threshold < threshold)
-    	threshold = this->RHS_threshold;
-
 	file << "RWNMR-PFGSE Results" << endl; 
-	file << "Points, ";
-    file << "Time, ";
-    file << "Pulse width, ";
-    file << "Giromagnetic Ratio, ";
-	file << "D_0, ";
-    file << "D_sat, ";
-    file << "D_msd, ";
-    file << "Msd, ";
-    file << "RHS Threshold" << endl;
-    file << this->gradientPoints << ", ";
-    file << this->exposureTime << ", ";
-    file << this->pulseWidth << ", ";
-    file << this->giromagneticRatio << ", ";
-	file << this->NMR.getDiffusionCoefficient() << ", ";
-    file << this->D_sat << ", ";
-    file << this->D_msd << ", ";
-    file << this->msd << ", ";
-    file << threshold << endl << endl;    
+	file << "Points: " << this->gradientPoints << endl;
+    file << "Time: " << this->exposureTime << endl;
+    file << "Pulse width: " << this->pulseWidth << endl;
+    file << "Giromagnetic Ratio: " << this->giromagneticRatio << endl;
+	file << "D_0: " << this->NMR.getDiffusionCoefficient() << endl;
+    file << "D_sat: " << this->D_sat << endl;
+    file << "D_sat (stdev): " << this->D_sat_stdev << endl;
+    file << "D_sat adjust points: " << this->DsatAdjustSamples << endl;
+    file << "D_msd: " << this->D_msd << endl;
+    file << "D_msd (stdev): " << this->D_msd_stdev << endl;
+    file << "MSD: " << this->msd << endl;
+    file << "MSD (stdev): " << this->msd_stdev << endl;   
 
     file.close();
 }
@@ -1011,12 +1027,12 @@ void NMR_PFGSE::writeMsd()
 		walkersPerSample /= this->NMR.walkerSamples;
     
 	file << "PFGSE - Mean squared displacement values - " << this->NMR.walkerSamples << " samples of " << walkersPerSample << " walkers" << endl;
-    file << "msdX[mean, stdDev], ";
-    file << "msdX[mean, stdDev], ";
-    file << "msdZ[mean, stdDev], ";
-    file << "DmsdX[mean, stdDev], ";
-    file << "DmsdY[mean, stdDev], ";
-    file << "DmsdZ[mean, stdDev]" << endl;
+    file << "msdX[mean, std], ";
+    file << "msdX[mean, std], ";
+    file << "msdZ[mean, std], ";
+    file << "DmsdX[mean, std], ";
+    file << "DmsdY[mean, std], ";
+    file << "DmsdZ[mean, std]" << endl;
 
     file << this->vecMsd.getX() << ", " << this->vecMsd_stdev.getX() << ", ";
     file << this->vecMsd.getY() << ", " << this->vecMsd_stdev.getY() << ", ";

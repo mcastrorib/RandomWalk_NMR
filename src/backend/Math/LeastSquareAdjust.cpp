@@ -43,7 +43,6 @@ void LeastSquareAdjust::setY(vector<double> &_y)
 void LeastSquareAdjust::setThreshold(double _threshold)
 {
 	this->threshold = _threshold;
-	// cout << "threshold: " << this->threshold << endl;
 	(*this).setLimits();
 }
 
@@ -85,6 +84,8 @@ double LeastSquareAdjust::computeMean(vector<double> &_vector)
 {
 	double sum = 0.0;
 	double size = (double) _vector.size();
+	// double size = (double) this->points;
+
 	for(uint idx = this->begin; idx < this->end; idx++)
 	{
 		sum += _vector[idx];
@@ -95,8 +96,6 @@ double LeastSquareAdjust::computeMean(vector<double> &_vector)
 
 void LeastSquareAdjust::computeB()
 {
-	cout << "samples adjusted: [" << this->begin << " to " << this->end - 1 << "]" << endl;
-
 	// get B dividend
 	double dividend = 0.0;
 	for(uint idx = this->begin; idx < this->end; idx++)

@@ -39,14 +39,15 @@ public:
 	double giromagneticRatio;
 
 
+	double M0;
 	vector<double> Mkt;
 	vector<double> Mkt_stdev;
 	vector<double> LHS;
 	vector<double> LHS_stdev;
-
-	double M0;
-	double RHS_threshold;
+	
+	int DsatAdjustSamples;
 	double D_sat;
+	double D_sat_stdev;
 	double D_msd;
 	double D_msd_stdev;
 	double msd;
@@ -55,6 +56,7 @@ public:
 	Vector3D vecMsd_stdev;	
 	Vector3D vecDmsd;
 	Vector3D vecDmsd_stdev;
+
 	uint stepsTaken;
 	int currentTime;	
 
@@ -73,10 +75,9 @@ public:
 	void setVectorK();
 	void setVectorMkt();
 	void setVectorRHS();
-	void setThresholdFromRHSValue(double _value);
     void setThresholdFromLHSValue(double _value);
-    void setThresholdFromFraction(double _fraction);
     void setThresholdFromSamples(int _samples);
+    void applyThreshold();
 	double computeRHS(double _Gvalue);
 	void setVectorLHS();
 	double computeLHS(double _Mg, double _M0);
@@ -89,6 +90,9 @@ public:
 	void simulation();
 	void recoverD(string _method = "sat");
 	void recoverDsat();
+	void recoverDsatWithoutSampling();
+	void recoverDsatWithSampling();
+	void recoverDmsd();
 	void recoverDmsdWithoutSampling();
 	void recoverDmsdWithSampling();	
 	void clear();
@@ -109,6 +113,7 @@ public:
 	void setPulseWidth(double _value){ this->pulseWidth = _value; }
 	void setGiromagneticRatio(double _value){ this->giromagneticRatio = _value; }
 	void setD_sat(double _value) { this->D_sat = _value; }
+	void setD_sat_StdDev(double _value) { this->D_sat_stdev = _value; }
 	void setD_msd(double _value) { this->D_msd = _value; }
 	void setD_msd_StdDev(double _value) { this->D_msd_stdev = _value; }
 	
@@ -151,6 +156,7 @@ public:
 	double getPulseWidth() {return this->pulseWidth; }
 	double getGiromagneticRatio() {return this->giromagneticRatio; }
 	double getD_sat() { return this->D_sat; }
+	double getD_sat_stdev() { return this->D_sat_stdev; }
 	double getD_msd() { return this->D_msd; }
 	double getD_msd_stdev() { return this->D_msd_stdev; }
 	double getMsd() { return this->msd; }
