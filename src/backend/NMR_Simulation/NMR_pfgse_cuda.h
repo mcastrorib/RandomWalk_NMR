@@ -50,7 +50,25 @@ __global__ void PFG_measure(int *walker_x0,
                             const double voxelResolution,
                             const double k_X,
                             const double k_Y,
-                            const double k_Z);
+                            const double k_Z,
+                            const uint kValues);
+
+__global__ void PFG_measure_all_k(int *walker_x0,
+                                  int *walker_y0, 
+                                  int *walker_z0,
+                                  int *walker_xF,
+                                  int *walker_yF,
+                                  int *walker_zF,
+                                  double *energy,
+                                  double *phase,
+                                  const uint packOffset,
+                                  const uint packSize,
+                                  const uint numberOfWalkers,
+                                  const double voxelResolution,
+                                  const double *k_X,
+                                  const double *k_Y,
+                                  const double *k_Z,
+                                  const uint kValues);
 
 __global__ void PFG_evaluate_energy( uint *collisions,
                                      double *penalty,

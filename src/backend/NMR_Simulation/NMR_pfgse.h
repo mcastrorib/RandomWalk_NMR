@@ -82,6 +82,10 @@ public:
 	void setVectorLHS();
 	double computeLHS(double _Mg, double _M0);
 	double computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio);
+	double ** getWalkerPhaseMagnitudes();
+	double ** computeWalkerPhaseMagnitudes();
+	double ** computeWalkerPhaseMagnitudesWithOmp();
+	double ** computeWalkerPhaseMagnitudesWithGpu();
 	void set();
 	void run();
 	void runSequence();
