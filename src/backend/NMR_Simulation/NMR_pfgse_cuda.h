@@ -69,11 +69,8 @@ __global__ void PFG_measure_with_sampling(int *walker_x0,
                                           const double k_Y,
                                           const double k_Z);
 
-__global__ void PFG_reduce_with_sampling(double *phase,
-                                         double *MktCollector,
-                                         const uint walkersPerSample, /* here consider walkersPerSample = 'real' + 'fake' walkers */
-                                         const uint collectorSize,
-                                         const uint samples);
+__global__ void PFG_reduce_with_sampling(double *MktCollector,
+                                         double *phase); 
 
 __global__ void PFG_evaluate_energy( uint *collisions,
                                      double *penalty,

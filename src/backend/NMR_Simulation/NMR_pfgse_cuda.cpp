@@ -307,43 +307,35 @@ __global__ void PFG_measure_with_sampling(int *walker_x0,
     }
 }
 
-__global__ void PFG_reduce_with_sampling(double *phase,
-                                         double *MktCollector,
-                                         const uint walkersPerSample, /* here consider walkersPerSample = 'real' + 'fake' walkers */
-                                         const uint collectorSize,
-                                         const uint samples)
+__global__ void PFG_reduce_with_sampling(double *MktCollector,
+                                         double *phase)
 {
     extern __shared__ double sdata[];
 
     // each thread loads one element from global to shared mem
     unsigned int threadId = threadIdx.x;
     unsigned int globalId = threadIdx.x + blockIdx.x * (blockDim.x * 2);
-    uint offset;
-    for(uint sample = 0; sample < samples; sample++)
+
+    sdata[threadId] = phase[globalId] + phase[globalId + blockDim.x];
+    __syncthreads();
+
+    // do reduction in shared mem
+    for (uint stride = blockDim.x / 2; stride > 0; stride >>= 1)
     {
-        offset = sample * walkersPerSample;
-
-        sdata[threadId] = phase[offset + globalId] + phase[offset + globalId + blockDim.x];
-        __syncthreads();
-
-        // do reduction in shared mem
-        for (uint stride = blockDim.x / 2; stride > 0; stride >>= 1)
+        if (threadId < stride)
         {
-            if (threadId < stride)
-            {
-                sdata[threadId] += sdata[threadId + stride];
-            }
-            __syncthreads();
+            sdata[threadId] += sdata[threadId + stride];
         }
-
-        // write result for this block to global mem
-        if (threadId == 0)
-        {
-            MktCollector[blockIdx.x + (sample * collectorSize)] = sdata[0];
-        }
-
         __syncthreads();
     }
+
+    // write result for this block to global mem
+    if (threadId == 0)
+    {
+        MktCollector[blockIdx.x] = sdata[0];
+    }
+    __syncthreads();
+    
 }
 
 
@@ -1869,6 +1861,18 @@ double ** NMR_PFGSE::computeSamplesMagnitudeWithGpu()
     {
         Mkt_samples[kIdx] = new double[this->NMR.walkerSamples];
     }
+
+    /*
+        initialize each element in table with zeros
+    */
+    for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+    {
+        for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+        {
+            Mkt_samples[kIdx][sample] = 0.0;
+        }
+    }  
+
     bool time_verbose = true;
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
@@ -1914,21 +1918,34 @@ double ** NMR_PFGSE::computeSamplesMagnitudeWithGpu()
 void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbose)
 {
     double tick;
+    double alloc_time = 0.0;
     double copy_time = 0.0;
-    double kernel_time = 0.0;
     double buffer_time = 0.0;
+    double kernel_time = 0.0;
     double reduce_time = 0.0;
 
-    // define parameters for CUDA kernel launch: blockDim, gridDim etc
+    /*
+        Define parameters for CUDA kernel launch: blockDim, gridDim etc
+    */
+    double voxelResolution = this->NMR.getImageVoxelResolution();
     uint walkerSamples = this->NMR.walkerSamples;
+    uint walkersPerSample = this->NMR.numberOfWalkers / walkerSamples;  
+    
     uint threadsPerBlock = this->NMR.rwNMR_config.getThreadsPerBlock();
-    uint walkersPerSample = this->NMR.numberOfWalkers / walkerSamples;        
+    uint minThreadsPerBlock = 64;
+    while(walkersPerSample < threadsPerBlock and walkersPerSample < (threadsPerBlock/2) and threadsPerBlock > minThreadsPerBlock)
+    {
+        threadsPerBlock >>= 1;
+    }
+    
     uint blocksPerSample = walkersPerSample / threadsPerBlock;
-    if(walkersPerSample % threadsPerBlock != 0) blocksPerSample++;
+    if(walkersPerSample % threadsPerBlock != 0) 
+        blocksPerSample++;
+    
     uint blocksPerKernel = blocksPerSample * walkerSamples;
     uint sampleTail = threadsPerBlock - walkersPerSample % threadsPerBlock;
     uint walkersPerKernel = walkerSamples * (walkersPerSample + sampleTail);
-    
+    uint MktCollectorSize = blocksPerSample;
 
     // debug
     cout << endl;
@@ -1938,14 +1955,14 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
     cout << "fake-walkers per sample = " << sampleTail << endl;
     cout << "blocks per sample = " << blocksPerSample << endl;
     cout << "walkers per kernel = " << walkersPerKernel << endl;
+    cout << "collector size = " << walkerSamples << "*" << MktCollectorSize << endl;
     cout << endl;
 
     /* 
         Host memory data allocation
         pointers used in host array conversion
     */ 
-    double voxelResolution = this->NMR.getImageVoxelResolution();
-    uint MktCollectorSize = blocksPerKernel / 2;
+    tick = omp_get_wtime();
     myAllocator arrayFactory;
     int *h_walker_x0 = arrayFactory.getIntArray(walkersPerKernel);
     int *h_walker_y0 = arrayFactory.getIntArray(walkersPerKernel);
@@ -1956,10 +1973,12 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
     double *h_energy = arrayFactory.getDoubleArray(walkersPerKernel);
     double *h_phase = arrayFactory.getDoubleArray(walkersPerKernel);
     double *h_MktCollector = arrayFactory.getDoubleArray(walkerSamples * MktCollectorSize);
-    
+    alloc_time += omp_get_wtime() - tick;
+
     /*
         Guarantee that arrays are zeroed after allocation
     */
+    tick = omp_get_wtime();
     for(uint idx = 0; idx < walkersPerKernel; idx++)
     {
         h_walker_x0[idx] = 0.0;
@@ -1971,10 +1990,11 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
         h_energy[idx] = 0.0;
         h_phase[idx] = 0.0;
     }
-    for(uint idx = 0; idx < blocksPerKernel; idx++)
+    for(uint idx = 0; idx < (walkerSamples * MktCollectorSize); idx++)
     {
         h_MktCollector[idx] = 0.0;
     }
+    buffer_time += omp_get_wtime() - tick;
 
     /* 
         Device memory data allocation
@@ -1990,6 +2010,7 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
     double *d_phase;
     double *d_MktCollector;
 
+    tick = omp_get_wtime();
     cudaMalloc((void **)&d_walker_x0, walkersPerKernel * sizeof(int));
     cudaMalloc((void **)&d_walker_y0, walkersPerKernel * sizeof(int));
     cudaMalloc((void **)&d_walker_z0, walkersPerKernel * sizeof(int));
@@ -1999,10 +2020,12 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
     cudaMalloc((void **)&d_energy, walkersPerKernel * sizeof(double));
     cudaMalloc((void **)&d_phase, walkersPerKernel * sizeof(double));
     cudaMalloc((void **)&d_MktCollector, walkerSamples * MktCollectorSize * sizeof(double));
+    alloc_time += omp_get_wtime() - tick;
 
     /*
         Copy data from class members to host buffers
     */
+    tick = omp_get_wtime();
     for(uint sample = 0; sample < walkerSamples; sample++)
     {
         uint nativeOffset = sample * walkersPerSample;
@@ -2018,11 +2041,12 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
             h_energy[bufferOffset + idx] = this->NMR.walkers[nativeOffset + idx].energy;
         }
     }
-
+    buffer_time += omp_get_wtime() - tick;
 
     /* 
         Copy data data from host buffers to data arrays
     */ 
+    tick = omp_get_wtime();
     cudaMemcpy(d_walker_x0, h_walker_x0, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_walker_y0, h_walker_y0, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_walker_z0, h_walker_z0, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
@@ -2030,6 +2054,8 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
     cudaMemcpy(d_walker_yF, h_walker_yF, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_walker_zF, h_walker_zF, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_energy, h_energy, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_MktCollector, h_MktCollector, walkerSamples * MktCollectorSize * sizeof(double), cudaMemcpyHostToDevice);
+    copy_time += omp_get_wtime() - tick;
 
     /*
         Compute Mkt for each k 
@@ -2043,7 +2069,10 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
         k_Y = this->vecK[kIdx].getY();
         k_Z = this->vecK[kIdx].getZ();  
 
-        // kernel call to compute walkers individual phase
+        /* 
+            kernel call to compute walkers individual phase
+        */
+        tick = omp_get_wtime();
         PFG_measure_with_sampling<<<blocksPerKernel, threadsPerBlock>>>(d_walker_x0,
                                                                         d_walker_y0, 
                                                                         d_walker_z0,
@@ -2061,24 +2090,29 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
                                                                         k_Z);
 
         cudaDeviceSynchronize();
+        kernel_time += omp_get_wtime() - tick;
 
-        int totalWalkersPerSample = walkersPerSample + sampleTail;
-        PFG_reduce_with_sampling<<<blocksPerKernel / 2, threadsPerBlock, threadsPerBlock * sizeof(double)>>>(d_phase,
-                                                                                                             d_MktCollector,
-                                                                                                             totalWalkersPerSample,
-                                                                                                             MktCollectorSize,
-                                                                                                             walkerSamples);
+        /* 
+            kernel call to reduce walkers individual phase to collectors
+        */
+        tick = omp_get_wtime();
+        PFG_reduce_with_sampling<<< blocksPerKernel, 
+                                   (threadsPerBlock/2), 
+                                   (threadsPerBlock/2) * sizeof(double) >>> (d_MktCollector, d_phase);
         cudaDeviceSynchronize();
+        reduce_time += omp_get_wtime() - tick;
 
         /*
             copy collector array data from device
         */
-        cudaMemcpy(h_phase, d_phase, walkersPerKernel * sizeof(double), cudaMemcpyDeviceToHost);
+        tick = omp_get_wtime();
         cudaMemcpy(h_MktCollector, d_MktCollector, walkerSamples * MktCollectorSize * sizeof(double), cudaMemcpyDeviceToHost);
+        copy_time += omp_get_wtime() - tick;
 
         /*
             last reduce from collector buffer array to Mkt_samples 
         */
+        tick = omp_get_wtime();
         for(uint sample = 0; sample < walkerSamples; sample++)
         {
             int offset = sample * MktCollectorSize;
@@ -2086,39 +2120,14 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
             {
                 Mkt_samples[kIdx][sample] += h_MktCollector[offset + idx];
             }
-        }
-
-        // if(kIdx == this->gradientPoints - 1)
-        // {
-        //         for(uint sample = 0; sample < walkerSamples; sample++)
-        //         {
-        //             uint bufferOffset = sample * (walkersPerSample + sampleTail);
-        //             cout << "sample: " << sample << endl;
-        //             for(int idx = 0; idx < (walkersPerSample + sampleTail); idx++)
-        //             {
-        //                 cout << "[" << idx << "][" << bufferOffset + idx << "] = " << h_phase[bufferOffset + idx];
-        //                 cout << " " << h_energy[bufferOffset + idx] << endl;
-        //             }
-        //             cout << endl;
-        //         }
-        // }
-    }
-
-    
-
-    if(time_verbose)
-    {
-        cout << "--- Time analysis ---" << endl;
-        cout << "cpu data buffer: " << buffer_time << " s" << endl;
-        cout << "gpu data copy: " << copy_time << " s" << endl;
-        cout << "gpu kernel launch: " << kernel_time << " s" << endl;
-        cout << "gpu reduce: " << reduce_time << " s" << endl;
-        cout << "---------------------" << endl;
+        }        
+        buffer_time += omp_get_wtime() - tick;
     }
 
     /*
         Free data from host buffers
     */
+    tick = omp_get_wtime();
     free(h_walker_x0); h_walker_x0 = NULL;
     free(h_walker_y0); h_walker_y0 = NULL;
     free(h_walker_z0); h_walker_z0 = NULL;
@@ -2128,10 +2137,12 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
     free(h_energy); h_energy = NULL;
     free(h_phase); h_phase = NULL;
     free(h_MktCollector); h_MktCollector = NULL;
+    alloc_time += omp_get_wtime() - tick;
 
     /*
         Free data from device arrays
     */
+    tick = omp_get_wtime();
     cudaFree(d_walker_x0);
     cudaFree(d_walker_y0);
     cudaFree(d_walker_z0);
@@ -2141,12 +2152,28 @@ void NMR_PFGSE::computeMktSmallPopulation(double **Mkt_samples, bool time_verbos
     cudaFree(d_energy);
     cudaFree(d_phase);
     cudaFree(d_MktCollector);
-
+    alloc_time += omp_get_wtime() - tick;
 
     /*
         Reset device after computation is completed
     */
+    tick = omp_get_wtime();
     cudaDeviceReset();
+    alloc_time += omp_get_wtime() - tick;
+
+    /*
+        Log time analysis
+    */ 
+    if(time_verbose)
+    {
+        cout << "--- Time analysis ---" << endl;
+        cout << "data allocation: " << alloc_time << " s" << endl;
+        cout << "cpu data buffer: " << buffer_time << " s" << endl;
+        cout << "gpu data copy: " << copy_time << " s" << endl;
+        cout << "gpu kernel launch: " << kernel_time << " s" << endl;
+        cout << "gpu reduce: " << reduce_time << " s" << endl;
+        cout << "---------------------" << endl;
+    }
 }
 
 void NMR_PFGSE::computeMktSmallSamples(double **Mkt_samples, bool time_verbose)
