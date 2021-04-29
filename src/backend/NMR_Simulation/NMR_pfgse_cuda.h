@@ -53,22 +53,27 @@ __global__ void PFG_measure(int *walker_x0,
                             const double k_Z,
                             const uint kValues);
 
-__global__ void PFG_measure_all_k(int *walker_x0,
-                                  int *walker_y0, 
-                                  int *walker_z0,
-                                  int *walker_xF,
-                                  int *walker_yF,
-                                  int *walker_zF,
-                                  double *energy,
-                                  double *phase,
-                                  const uint packOffset,
-                                  const uint packSize,
-                                  const uint numberOfWalkers,
-                                  const double voxelResolution,
-                                  const double *k_X,
-                                  const double *k_Y,
-                                  const double *k_Z,
-                                  const uint kValues);
+__global__ void PFG_measure_with_sampling(int *walker_x0,
+                                          int *walker_y0, 
+                                          int *walker_z0,
+                                          int *walker_xF,
+                                          int *walker_yF,
+                                          int *walker_zF,
+                                          double *energy,
+                                          double *phase,
+                                          const uint blocksPerSample,
+                                          const uint walkersPerSample,
+                                          const uint sampleTail,
+                                          const double voxelResolution,
+                                          const double k_X,
+                                          const double k_Y,
+                                          const double k_Z);
+
+__global__ void PFG_reduce_with_sampling(double *phase,
+                                         double *MktCollector,
+                                         const uint walkersPerSample, /* here consider walkersPerSample = 'real' + 'fake' walkers */
+                                         const uint collectorSize,
+                                         const uint samples);
 
 __global__ void PFG_evaluate_energy( uint *collisions,
                                      double *penalty,

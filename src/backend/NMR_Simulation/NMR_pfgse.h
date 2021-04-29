@@ -82,10 +82,13 @@ public:
 	void setVectorLHS();
 	double computeLHS(double _Mg, double _M0);
 	double computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio);
-	double ** getWalkerPhaseMagnitudes();
-	double ** computeWalkerPhaseMagnitudes();
-	double ** computeWalkerPhaseMagnitudesWithOmp();
-	double ** computeWalkerPhaseMagnitudesWithGpu();
+	double ** getSamplesMagnitude();
+	double ** computeSamplesMagnitude();
+	double ** computeSamplesMagnitudeWithOmp();
+	double ** computeSamplesMagnitudeWithGpu();
+	void computeMktSmallPopulation(double **Mkt_samples, bool time_verbose);
+	void computeMktSmallSamples(double **Mkt_samples, bool time_verbose);
+	void computeMktBigSamples(double **Mkt_samples, bool time_verbose);
 	void set();
 	void run();
 	void runSequence();

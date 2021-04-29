@@ -507,43 +507,62 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat() << endl;	
 }
 
-double ** NMR_PFGSE::getWalkerPhaseMagnitudes()
+double ** NMR_PFGSE::getSamplesMagnitude()
 {
 	if(this->NMR.gpu_use == true)
 	{
-		return (*this).computeWalkerPhaseMagnitudesWithGpu();
+		return (*this).computeSamplesMagnitudeWithGpu();
 	}
 	else
 	{
 		if(this->NMR.rwNMR_config.getOpenMPUsage())
 		{
-			return (*this).computeWalkerPhaseMagnitudesWithOmp();
+			return (*this).computeSamplesMagnitudeWithOmp();
 		} else
 		{	
-			return (*this).computeWalkerPhaseMagnitudes();
+			return (*this).computeSamplesMagnitude();
 		}
 	}
 }
 
-double ** NMR_PFGSE::computeWalkerPhaseMagnitudesWithOmp()
+double ** NMR_PFGSE::computeSamplesMagnitudeWithOmp()
 {
-	double **magnitudes;
-	magnitudes = new double*[this->gradientPoints];
+	/* 
+		alloc table for Mkt data each row will represent a wavevector K value, 
+		while each column represent a sample of random walkers
+	*/
+	double **Mkt_samples;
+	Mkt_samples = new double*[this->gradientPoints];
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 	{
-		magnitudes[kIdx] = new double[this->NMR.walkers.size()];
-	} 
+		Mkt_samples[kIdx] = new double[this->NMR.walkerSamples];
+	}
+
+	/*
+		initialize each element in table with zeros
+	*/
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+		{
+			Mkt_samples[kIdx][sample] = 0.0;
+		}
+	}	
 
 	double resolution = this->NMR.getImageVoxelResolution();
 	double phase;
 	double dX, dY, dZ;
 
     // set omp variables for parallel loop throughout walker list
-    const int num_cpu_threads = omp_get_max_threads();
-    const int loop_size = this->NMR.walkers.size();
+    const int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;	
+	const int num_cpu_threads = omp_get_max_threads();
     int loop_start, loop_finish;
+	const int loop_size = this->NMR.walkerSamples;	
 
-    #pragma omp parallel shared(magnitudes, resolution) private(loop_start, loop_finish, phase, dX, dY, dZ) 
+    /*
+		collect sum of data from phaseMagnitudes table
+	*/
+	#pragma omp parallel shared(Mkt_samples, resolution) private(loop_start, loop_finish, phase, dX, dY, dZ) 
     {
         const int thread_id = omp_get_thread_num();
         OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
@@ -552,76 +571,46 @@ double ** NMR_PFGSE::computeWalkerPhaseMagnitudesWithOmp()
 
         cout << "thread " << thread_id << " here with omp ^^" << endl;
 
-        for (uint id = loop_start; id < loop_finish; id++)
-        {
-            // Get walker displacement
-			dX = ((double) this->NMR.walkers[id].initialPosition.x - (double) this->NMR.walkers[id].position_x);
-			dY = ((double) this->NMR.walkers[id].initialPosition.y - (double) this->NMR.walkers[id].position_y);
-			dZ = ((double) this->NMR.walkers[id].initialPosition.z - (double) this->NMR.walkers[id].position_z);
-			Vector3D dR(resolution * dX, resolution * dY, resolution * dZ);
-				
-			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
-			{
-				phase = this->vecK[kIdx].dotProduct(dR);	
-				magnitudes[kIdx][id] = cos(phase) * this->NMR.walkers[id].energy;		
-			}
-        }
-    }  
+        for (uint sampleId = loop_start; sampleId < loop_finish; sampleId++)
+        {			
+			int offset = sampleId * walkersPerSample;
+			for(uint idx = 0; idx < walkersPerSample; idx++)
+	        {
+	            // Get walker displacement
+				dX = ((double) this->NMR.walkers[offset + idx].initialPosition.x - (double) this->NMR.walkers[offset + idx].position_x);
+				dY = ((double) this->NMR.walkers[offset + idx].initialPosition.y - (double) this->NMR.walkers[offset + idx].position_y);
+				dZ = ((double) this->NMR.walkers[offset + idx].initialPosition.z - (double) this->NMR.walkers[offset + idx].position_z);
+				Vector3D dR(resolution * dX, resolution * dY, resolution * dZ);
+					
+				for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+				{
+					phase = this->vecK[kIdx].dotProduct(dR);	
+					Mkt_samples[kIdx][sampleId] += cos(phase) * this->NMR.walkers[idx].energy;	
+				}
+	        }
 
-    return magnitudes;  
+		}
+	}
+
+	return Mkt_samples;
  }
 
-double ** NMR_PFGSE::computeWalkerPhaseMagnitudes()
+double ** NMR_PFGSE::computeSamplesMagnitude()
 {
-	double **magnitudes;
-	magnitudes = new double*[this->gradientPoints];
-	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
-	{
-		magnitudes[kIdx] = new double[this->NMR.walkers.size()];
-	} 
-
-	double resolution = this->NMR.getImageVoxelResolution();
-	double phase;
-	double dX, dY, dZ;
-
-	for(uint idx = 0; idx < this->NMR.walkers.size(); idx++)
-	{
-		Walker particle(this->NMR.walkers[idx]);
-
-		// Get walker displacement
-		dX = ((double) particle.initialPosition.x - (double) particle.position_x);
-		dY = ((double) particle.initialPosition.y - (double) particle.position_y);
-		dZ = ((double) particle.initialPosition.z - (double) particle.position_z);
-		Vector3D dR(resolution * dX, resolution * dY, resolution * dZ);
-			
-		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
-		{
-			phase = this->vecK[kIdx].dotProduct(dR);	
-			magnitudes[kIdx][idx] = cos(phase) * this->NMR.walkers[idx].energy;		
-		}
-	}	
-	return magnitudes;
-}
-
-void NMR_PFGSE::recoverDsatWithSampling()
-{
-	bool time_verbose = true;
-	int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;	
-	double tick, allocTime, phaseTime, normTime, lhsTime, statTime, lsTime;
-
 	/* 
 		alloc table for Mkt data each row will represent a wavevector K value, 
 		while each column represent a sample of random walkers
 	*/
 	double **Mkt_samples;
 	Mkt_samples = new double*[this->gradientPoints];
-	tick = omp_get_wtime();
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 	{
 		Mkt_samples[kIdx] = new double[this->NMR.walkerSamples];
-	} 	
+	}
 
-	// initialize each element in table with zeros
+	/*
+		initialize each element in table with zeros
+	*/
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 	{
 		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
@@ -629,24 +618,46 @@ void NMR_PFGSE::recoverDsatWithSampling()
 			Mkt_samples[kIdx][sample] = 0.0;
 		}
 	}	
-	allocTime = omp_get_wtime() - tick;
 
-	// measure dR for each sample of walkers
-	tick = omp_get_wtime();
-	double **phaseMagnitudes;
-	phaseMagnitudes = (*this).computeWalkerPhaseMagnitudesWithGpu();
+	double resolution = this->NMR.getImageVoxelResolution();
+	double phase;
+	double dX, dY, dZ;
+
+	int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;	
 	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
-	{			
+	{		
+		int offset = sample * walkersPerSample;	
 		for(uint idx = 0; idx < walkersPerSample; idx++)
 		{
-			int offset = sample * walkersPerSample;
+			// Get walker displacement
+			dX = ((double) this->NMR.walkers[offset + idx].initialPosition.x - (double) this->NMR.walkers[offset + idx].position_x);
+			dY = ((double) this->NMR.walkers[offset + idx].initialPosition.y - (double) this->NMR.walkers[offset + idx].position_y);
+			dZ = ((double) this->NMR.walkers[offset + idx].initialPosition.z - (double) this->NMR.walkers[offset + idx].position_z);
+			Vector3D dR(resolution * dX, resolution * dY, resolution * dZ);
 			
 			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 			{
-				Mkt_samples[kIdx][sample] += phaseMagnitudes[kIdx][idx + offset];	
+				phase = this->vecK[kIdx].dotProduct(dR);
+				Mkt_samples[kIdx][sample] += cos(phase) * this->NMR.walkers[idx].energy;;	
 			}
 		}		 
 	}
+
+	return Mkt_samples;
+}
+
+void NMR_PFGSE::recoverDsatWithSampling()
+{
+	bool time_verbose = true;
+	int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;	
+	double tick, phaseTime, normTime, lhsTime, statTime, lsTime;	
+
+	/* 
+		Compute magnitude Mkt for each sample of walkers
+	*/
+	tick = omp_get_wtime();
+	double **Mkt_samples;
+	Mkt_samples = (*this).getSamplesMagnitude();	
 	phaseTime = omp_get_wtime() - tick;
 
 	// Normalize for k=0
@@ -665,15 +676,13 @@ void NMR_PFGSE::recoverDsatWithSampling()
 		alloc table for LHS data each row will represent a wavevector K value, 
 		while each column represent a sample of random walkers
 	*/
-	tick = omp_get_wtime();
 	double **LHS_samples;
 	LHS_samples = new double*[this->gradientPoints];
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 	{
 		LHS_samples[kIdx] = new double[this->NMR.walkerSamples];
 	} 	
-	allocTime = allocTime + (omp_get_wtime() - tick);
-
+	
 	/*
 		compute lhs for each sample
 	*/
@@ -759,7 +768,6 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	if(time_verbose)
     {
         cout << "--- Time analysis ---" << endl;
-        cout << "data allocation: " << allocTime << " s" << endl;
         cout << "phase computation: " << phaseTime << " s" << endl;
         cout << "data normalization: " << normTime << " s" << endl;
         cout << "LHS computation: " << lhsTime << " s" << endl;
@@ -788,15 +796,6 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	}
 	delete [] LHS_samples;
 	LHS_samples = NULL; 
-
-	// free walker phases
-	for(uint idx = 0; idx < this->gradientPoints; idx++)
-	{
-		delete [] phaseMagnitudes[idx];
-		phaseMagnitudes[idx] = NULL;
-	}
-	delete [] phaseMagnitudes;
-	phaseMagnitudes = NULL;
 }
 
 void NMR_PFGSE::recoverDmsdWithoutSampling()
