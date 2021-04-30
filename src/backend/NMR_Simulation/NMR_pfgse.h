@@ -87,6 +87,7 @@ public:
 	double ** computeSamplesMagnitudeWithOmp();
 	double ** computeSamplesMagnitudeWithGpu();
 	void computeMktSmallPopulation(double **Mkt_samples, bool time_verbose);
+	void computeMktSmallPopulation2(double **Mkt_samples, bool time_verbose);
 	void computeMktSmallSamples(double **Mkt_samples, bool time_verbose);
 	void computeMktBigSamples(double **Mkt_samples, bool time_verbose);
 	void set();
