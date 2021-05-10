@@ -211,6 +211,52 @@ def read_analytic_echoes_from_json(file):
 			echoes[idx] = float(data['echoes'][idx])
 	return echoes
 
+def read_analytic_data_from_json(file):
+	# init json variables
+	D0 = 0
+	length = 0.0
+	rho = 0.0
+	time = 0.0
+	qa_samples = 0.0
+	qa_max = 0.0
+	qa = []
+	echoes = []
+
+	# read json data
+	with open(file) as json_file:
+		# load json object
+		json_data = json.load(json_file)
+		
+		# read scalars
+		D0 = float(json_data["D0"])
+		length = float(json_data["length"])
+		rho = float(json_data["rho"])
+		time = float(json_data["time"])
+		qa_samples = int(json_data['qa_samples'])
+		qa_max = float(json_data['qa_max'])
+
+		# read arrays
+		qa = np.zeros(qa_samples)
+		for idx in range(qa_samples):
+			qa[idx] = float(json_data['qa'][idx])
+
+		echoes = np.zeros(qa_samples)
+		for idx in range(qa_samples):
+			echoes[idx] = float(json_data['echoes'][idx])
+	
+	# wrap json data into dictionary
+	data = {}
+	data["D0"] = D0
+	data["length"] = length
+	data["rho"] = rho
+	data["delta"] = time
+	data["qa_samples"] = qa_samples
+	data["qa_max"] = qa_max
+	data["qa"] = qa
+	data["echoes"] = echoes
+	
+	return data
+
 def read_number_of_walkers_from_file(_filename):
 	'''
 	this function count the number of lines from a NMR txt file @_filename with a NMR walker info
@@ -450,6 +496,158 @@ def read_data_from_pfgse_echoes_file(filename):
 
 	return pfgse_data
 
+def read_pfgse_data_from_rwnmr_file(file):
+	# scallar data
+	points = 0.0
+	delta = 0.0
+	width = 0.0
+	giromagnet = 0.0
+	D0 = 0.0
+	Dsat = 0.0
+	Dsat_std = 0.0
+	Dsat_pts = 0.0
+	Dmsd = 0.0
+	DmsdX_std = 0.0
+	Msd = 0.0
+	Msd_std = 0.0
+	
+	# vector data
+	gradient = []
+	Mkt = []
+	Mkt_std = []
+	lhs = []
+	lhs_std = []
+	rhs = []
+
+	# read params file
+	with open(file[0], 'r') as txt_file:
+		# ignore header 
+		next(txt_file)
+
+		points = int(txt_file.readline().split(': ')[1])
+		delta = float(txt_file.readline().split(': ')[1])
+		width = float(txt_file.readline().split(': ')[1])
+		giromagnet = float(txt_file.readline().split(': ')[1])
+		D0 = float(txt_file.readline().split(': ')[1])
+		Dsat = float(txt_file.readline().split(': ')[1])
+		Dsat_std = float(txt_file.readline().split(': ')[1])
+		Dsat_pts = float(txt_file.readline().split(': ')[1])
+		Dmsd = float(txt_file.readline().split(': ')[1])
+		Dmsd_std = float(txt_file.readline().split(': ')[1])
+		Msd = float(txt_file.readline().split(': ')[1])
+		Msd_std = float(txt_file.readline().split(': ')[1])
+		
+
+	# read echoes file
+	with open(file[1], 'r') as txt_file:
+		# ignore header 
+		next(txt_file)
+
+		# ignore variable naming line
+		next(txt_file)
+
+		# reading pfgse data
+		gradient = np.zeros(points)
+		Mkt = np.zeros(points)
+		Mkt_std = np.zeros(points)
+		lhs = np.zeros(points)
+		lhs_std = np.zeros(points)
+		rhs = np.zeros(points)
+		for idx in range(points):
+			# read and split next line
+			line = txt_file.readline().split(',')
+
+			gradient[idx] = float(line[1])
+			Mkt[idx] = float(line[2])
+			Mkt_std[idx] = float(line[2])
+			lhs[idx] = float(line[3])
+			lhs_std[idx] = float(line[3])
+			rhs[idx] = float(line[4])
+
+	# data assembly to dictionary object
+	pfgse_data = {
+		"points": points,
+		"delta": delta,
+		"width": width,
+		"giromagnet": giromagnet,
+		"D0": D0,
+		"Dsat": Dsat,
+		"Dsat_std": Dsat_std,
+		"Dsat_pts": Dsat_pts,
+		"Dmsd": Dmsd,
+		"Dmsd_std": Dmsd,
+		"Msd": Msd,
+		"Msd_std": Msd,
+		"gradient": gradient,
+		"Mkt": Mkt,
+		"Mkt_std": Mkt,
+		"lhs": lhs,
+		"lhs_std": lhs,
+		"rhs": rhs
+	}	
+
+	return pfgse_data
+
+def read_msd_data_from_rwnmr_file(file):
+	
+	# mean data
+	msdX = 0.0
+	msdY = 0.0
+	msdZ = 0.0
+	DmsdX = 0.0
+	DmsdY = 0.0
+	DmsdZ = 0.0
+
+	# std dev data
+	msdX_std = 0.0
+	msdY_std = 0.0
+	msdZ_std = 0.0
+	DmsdX_std = 0.0
+	DmsdY_std = 0.0
+	DmsdZ_std = 0.0
+
+	# read params file
+	with open(file, 'r') as txt_file:
+		# ignore header 
+		next(txt_file)
+
+		# ignore variable naming line
+		next(txt_file)
+
+		# read and split next line
+		line = txt_file.readline().split(',')
+		msdX = float(line[0])
+		msdX_std = float(line[1])
+		msdY = float(line[2])
+		msdY_std = float(line[3])
+		msdZ = float(line[4])
+		msdZ_std = float(line[5])
+		DmsdX = float(line[6])
+		DmsdX_std = float(line[7])
+		DmsdY = float(line[8])
+		DmsdY_std = float(line[9])
+		DmsdZ = float(line[10])
+		DmsdZ_std = float(line[11])
+
+	# data assembly to dictionary object
+	msd_data = {
+		"msdX": msdX,
+		"msdX_std": msdX_std,
+		"msdY": msdY,
+		"msdY_std": msdY_std,
+		"msdZ": msdZ,
+		"msdZ_std": msdZ_std,
+		"DmsdX": DmsdX,
+		"DmsdX_std": DmsdX_std,
+		"DmsdY": DmsdY,
+		"DmsdY_std": DmsdY_std,
+		"DmsdZ": DmsdZ,
+		"DmsdZ_std": DmsdZ_std
+	}	
+
+	return msd_data
+
+
 def count_points_to_apply_lhs_threshold(pfgse_lhs, threshold):
 	log_threshold = np.log(threshold)
 	lhs_size = len(pfgse_lhs)
@@ -465,3 +663,4 @@ def count_points_to_apply_lhs_threshold(pfgse_lhs, threshold):
 		return idx-1
 	else:
 		return idx
+
