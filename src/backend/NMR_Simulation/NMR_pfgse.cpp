@@ -417,8 +417,9 @@ void NMR_PFGSE::simulation()
 {
 	if(this->NMR.gpu_use == true)
 	{
-		if(this->NMR.getBoundaryCondition() == "noflux") (*this).simulation_cuda_noflux();
-		else if(this->NMR.getBoundaryCondition() == "periodic") (*this).simulation_cuda_periodic();
+		if(this->NMR.getBoundaryCondition() == "noflux") { (*this).simulation_cuda_noflux(); } 
+		else if(this->NMR.getBoundaryCondition() == "periodic") { (*this).simulation_cuda_periodic(); } 
+		else if(this->NMR.getBoundaryCondition() == "mirror") { (*this).simulation_cuda_mirror(); }
 		else cout << "error: BC not set" << endl;
 	}
 	else
@@ -648,7 +649,7 @@ double ** NMR_PFGSE::computeSamplesMagnitude()
 
 void NMR_PFGSE::recoverDsatWithSampling()
 {
-	bool time_verbose = true;
+	bool time_verbose = false;
 	int walkersPerSample = this->NMR.numberOfWalkers / this->NMR.walkerSamples;	
 	double tick, phaseTime, normTime, lhsTime, statTime, lsTime;	
 

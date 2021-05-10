@@ -209,6 +209,7 @@ void rwnmr_config::readSeed(string s)
 void rwnmr_config::readBC(string s)
 {
 	if(s == "periodic") this->BC = "periodic";
+	if(s == "mirror") this->BC = "mirror";
 	else this->BC = "noflux";
 }
 
