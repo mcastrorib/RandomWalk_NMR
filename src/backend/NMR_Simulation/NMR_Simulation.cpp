@@ -228,8 +228,7 @@ void NMR_Simulation::setNumberOfStepsPerEcho(uint _stepsPerEcho)
 void NMR_Simulation::setNumberOfStepsFromTime(double _time)
 {
     // _time = _time;
-    this->simulationSteps =  _time * (6 * this->diffusionCoefficient / 
-                                     (this->imageVoxelResolution * this->imageVoxelResolution)); 
+    this->simulationSteps =  round( _time * (6 * this->diffusionCoefficient / (this->imageVoxelResolution * this->imageVoxelResolution))); 
     
     // correct steps < steps per echo case (simulation becomes inaccurate but at least don't crash)
     if(this->simulationSteps < this->stepsPerEcho) this->simulationSteps = this->stepsPerEcho;
