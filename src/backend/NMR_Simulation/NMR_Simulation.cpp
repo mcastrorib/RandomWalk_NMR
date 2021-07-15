@@ -879,7 +879,9 @@ void NMR_Simulation::countInterfacePoreMatrix()
 
 void NMR_Simulation::updateSVp()
 {
-    this->SVp = ((double) this->interfacePoreMatrix) / ((double) this->numberOfPores);
+    double voxelFacialArea = (*this).getImageVoxelResolution() * (*this).getImageVoxelResolution();
+    double voxelVolume = voxelFacialArea * (*this).getImageVoxelResolution();
+    this->SVp = ((double) this->interfacePoreMatrix * voxelFacialArea) / ((double) this->numberOfPores * voxelVolume);
 }
 
 void NMR_Simulation::updatePorosity()
