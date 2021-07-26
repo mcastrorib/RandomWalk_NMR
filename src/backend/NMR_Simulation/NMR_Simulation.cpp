@@ -285,6 +285,7 @@ void NMR_Simulation::readImage()
     {
         this->numberOfImages = this->uCT_config.SLICES;
         this->depth = this->uCT_config.SLICES;
+        (*this).assemblyImagePath();
         (*this).loadRockImageFromList();
     }
     else
