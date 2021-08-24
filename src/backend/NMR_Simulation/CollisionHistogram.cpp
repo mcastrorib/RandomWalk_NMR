@@ -18,6 +18,7 @@
 using namespace std;
 
 CollisionHistogram::CollisionHistogram():size(0),
+										 scale("linear"),
 										 gap(0.0),
 										 firstEcho(0),
 										 lastEcho(0)
@@ -26,23 +27,25 @@ CollisionHistogram::CollisionHistogram():size(0),
 	vector<double> bins();
 }
 
-CollisionHistogram::CollisionHistogram(int _size):size(_size),
-												  gap(0.0),
-												  firstEcho(0),
-												  lastEcho(0)
+CollisionHistogram::CollisionHistogram(int _size, string _scale):size(_size),
+														 		 scale(_scale),
+																 gap(0.0),
+																 firstEcho(0),
+																 lastEcho(0)
 {	
 	// Initialize stl vectors
 	vector<double> amps();
 	vector<double> bins();
 
 	if(this->size != 0)
-		(*this).createBlankHistogram(this->size);
+		(*this).createBlankHistogram(this->size, this->scale);
 
 }
 
 CollisionHistogram::CollisionHistogram(const CollisionHistogram &_otherHistogram)
 {
 	this->size = _otherHistogram.size;
+	this->scale = _otherHistogram.scale;
 	this->gap = _otherHistogram.gap;
 	this->amps = _otherHistogram.amps;
 	this->bins = _otherHistogram.bins;
@@ -50,8 +53,9 @@ CollisionHistogram::CollisionHistogram(const CollisionHistogram &_otherHistogram
 	this->lastEcho = _otherHistogram.lastEcho;
 }
 
-void CollisionHistogram::createBlankHistogram(int _size)
+void CollisionHistogram::createBlankHistogram(int _size, string _scale)
 {
+	(*this).setScale(_scale);
 	double gap = 1.0 / ((double) _size);
 	(*this).setSize(_size);
 	(*this).setGap(gap);
@@ -61,11 +65,19 @@ void CollisionHistogram::createBlankHistogram(int _size)
 
 void CollisionHistogram::fillHistogram(vector<Walker> &_walkers, uint _numberOfSteps)
 {
-	(*this).createBinsVector(_walkers);
-	(*this).createAmpsVector(_walkers, _numberOfSteps);
+	if(this->scale == "log")
+	{
+		cout << "Histogram with log-scale was chosen :)" << endl;
+		(*this).createBinsLogVector(_walkers);
+		(*this).createAmpsLogVector(_walkers, _numberOfSteps);
+	} else
+	{
+		(*this).createBinsLinearVector(_walkers);
+		(*this).createAmpsLinearVector(_walkers, _numberOfSteps);
+	}
 }
 
-void CollisionHistogram::createBinsVector(vector<Walker> &_walkers)
+void CollisionHistogram::createBinsLinearVector(vector<Walker> &_walkers)
 {	
 	double offset;
 	double meanBin = (0.5) * this->gap;
@@ -76,7 +88,7 @@ void CollisionHistogram::createBinsVector(vector<Walker> &_walkers)
 	}
 }
 
-void CollisionHistogram::createAmpsVector(vector<Walker> &_walkers, uint _numberOfSteps)
+void CollisionHistogram::createAmpsLinearVector(vector<Walker> &_walkers, uint _numberOfSteps)
 {	
 	// initialize amps vector entries	
 	for(int id = 0; id < this->size; id++)
@@ -103,5 +115,13 @@ void CollisionHistogram::createAmpsVector(vector<Walker> &_walkers, uint _number
 	{
 		this->amps[id] = this->amps[id] / numberOfWalkers;
 	}	
+}
+
+void CollisionHistogram::createBinsLogVector(vector<Walker> &_walkers)
+{	
+}
+
+void CollisionHistogram::createAmpsLogVector(vector<Walker> &_walkers, uint _numberOfSteps)
+{	
 }
 

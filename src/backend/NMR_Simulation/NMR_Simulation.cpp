@@ -1615,22 +1615,14 @@ void NMR_Simulation::initHistogramList()
 
 void NMR_Simulation::createHistogram()
 {
-    // CollisionHistogram newHistogram(NMR_HISTOGRAM_SIZE);
-    // newHistogram.fillHistogram(this->walkers, this->simulationSteps);
-    // this->histogram = newHistogram;
-    this->histogram.createBlankHistogram(this->rwNMR_config.getHistogramSize());
+    this->histogram.createBlankHistogram(this->rwNMR_config.getHistogramSize(), this->rwNMR_config.getHistogramScale());
     int steps = this->histogramList.back().lastEcho * this->stepsPerEcho;
     this->histogram.fillHistogram(this->walkers, steps);       
 }
 
 void NMR_Simulation::createHistogram(uint histID, uint _steps)
 {
-    // CollisionHistogram newHistogram(NMR_HISTOGRAM_SIZE);
-    // newHistogram.fillHistogram(this->walkers, _steps);
-    // this->histogramList[histID].amps.assign(newHistogram.amps.begin(), newHistogram.amps.end());
-    // this->histogramList[histID].bins.assign(newHistogram.bins.begin(), newHistogram.bins.end()); 
-
-    this->histogramList[histID].createBlankHistogram(this->rwNMR_config.getHistogramSize());
+    this->histogramList[histID].createBlankHistogram(this->rwNMR_config.getHistogramSize(), this->rwNMR_config.getHistogramScale());
     this->histogramList[histID].fillHistogram(this->walkers, _steps);       
 }
 
