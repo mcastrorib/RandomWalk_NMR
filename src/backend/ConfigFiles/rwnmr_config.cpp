@@ -45,6 +45,7 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
     // HISTOGRAM SIZE
     this->HISTOGRAMS = otherConfig.HISTOGRAMS;  
     this->HISTOGRAM_SIZE = otherConfig.HISTOGRAM_SIZE;
+    this->HISTOGRAM_SCALE = otherConfig.HISTOGRAM_SCALE;
 
     // -- OPENMP MODE
     this->OPENMP_USAGE = otherConfig.OPENMP_USAGE;
@@ -111,6 +112,7 @@ void rwnmr_config::readConfigFile(const string configFile)
 			else if(token == "SAVE_BINIMG") (*this).readSaveBinImg(content);
 			else if(token == "HISTOGRAMS") (*this).readHistograms(content);
 			else if(token == "HISTOGRAM_SIZE") (*this).readHistogramSize(content);
+			else if(token == "HISTOGRAM_SCALE") (*this).readHistogramScale(content);
 			else if(token == "OPENMP_USAGE") (*this).readOpenMPUsage(content);
 			else if(token == "OPENMP_THREADS") (*this).readOpenMPThreads(content);
 			else if(token == "GPU_USAGE") (*this).readGPUUsage(content);
@@ -239,6 +241,11 @@ void rwnmr_config::readHistograms(string s)
 void rwnmr_config::readHistogramSize(string s)
 {
 	this->HISTOGRAM_SIZE = std::stoi(s);
+}
+
+void rwnmr_config::readHistogramScale(string s)
+{
+	if(s != "log") this->HISTOGRAM_SCALE = "linear";
 }
 
 // -- OpenMP

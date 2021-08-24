@@ -32,6 +32,7 @@ public:
     // HISTOGRAM SIZE
     uint HISTOGRAMS;  
     uint HISTOGRAM_SIZE;
+    string HISTOGRAM_SCALE;
 
     // -- OPENMP MODE
     bool OPENMP_USAGE;
@@ -92,6 +93,7 @@ public:
     // Histograms
     void readHistograms(string s);  
     void readHistogramSize(string s);
+    void readHistogramScale(string s);
 
     // -- OpenMP
     void readOpenMPUsage(string s);
@@ -137,6 +139,7 @@ public:
     // Histograms
     uint getHistograms(){ return this->HISTOGRAMS;}
     uint getHistogramSize(){ return this->HISTOGRAM_SIZE;}
+    string getHistogramScale(){ return this->HISTOGRAM_SCALE;}
 
     // -- OpenMP
     bool getOpenMPUsage(){ return this->OPENMP_USAGE;}
