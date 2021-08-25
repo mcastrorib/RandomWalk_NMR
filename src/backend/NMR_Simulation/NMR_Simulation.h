@@ -150,8 +150,7 @@ public:
     // default destructor
     virtual ~NMR_Simulation()
     {
-        delete[] penalties;
-        penalties = NULL;
+        (*this).clear();
         cout << "NMR_simulation object destroyed." << endl;
     }
 

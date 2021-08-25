@@ -245,7 +245,8 @@ void rwnmr_config::readHistogramSize(string s)
 
 void rwnmr_config::readHistogramScale(string s)
 {
-	if(s != "log") this->HISTOGRAM_SCALE = "linear";
+	if(s == "log") this->HISTOGRAM_SCALE = "log";
+	else this->HISTOGRAM_SCALE = "linear";
 }
 
 // -- OpenMP

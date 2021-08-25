@@ -57,8 +57,17 @@ void CollisionHistogram::createBlankHistogram(int _size, string _scale)
 {
 	(*this).setScale(_scale);
 	double gap = 1.0 / ((double) _size);
-	(*this).setSize(_size);
 	(*this).setGap(gap);
+
+	if(this->scale == "log")
+	{
+		// reserve additional spot for 0 collisions in log scale
+		(*this).setSize(_size + 1); 
+	} else
+	{
+		(*this).setSize(_size);
+	}
+
 	this->amps.reserve(this->size);
 	this->bins.reserve(this->size);
 }
@@ -68,7 +77,7 @@ void CollisionHistogram::fillHistogram(vector<Walker> &_walkers, uint _numberOfS
 	if(this->scale == "log")
 	{
 		cout << "Histogram with log-scale was chosen :)" << endl;
-		(*this).createBinsLogVector(_walkers);
+		(*this).createBinsLogVector(_walkers, _numberOfSteps);
 		(*this).createAmpsLogVector(_walkers, _numberOfSteps);
 	} else
 	{
@@ -117,11 +126,120 @@ void CollisionHistogram::createAmpsLinearVector(vector<Walker> &_walkers, uint _
 	}	
 }
 
-void CollisionHistogram::createBinsLogVector(vector<Walker> &_walkers)
+void CollisionHistogram::createBinsLogVector(vector<Walker> &_walkers, uint _numberOfSteps)
 {	
+	// find min rate to generate bins accordingly
+	double steps = (double) _numberOfSteps;
+	uint first_idx = 0;
+	while(first_idx < _walkers.size() and _walkers[first_idx].collisions == 0)
+	{
+		first_idx++;	
+	}
+
+	if(first_idx < _walkers.size())
+	{
+		double min_rate = _walkers[first_idx].collisions / steps;
+		double xi_rate;
+		for(uint id = first_idx; id < _walkers.size(); id++)
+		{
+			if(_walkers[id].collisions != 0)
+			{
+				xi_rate = _walkers[id].collisions / steps;
+				if(xi_rate < min_rate)
+				{
+					min_rate = xi_rate;
+				}
+			}
+		}
+
+
+		// create vector of logspaced values 
+		double logmin_rate = log10(min_rate);
+		vector<double> logbins = (*this).logspace(round(logmin_rate), 0.0, this->size - 1);
+
+		// first entry used for control no-collision cases
+		this->bins.push_back(round(logmin_rate) - 1.0);
+
+		// other entries based on logspaced vector
+		for(uint idx = 1; idx < this->size; idx++)
+		{
+			this->bins.push_back(logbins[idx - 1]);
+		}
+
+	} else
+	{
+		// dealing with free diffusion (no collision at all)
+		for(uint idx = 0; idx < this->size; idx++)
+		{
+			this->bins.push_back(0.0);
+		}
+	}
 }
 
 void CollisionHistogram::createAmpsLogVector(vector<Walker> &_walkers, uint _numberOfSteps)
 {	
+	// 1st: initialize entries
+	for(uint idx = 0; idx < this->size; idx++)
+	{
+		this->amps.push_back(0.0);
+	}
+
+	
+	// compute histogram
+	int histogramIndex;
+	double xi_rate;
+	double logGap = log10(this->bins[2]) - log10(this->bins[1]);
+	double min_val = log10(this->bins[1]);
+	double steps = (double) _numberOfSteps;
+
+	for(uint id = 0; id < _walkers.size(); id++)
+	{
+		if(_walkers[id].collisions == 0)
+		{
+			this->amps[0] += 1.0;
+		} else
+		{
+			xi_rate = (_walkers[id].collisions / steps);
+			histogramIndex = floor( round( (log10(xi_rate) - min_val) / logGap ) );
+			histogramIndex += 1;
+			this->amps[histogramIndex] += 1.0;
+		}
+	}
+
+	// normalize histogram, i.e, histogram values sum 1.0
+	double numberOfWalkers = (double) _walkers.size();
+	for(int id = 0; id < this->size; id++)
+	{
+		this->amps[id] = this->amps[id] / numberOfWalkers;
+	}
 }
 
+// Returns a vector<double> linearly space from @start to @end with @points
+vector<double> CollisionHistogram::linspace(double start, double end, uint points)
+{
+    vector<double> vec(points);
+    double step = (end - start) / ((double) points - 1.0);
+    
+    for(int idx = 0; idx < points; idx++)
+    {
+        double x_i = start + step * idx;
+        vec[idx] = x_i;
+    }
+
+    return vec;
+}
+
+// Returns a vector<double> logarithmly space from 10^@exp_start to 10^@end with @points
+vector<double> CollisionHistogram::logspace(double exp_start, double exp_end, uint points, double base)
+{
+    vector<double> vec(points);
+    double step = (exp_end - exp_start) / ((double) points - 1.0);
+    
+    for(int idx = 0; idx < points; idx++)
+    {
+        double x_i = exp_start + step * idx;
+        vec[idx] = pow(base, x_i);
+    }
+
+    return vec;
+}
