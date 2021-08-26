@@ -146,7 +146,6 @@ __global__ void PFG_map_periodic(int *walker_px,
 
     // thread variables for future movements
     int localNextX, localNextY, localNextZ;
-    // int imgNextX, imgNextY, imgNextZ;
     direction nextDirection = None;
 
     // now begin the "walk" procedure de facto
@@ -158,9 +157,6 @@ __global__ void PFG_map_periodic(int *walker_px,
         localPosZ = walker_pz[walkerId];
         localCollisions = collisions[walkerId];
         localSeed = seed[walkerId];
-
-        // printf("\ngpu kernel pfgse_map_periodic() launched");
-        // printf("\ninitial: {%d, %d, %d} \n", localPosX, localPosY, localPosZ);
             
         for(int step = 0; step < numberOfSteps; step++)
         {
@@ -174,7 +170,6 @@ __global__ void PFG_map_periodic(int *walker_px,
                                     localNextX,
                                     localNextY,
                                     localNextZ);
-            // printf("next: {%d, %d, %d} \t", localNextX, localNextY, localNextZ);
 
             // update img position
             imgPosX = convertLocalToGlobal(localNextX, shift_convert) % map_columns;
@@ -186,8 +181,6 @@ __global__ void PFG_map_periodic(int *walker_px,
             imgPosZ = convertLocalToGlobal(localNextZ, shift_convert) % map_depth;
             if(imgPosZ < 0) imgPosZ += map_depth;
 
-            // printf("img: {%d, %d, %d} ", imgPosX, imgPosY, imgPosZ);
-
             if (checkNextPosition_PFG(imgPosX, 
                                       imgPosY, 
                                       imgPosZ, 
@@ -196,7 +189,6 @@ __global__ void PFG_map_periodic(int *walker_px,
                                       bitBlockRows))
             {
                 // update real position
-                // printf("Ok! \n");
                 localPosX = localNextX;
                 localPosY = localNextY;
                 localPosZ = localNextZ;                
@@ -205,7 +197,6 @@ __global__ void PFG_map_periodic(int *walker_px,
             {
                 // walker hits wall and comes back to the same position
                 // collisions count is incremented
-                // printf("Not ok, hit wall!\n");
                 localCollisions++;
             }
         }
@@ -262,10 +253,7 @@ __global__ void PFG_map_mirror ( int *walker_px,
         localPosZ = walker_pz[walkerId];
         localCollisions = collisions[walkerId];
         localSeed = seed[walkerId];
-
-        // printf("\ngpu kernel pfgse_map_periodic() launched");
-        // printf("\ninitial: {%d, %d, %d} \n", localPosX, localPosY, localPosZ);
-            
+         
         for(int step = 0; step < numberOfSteps; step++)
         {
             
@@ -278,7 +266,6 @@ __global__ void PFG_map_mirror ( int *walker_px,
                                     localNextX,
                                     localNextY,
                                     localNextZ);
-            // printf("next: {%d, %d, %d} \t", localNextX, localNextY, localNextZ);
 
             // update img position
             /*
@@ -321,9 +308,6 @@ __global__ void PFG_map_mirror ( int *walker_px,
             imgPosZ = (antimirror * imgPosZ) + (mirror * (map_depth - 1 - imgPosZ));
 
 
-
-            // printf("img: {%d, %d, %d} ", imgPosX, imgPosY, imgPosZ);
-
             if (checkNextPosition_PFG(imgPosX, 
                                       imgPosY, 
                                       imgPosZ, 
@@ -332,7 +316,6 @@ __global__ void PFG_map_mirror ( int *walker_px,
                                       bitBlockRows))
             {
                 // update real position
-                // printf("Ok! \n");
                 localPosX = localNextX;
                 localPosY = localNextY;
                 localPosZ = localNextZ;                
@@ -341,7 +324,6 @@ __global__ void PFG_map_mirror ( int *walker_px,
             {
                 // walker hits wall and comes back to the same position
                 // collisions count is incremented
-                // printf("Not ok, hit wall!\n");
                 localCollisions++;
             }
         }

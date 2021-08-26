@@ -276,11 +276,8 @@ private:
     void mapSimulation_OMP();    
 
     // simulations in CUDA language for GPU application
-    void mapSimulation_CUDA_2D();
     void mapSimulation_CUDA_2D_histograms();
-    void mapSimulation_CUDA_3D_noflux();
-    void mapSimulation_CUDA_3D_histograms_noflux();
-    void mapSimulation_CUDA_3D_histograms_periodic();
+    void mapSimulation_CUDA_3D_histograms();
 
 
 public:

@@ -82,6 +82,20 @@ __global__ void map_3D_periodic(int *walker_px,
                                 const uint map_depth,
                                 const uint shift_convert);
 
+__global__ void map_3D_mirror( int *walker_px,
+                               int *walker_py,
+                               int *walker_pz,
+                               uint *collisions,
+                               uint64_t *seed,
+                               const uint64_t *bitBlock,
+                               const uint bitBlockColumns,
+                               const uint bitBlockRows,
+                               const uint numberOfWalkers,
+                               const uint numberOfSteps,
+                               const uint map_columns,
+                               const uint map_rows,
+                               const uint map_depth,
+                               const uint shift_convert);
 
 // Device functions for 3D simulation
 __device__ direction computeNextDirection_3D(uint64_t &seed);

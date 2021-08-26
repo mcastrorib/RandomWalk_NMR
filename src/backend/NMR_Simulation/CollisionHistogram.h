@@ -30,10 +30,7 @@ public:
 	CollisionHistogram();
 	CollisionHistogram(int _size, string _scale);
 	CollisionHistogram(const CollisionHistogram &_otherHistogram);
-	virtual ~CollisionHistogram()
-	{
-		cout << "erasing histogram" << endl;
-	}
+	virtual ~CollisionHistogram(){}
 
 	void clear()
 	{
