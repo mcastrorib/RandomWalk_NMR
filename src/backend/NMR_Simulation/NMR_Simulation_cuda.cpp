@@ -723,11 +723,8 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
 {   
     string bc = (*this).getBoundaryCondition();
 
-    cout << "- starting 3DRW-Mapping simulation (in GPU)";
-    if(bc == "periodic") cout << "[bc:periodic]... ";
-    else if(bc == "mirror") cout << "[bc:mirror]... ";
-    else cout << "[bc:noflux]... ";
-    
+    cout << "- starting 3DRW-Mapping simulation (in GPU) [bc:" << bc << "]...";
+        
     // reset walkers
     if(this->rwNMR_config.getOpenMPUsage())
     {

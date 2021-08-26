@@ -417,10 +417,7 @@ void NMR_PFGSE::simulation()
 {
 	if(this->NMR.gpu_use == true)
 	{
-		if(this->NMR.getBoundaryCondition() == "noflux") { (*this).simulation_cuda_noflux(); } 
-		else if(this->NMR.getBoundaryCondition() == "periodic") { (*this).simulation_cuda_periodic(); } 
-		else if(this->NMR.getBoundaryCondition() == "mirror") { (*this).simulation_cuda_mirror(); }
-		else cout << "error: BC not set" << endl;
+		(*this).simulation_cuda();
 	}
 	else
 	{

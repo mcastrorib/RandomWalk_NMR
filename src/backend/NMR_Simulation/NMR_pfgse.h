@@ -181,9 +181,6 @@ private:
 	int mpi_processes;
 
 	void simulation_cuda();
-	void simulation_cuda_noflux();
-	void simulation_cuda_periodic();
-	void simulation_cuda_mirror();
 	void simulation_omp();
 	double mean(vector<double> &_vec);
 	double mean(double *_vec, int _size);
