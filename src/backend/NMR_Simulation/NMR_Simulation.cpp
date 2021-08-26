@@ -57,6 +57,7 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
                                                          SVp(-1.0),
                                                          walkerOccupancy(-1.0),
                                                          voxelDivisionApplied(false),
+                                                         histogram(),
                                                          penalties(NULL)
 {
     // init vector objects
@@ -1676,13 +1677,21 @@ void NMR_Simulation::associateMapSimulation()
         else
         {
             if((*this).getBoundaryCondition() == "periodic") 
+            {
                 mapSimulationPointer = &NMR_Simulation::mapSimulation_CUDA_3D_histograms_periodic;
-            else
-                mapSimulationPointer = &NMR_Simulation::mapSimulation_CUDA_3D_histograms;
+            } else if((*this).getBoundaryCondition() == "mirror") 
+            { 
+               mapSimulationPointer = &NMR_Simulation::mapSimulation_CUDA_3D_histograms_periodic;
+            } else
+            {
+                mapSimulationPointer = &NMR_Simulation::mapSimulation_CUDA_3D_histograms_noflux;
+            }
         }
     }
     else
+    {
         mapSimulationPointer = &NMR_Simulation::mapSimulation_OMP;
+    }
 }
 
 uint NMR_Simulation::pickRandomIndex(uint _maxValue)

@@ -76,7 +76,6 @@ void CollisionHistogram::fillHistogram(vector<Walker> &_walkers, uint _numberOfS
 {
 	if(this->scale == "log")
 	{
-		cout << "Histogram with log-scale was chosen :)" << endl;
 		(*this).createBinsLogVector(_walkers, _numberOfSteps);
 		(*this).createAmpsLogVector(_walkers, _numberOfSteps);
 	} else
@@ -191,6 +190,7 @@ void CollisionHistogram::createAmpsLogVector(vector<Walker> &_walkers, uint _num
 	double logGap = log10(this->bins[2]) - log10(this->bins[1]);
 	double min_val = log10(this->bins[1]);
 	double steps = (double) _numberOfSteps;
+	uint leaks = 0;
 
 	for(uint id = 0; id < _walkers.size(); id++)
 	{
@@ -202,7 +202,13 @@ void CollisionHistogram::createAmpsLogVector(vector<Walker> &_walkers, uint _num
 			xi_rate = (_walkers[id].collisions / steps);
 			histogramIndex = floor( round( (log10(xi_rate) - min_val) / logGap ) );
 			histogramIndex += 1;
-			this->amps[histogramIndex] += 1.0;
+			if(histogramIndex > 0 /* and histogramIndex < this->size */)
+			{
+				this->amps[histogramIndex] += 1.0;				
+			} else
+			{
+				this->amps[1] += 1.0;		
+			}
 		}
 	}
 

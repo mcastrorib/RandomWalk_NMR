@@ -52,20 +52,20 @@ __device__ uint convertLocalToGlobal_2D(uint _localPos, uint _shiftConverter);
 
 // -----
 // -- 3D
-__global__ void map_3D(int *walker_px,
-                       int *walker_py,
-                       int *walker_pz,
-                       uint *collisions,
-                       uint64_t *seed,
-                       const uint64_t *bitBlock,
-                       const uint bitBlockColumns,
-                       const uint bitBlockRows,
-                       const uint numberOfWalkers,
-                       const uint numberOfSteps,
-                       const uint map_columns,
-                       const uint map_rows,
-                       const uint map_depth,
-                       const uint shift_convert);
+__global__ void map_3D_noflux( int *walker_px,
+                               int *walker_py,
+                               int *walker_pz,
+                               uint *collisions,
+                               uint64_t *seed,
+                               const uint64_t *bitBlock,
+                               const uint bitBlockColumns,
+                               const uint bitBlockRows,
+                               const uint numberOfWalkers,
+                               const uint numberOfSteps,
+                               const uint map_columns,
+                               const uint map_rows,
+                               const uint map_depth,
+                               const uint shift_convert);
 
 __global__ void map_3D_periodic(int *walker_px,
                                 int *walker_py,

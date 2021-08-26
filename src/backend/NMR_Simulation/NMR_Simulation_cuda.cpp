@@ -555,20 +555,20 @@ __device__ uint convertLocalToGlobal_2D(uint _localPos, uint _shiftConverter)
 
 // GPU kernel for Mapping simulation - a.k.a. walker's collision count
 // in this kernel, each thread will behave as an unique walker
-__global__ void map_3D(int *walker_px,
-                       int *walker_py,
-                       int *walker_pz,
-                       uint *collisions,
-                       uint64_t *seed,
-                       const uint64_t *bitBlock,
-                       const uint bitBlockColumns,
-                       const uint bitBlockRows,
-                       const uint numberOfWalkers,
-                       const uint numberOfSteps,
-                       const uint map_columns,
-                       const uint map_rows,
-                       const uint map_depth,
-                       const uint shift_convert)
+__global__ void map_3D_noflux( int *walker_px,
+                               int *walker_py,
+                               int *walker_pz,
+                               uint *collisions,
+                               uint64_t *seed,
+                               const uint64_t *bitBlock,
+                               const uint bitBlockColumns,
+                               const uint bitBlockRows,
+                               const uint numberOfWalkers,
+                               const uint numberOfSteps,
+                               const uint map_columns,
+                               const uint map_rows,
+                               const uint map_depth,
+                               const uint shift_convert)
 {
 
     // identify thread's walker
@@ -738,9 +738,9 @@ __global__ void map_3D_periodic(int *walker_px,
 
 // function to call GPU kernel to execute
 // walker's "map" method in Graphics Processing Unit
-void NMR_Simulation::mapSimulation_CUDA_3D()
+void NMR_Simulation::mapSimulation_CUDA_3D_noflux()
 {
-    cout << "- starting 3DRW-Mapping simulation (in GPU)... ";
+    cout << "- starting 3DRW-Mapping simulation (in GPU) [bc:noflux]... ";
     // reset walkers
     for (uint id = 0; id < this->walkers.size(); id++)
     {
@@ -860,20 +860,20 @@ void NMR_Simulation::mapSimulation_CUDA_3D()
         // kernel "map" launch
         for(uint sIdx = 0; sIdx < stepsList.size(); sIdx++)
         {
-            map_3D<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
-                                                         d_walker_py,
-                                                         d_walker_pz,
-                                                         d_collisions,
-                                                         d_seed,
-                                                         d_bitBlock,
-                                                         bitBlockColumns,
-                                                         bitBlockRows,
-                                                         walkersPerKernel,
-                                                         stepsList[sIdx],
-                                                         map_columns,
-                                                         map_rows,
-                                                         map_depth,
-                                                         shiftConverter);
+            map_3D_noflux<<<blocksPerKernel, threadsPerBlock>>>( d_walker_px,
+                                                                 d_walker_py,
+                                                                 d_walker_pz,
+                                                                 d_collisions,
+                                                                 d_seed,
+                                                                 d_bitBlock,
+                                                                 bitBlockColumns,
+                                                                 bitBlockRows,
+                                                                 walkersPerKernel,
+                                                                 stepsList[sIdx],
+                                                                 map_columns,
+                                                                 map_rows,
+                                                                 map_depth,
+                                                                 shiftConverter);
             cudaDeviceSynchronize();
         }
 
@@ -927,20 +927,20 @@ void NMR_Simulation::mapSimulation_CUDA_3D()
         // kernel "map" launch
         for(uint sIdx = 0; sIdx < stepsList.size(); sIdx++)
         {
-            map_3D<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
-                                                         d_walker_py,
-                                                         d_walker_pz,
-                                                         d_collisions,
-                                                         d_seed,
-                                                         d_bitBlock,
-                                                         bitBlockColumns,
-                                                         bitBlockRows,
-                                                         walkersPerKernel,
-                                                         stepsList[sIdx],
-                                                         map_columns,
-                                                         map_rows,
-                                                         map_depth,
-                                                         shiftConverter);
+            map_3D_noflux<<<blocksPerKernel, threadsPerBlock>>>( d_walker_px,
+                                                                 d_walker_py,
+                                                                 d_walker_pz,
+                                                                 d_collisions,
+                                                                 d_seed,
+                                                                 d_bitBlock,
+                                                                 bitBlockColumns,
+                                                                 bitBlockRows,
+                                                                 walkersPerKernel,
+                                                                 stepsList[sIdx],
+                                                                 map_columns,
+                                                                 map_rows,
+                                                                 map_depth,
+                                                                 shiftConverter);
             cudaDeviceSynchronize();
         }
 
@@ -1003,9 +1003,9 @@ void NMR_Simulation::mapSimulation_CUDA_3D()
 
 // function to call GPU kernel to execute
 // walker's "walk" method in Graphics Processing Unit
-void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
+void NMR_Simulation::mapSimulation_CUDA_3D_histograms_noflux()
 {
-    cout << "- starting 3DRW-Mapping simulation (in GPU)... ";
+    cout << "- starting 3DRW-Mapping simulation (in GPU) [bc:noflux]... ";
     // reset walkers
     if(this->rwNMR_config.getOpenMPUsage())
     {
@@ -1183,20 +1183,20 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
             // kernel "map" launch
             for(uint sIdx = 0; sIdx < stepsList.size(); sIdx++)
             {
-                map_3D<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
-                                                             d_walker_py,
-                                                             d_walker_pz,
-                                                             d_collisions,
-                                                             d_seed,
-                                                             d_bitBlock,
-                                                             bitBlockColumns,
-                                                             bitBlockRows,
-                                                             walkersPerKernel,
-                                                             stepsList[sIdx],
-                                                             map_columns,
-                                                             map_rows,
-                                                             map_depth,
-                                                             shiftConverter);
+                map_3D_noflux<<<blocksPerKernel, threadsPerBlock>>>( d_walker_px,
+                                                                     d_walker_py,
+                                                                     d_walker_pz,
+                                                                     d_collisions,
+                                                                     d_seed,
+                                                                     d_bitBlock,
+                                                                     bitBlockColumns,
+                                                                     bitBlockRows,
+                                                                     walkersPerKernel,
+                                                                     stepsList[sIdx],
+                                                                     map_columns,
+                                                                     map_rows,
+                                                                     map_depth,
+                                                                     shiftConverter);
                 cudaDeviceSynchronize();
             }
 
@@ -1304,20 +1304,20 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
             // kernel "map" launch
             for(uint sIdx = 0; sIdx < stepsList.size(); sIdx++)
             {
-                map_3D<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
-                                                             d_walker_py,
-                                                             d_walker_pz,
-                                                             d_collisions,
-                                                             d_seed,
-                                                             d_bitBlock,
-                                                             bitBlockColumns,
-                                                             bitBlockRows,
-                                                             lastWalkerPackSize,
-                                                             stepsList[sIdx],
-                                                             map_columns,
-                                                             map_rows,
-                                                             map_depth,
-                                                             shiftConverter);
+                map_3D_noflux<<<blocksPerKernel, threadsPerBlock>>>( d_walker_px,
+                                                                     d_walker_py,
+                                                                     d_walker_pz,
+                                                                     d_collisions,
+                                                                     d_seed,
+                                                                     d_bitBlock,
+                                                                     bitBlockColumns,
+                                                                     bitBlockRows,
+                                                                     lastWalkerPackSize,
+                                                                     stepsList[sIdx],
+                                                                     map_columns,
+                                                                     map_rows,
+                                                                     map_depth,
+                                                                     shiftConverter);
                 cudaDeviceSynchronize();
             }
     
@@ -1472,7 +1472,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
 // walker's "walk" method in Graphics Processing Unit
 void NMR_Simulation::mapSimulation_CUDA_3D_histograms_periodic()
 {
-    cout << "- starting 3DRW-Mapping simulation in GPU...";
+    cout << "- starting 3DRW-Mapping simulation in GPU [bc:periodic]...";
     // reset walkers
     if(this->rwNMR_config.getOpenMPUsage())
     {
@@ -1909,6 +1909,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms_periodic()
     free(collisions);
     free(seed);
 
+
     // and direct them to NULL
     walker_px = NULL;
     walker_py = NULL;
@@ -1932,6 +1933,7 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms_periodic()
     cudaEventSynchronize(stop); 
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
+
     cout << "Done.\nCPU/GPU elapsed time: " << elapsedTime * 1.0e-3 << " seconds" << endl;
 }
 

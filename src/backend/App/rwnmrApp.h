@@ -36,9 +36,10 @@ public:
     // default destructor
     virtual ~rwnmrApp()
     {
+        cout << "Deleting application...";
         delete NMR;
         NMR = NULL;
-        cout << "Application ended." << endl;
+        cout << " Finished." << endl;
     }
 
     void buildEssentials();
