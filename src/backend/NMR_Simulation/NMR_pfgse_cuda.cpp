@@ -72,9 +72,9 @@ __global__ void PFG_map_noflux(  int *walker_px,
         {
             nextDirection = computeNextDirection_PFG(localSeed);
         
-            nextDirection = checkBorder_PFG(convertLocalToGlobal(localPosX, shift_convert),
-                                            convertLocalToGlobal(localPosY, shift_convert),
-                                            convertLocalToGlobal(localPosZ, shift_convert),
+            nextDirection = checkBorder_PFG(convertLocalToGlobal_PFG(localPosX, shift_convert),
+                                            convertLocalToGlobal_PFG(localPosY, shift_convert),
+                                            convertLocalToGlobal_PFG(localPosZ, shift_convert),
                                             nextDirection,
                                             map_columns,
                                             map_rows,
@@ -88,9 +88,9 @@ __global__ void PFG_map_noflux(  int *walker_px,
                                     next_y,
                                     next_z);
 
-            if (checkNextPosition_PFG(convertLocalToGlobal(next_x, shift_convert), 
-                                      convertLocalToGlobal(next_y, shift_convert), 
-                                      convertLocalToGlobal(next_z, shift_convert), 
+            if (checkNextPosition_PFG(convertLocalToGlobal_PFG(next_x, shift_convert), 
+                                      convertLocalToGlobal_PFG(next_y, shift_convert), 
+                                      convertLocalToGlobal_PFG(next_z, shift_convert), 
                                       bitBlock, 
                                       bitBlockColumns, 
                                       bitBlockRows))
@@ -172,13 +172,13 @@ __global__ void PFG_map_periodic(int *walker_px,
                                     localNextZ);
 
             // update img position
-            imgPosX = convertLocalToGlobal(localNextX, shift_convert) % map_columns;
+            imgPosX = convertLocalToGlobal_PFG(localNextX, shift_convert) % map_columns;
             if(imgPosX < 0) imgPosX += map_columns;
 
-            imgPosY = convertLocalToGlobal(localNextY, shift_convert) % map_rows;
+            imgPosY = convertLocalToGlobal_PFG(localNextY, shift_convert) % map_rows;
             if(imgPosY < 0) imgPosY += map_rows;
 
-            imgPosZ = convertLocalToGlobal(localNextZ, shift_convert) % map_depth;
+            imgPosZ = convertLocalToGlobal_PFG(localNextZ, shift_convert) % map_depth;
             if(imgPosZ < 0) imgPosZ += map_depth;
 
             if (checkNextPosition_PFG(imgPosX, 
@@ -271,7 +271,7 @@ __global__ void PFG_map_mirror ( int *walker_px,
             /*
                 coordinate X
             */
-            globalPosX = convertLocalToGlobal(localNextX, shift_convert);
+            globalPosX = convertLocalToGlobal_PFG(localNextX, shift_convert);
             imgPosX = globalPosX % map_columns;
             if(imgPosX < 0) imgPosX += map_columns;
 
@@ -284,7 +284,7 @@ __global__ void PFG_map_mirror ( int *walker_px,
             /*
                 coordinate Y
             */
-            globalPosY = convertLocalToGlobal(localNextY, shift_convert);
+            globalPosY = convertLocalToGlobal_PFG(localNextY, shift_convert);
             imgPosY = globalPosY % map_rows;
             if(imgPosY < 0) imgPosY += map_rows;
 
@@ -297,7 +297,7 @@ __global__ void PFG_map_mirror ( int *walker_px,
             /*
                 coordinate Z
             */
-            globalPosZ = convertLocalToGlobal(localNextZ, shift_convert);
+            globalPosZ = convertLocalToGlobal_PFG(localNextZ, shift_convert);
             imgPosZ = globalPosZ % map_depth;
             if(imgPosZ < 0) imgPosZ += map_depth;
 
@@ -615,7 +615,6 @@ void NMR_PFGSE::simulation_cuda()
     // assign pointer to bitBlock datastructure
     uint64_t *h_bitBlock;
     h_bitBlock = this->NMR.bitBlock.blocks;
-
     uint64_t *d_bitBlock;
     cudaMalloc((void **)&d_bitBlock, numberOfBitBlocks * sizeof(uint64_t));
     cudaMemcpy(d_bitBlock, h_bitBlock, numberOfBitBlocks * sizeof(uint64_t), cudaMemcpyHostToDevice);
@@ -776,7 +775,6 @@ void NMR_PFGSE::simulation_cuda()
         copy_time += omp_get_wtime() - tick;
 
         // Launch kernel for GPU computation
-        // call "walk" method kernel
         tick = omp_get_wtime();
         for(uint step = 0; step < steps.size(); step++)
         {
@@ -975,8 +973,9 @@ void NMR_PFGSE::simulation_cuda()
                 h_globalEnergy += h_energy[idx];
             } 
         }
+        reduce_time += omp_get_wtime() - tick;
     } 
-    reduce_time += omp_get_wtime() - tick;
+    
 
     if (lastWalkerPackSize > 0)
     {
@@ -3090,7 +3089,7 @@ __device__ double compute_PFG_k_value(double gradientMagnitude, double pulse_wid
     return (pulse_width * 1.0e-03) * (giromagneticRatio * 1.0e+06) * (gradientMagnitude * 1.0e-08);
 }
 
-__device__ int convertLocalToGlobal(int _localPos, int _shiftConverter)
+__device__ int convertLocalToGlobal_PFG(int _localPos, int _shiftConverter)
 {
     return (_localPos >> _shiftConverter);
 }

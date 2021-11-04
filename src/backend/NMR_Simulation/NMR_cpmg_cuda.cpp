@@ -29,25 +29,28 @@
 
 
 
-// GPU kernel for NMR simulation - a.k.a. walker's relaxation/demagnetization
-// in this kernel, each thread will behave as a solitary walker
-__global__ void walk_CPMG(int *walker_px,
-                          int *walker_py,
-                          int *walker_pz,
-                          double *penalty,
-                          double *energy,
-                          uint64_t *seed,
-                          const uint64_t *bitBlock,
-                          const uint bitBlockColumns,
-                          const uint bitBlockRows,
-                          const uint numberOfWalkers,
-                          const uint energyArraySize,
-                          const uint echoesPerKernel,
-                          const uint stepsPerEcho,
-                          const uint map_columns,
-                          const uint map_rows,
-                          const uint map_depth,
-                          const uint shift_convert)
+/* 
+    GPU kernel for NMR CPMG simulation 
+    in this kernel, each thread will represent a unique walker
+    noflux condition is applied as image boundary treatment
+*/
+__global__ void CPMG_walk_noflux(int *walker_px,
+                                 int *walker_py,
+                                 int *walker_pz,
+                                 double *penalty,
+                                 double *energy,
+                                 uint64_t *seed,
+                                 const uint64_t *bitBlock,
+                                 const uint bitBlockColumns,
+                                 const uint bitBlockRows,
+                                 const uint numberOfWalkers,
+                                 const uint energyArraySize,
+                                 const uint echoesPerKernel,
+                                 const uint stepsPerEcho,
+                                 const uint map_columns,
+                                 const uint map_rows,
+                                 const uint map_depth,
+                                 const uint shift_convert)
 {
     // identify thread's walker
     int walkerId = threadIdx.x + blockIdx.x * blockDim.x;
@@ -86,12 +89,12 @@ __global__ void walk_CPMG(int *walker_px,
                 nextDirection = computeNextDirection_CPMG(local_seed);
 
                 nextDirection = checkBorder_CPMG(convertLocalToGlobal_CPMG(position_x, shift_convert),
-                                               convertLocalToGlobal_CPMG(position_y, shift_convert),
-                                               convertLocalToGlobal_CPMG(position_z, shift_convert),
-                                               nextDirection,
-                                               map_columns,
-                                               map_rows,
-                                               map_depth);
+                                                 convertLocalToGlobal_CPMG(position_y, shift_convert),
+                                                 convertLocalToGlobal_CPMG(position_z, shift_convert),
+                                                 nextDirection,
+                                                 map_columns,
+                                                 map_rows,
+                                                 map_depth);
 
                 computeNextPosition_CPMG(position_x,
                                        position_y,
@@ -102,11 +105,11 @@ __global__ void walk_CPMG(int *walker_px,
                                        next_z);
 
                 if (checkNextPosition_CPMG(convertLocalToGlobal_CPMG(next_x, shift_convert),
-                                         convertLocalToGlobal_CPMG(next_y, shift_convert),
-                                         convertLocalToGlobal_CPMG(next_z, shift_convert),
-                                         bitBlock, 
-                                         bitBlockColumns, 
-                                         bitBlockRows))
+                                           convertLocalToGlobal_CPMG(next_y, shift_convert),
+                                           convertLocalToGlobal_CPMG(next_z, shift_convert),
+                                           bitBlock, 
+                                           bitBlockColumns, 
+                                           bitBlockRows))
                 {
                     // position is valid
                     position_x = next_x;
@@ -135,8 +138,264 @@ __global__ void walk_CPMG(int *walker_px,
     }
 }
 
+/* 
+    GPU kernel for NMR CPMG simulation 
+    in this kernel, each thread will represent a unique walker
+    periodic condition is applied as image boundary treatment
+*/
+__global__ void CPMG_walk_periodic(int *walker_px,
+                                   int *walker_py,
+                                   int *walker_pz,
+                                   double *penalty,
+                                   double *energy,
+                                   uint64_t *seed,
+                                   const uint64_t *bitBlock,
+                                   const uint bitBlockColumns,
+                                   const uint bitBlockRows,
+                                   const uint numberOfWalkers,
+                                   const uint energyArraySize,
+                                   const uint echoesPerKernel,
+                                   const uint stepsPerEcho,
+                                   const uint map_columns,
+                                   const uint map_rows,
+                                   const uint map_depth,
+                                   const uint shift_convert)
+{
+    // identify thread's walker
+    int walkerId = threadIdx.x + blockIdx.x * blockDim.x;
+
+    // Local variables for unique read from device global memory
+    int localPosX, localPosY, localPosZ;
+    int imgPosX, imgPosY, imgPosZ;
+    double localDFactor;
+    uint64_t localSeed;
+
+    // thread variables for future movements
+    int localNextX, localNextY, localNextZ;
+    direction nextDirection = None;
+
+    // 1st energy array offset
+    // in first echo, walker's energy is stored in last echo of previous kernel launch
+    uint energy_OFFSET = (echoesPerKernel - 1) * energyArraySize;
+    double energyLvl;
+
+    // now begin the "walk" procedure de facto
+    if (walkerId < numberOfWalkers)
+    {
+        // Local variables for unique read from device global memory
+        localPosX = walker_px[walkerId];
+        localPosY = walker_py[walkerId];
+        localPosZ = walker_pz[walkerId];
+        localDFactor = penalty[walkerId];
+        localSeed = seed[walkerId];
+        energyLvl = energy[walkerId + energy_OFFSET];
+            
+        for (int echo = 0; echo < echoesPerKernel; echo++)
+        {
+            // update the offset
+            energy_OFFSET = echo * energyArraySize;
+
+            for (int step = 0; step < stepsPerEcho; step++)
+            {            
+                nextDirection = computeNextDirection_CPMG(localSeed); 
+                computeNextPosition_CPMG(localPosX,
+                                         localPosY,
+                                         localPosZ,
+                                         nextDirection,
+                                         localNextX,
+                                         localNextY,
+                                         localNextZ);
+
+                // update img position
+                imgPosX = convertLocalToGlobal_CPMG(localNextX, shift_convert) % map_columns;
+                if(imgPosX < 0) imgPosX += map_columns;
+
+                imgPosY = convertLocalToGlobal_CPMG(localNextY, shift_convert) % map_rows;
+                if(imgPosY < 0) imgPosY += map_rows;
+
+                imgPosZ = convertLocalToGlobal_CPMG(localNextZ, shift_convert) % map_depth;
+                if(imgPosZ < 0) imgPosZ += map_depth;
+
+                if (checkNextPosition_CPMG(imgPosX, 
+                                           imgPosY, 
+                                           imgPosZ, 
+                                           bitBlock, 
+                                           bitBlockColumns, 
+                                           bitBlockRows))
+                {
+                    // update real position
+                    localPosX = localNextX;
+                    localPosY = localNextY;
+                    localPosZ = localNextZ;                
+                }
+                else
+                {
+                    // walker hits wall and comes back to the same position
+                    // collisions count is incremented
+                    energyLvl = energyLvl * localDFactor;
+                }
+            }
+
+            // walker's energy device global memory update
+            // must be done for each echo
+            energy[walkerId + energy_OFFSET] = energyLvl;
+        }
+
+        // position and seed device global memory update
+        // must be done for each kernel
+        walker_px[walkerId] = localPosX;
+        walker_py[walkerId] = localPosY;
+        walker_pz[walkerId] = localPosZ;
+        seed[walkerId] = localSeed;
+    }
+}
+
+/* 
+    GPU kernel for NMR CPMG simulation 
+    in this kernel, each thread will represent a unique walker
+    mirror condition is applied as image boundary treatment
+*/
+__global__ void CPMG_walk_mirror(int *walker_px,
+                                 int *walker_py,
+                                 int *walker_pz,
+                                 double *penalty,
+                                 double *energy,
+                                 uint64_t *seed,
+                                 const uint64_t *bitBlock,
+                                 const uint bitBlockColumns,
+                                 const uint bitBlockRows,
+                                 const uint numberOfWalkers,
+                                 const uint energyArraySize,
+                                 const uint echoesPerKernel,
+                                 const uint stepsPerEcho,
+                                 const uint map_columns,
+                                 const uint map_rows,
+                                 const uint map_depth,
+                                 const uint shift_convert)
+{
+    // identify thread's walker
+    int walkerId = threadIdx.x + blockIdx.x * blockDim.x;
+
+    // Local variables for unique read from device global memory
+    int globalPosX, globalPosY, globalPosZ;
+    int localPosX, localPosY, localPosZ;
+    int imgPosX, imgPosY, imgPosZ;
+    int mirror, antimirror;
+    double localDFactor;
+    uint64_t localSeed;
+
+    // thread variables for future movements
+    int localNextX, localNextY, localNextZ;
+    direction nextDirection = None;
+
+    // 1st energy array offset
+    // in first echo, walker's energy is stored in last echo of previous kernel launch
+    uint energy_OFFSET = (echoesPerKernel - 1) * energyArraySize;
+    double energyLvl;
+
+    // now begin the "walk" procedure de facto
+    if (walkerId < numberOfWalkers)
+    {
+        // Local variables for unique read from device global memory
+        localPosX = walker_px[walkerId];
+        localPosY = walker_py[walkerId];
+        localPosZ = walker_pz[walkerId];
+        localDFactor = penalty[walkerId];
+        localSeed = seed[walkerId];
+        energyLvl = energy[walkerId + energy_OFFSET];
+            
+        for (int echo = 0; echo < echoesPerKernel; echo++)
+        {
+            // update the offset
+            energy_OFFSET = echo * energyArraySize;
+
+            for (int step = 0; step < stepsPerEcho; step++)
+            {            
+                nextDirection = computeNextDirection_CPMG(localSeed); 
+                computeNextPosition_CPMG(localPosX,
+                                         localPosY,
+                                         localPosZ,
+                                         nextDirection,
+                                         localNextX,
+                                         localNextY,
+                                         localNextZ);
+
+                // update img position
+                /*
+                    coordinate X
+                */
+                globalPosX = convertLocalToGlobal_CPMG(localNextX, shift_convert);
+                imgPosX = globalPosX % map_columns;
+                if(imgPosX < 0) imgPosX += map_columns;
+
+                if(globalPosX > 0) mirror = (globalPosX / map_columns) % 2;
+                else mirror = ((-globalPosX - 1 + map_columns) / map_columns) % 2; 
+
+                antimirror = (mirror + 1) % 2;
+                imgPosX = (antimirror * imgPosX) + (mirror * (map_columns - 1 - imgPosX));    
+
+                /*
+                    coordinate Y
+                */
+                globalPosY = convertLocalToGlobal_CPMG(localNextY, shift_convert);
+                imgPosY = globalPosY % map_rows;
+                if(imgPosY < 0) imgPosY += map_rows;
+
+                if(globalPosY > 0) mirror = (globalPosY / map_rows) % 2;
+                else mirror = ((-globalPosY - 1 + map_rows) / map_rows) % 2; 
+
+                antimirror = (mirror + 1) % 2;
+                imgPosY = (antimirror * imgPosY) + (mirror * (map_rows - 1 - imgPosY));
+
+                /*
+                    coordinate Z
+                */
+                globalPosZ = convertLocalToGlobal_CPMG(localNextZ, shift_convert);
+                imgPosZ = globalPosZ % map_depth;
+                if(imgPosZ < 0) imgPosZ += map_depth;
+
+                if(globalPosZ > 0) mirror = (globalPosZ / map_depth) % 2;
+                else mirror = ((-globalPosZ - 1 + map_depth) / map_depth) % 2; 
+
+                antimirror = (mirror + 1) % 2;
+                imgPosZ = (antimirror * imgPosZ) + (mirror * (map_depth - 1 - imgPosZ));
+
+                if (checkNextPosition_CPMG(imgPosX, 
+                                           imgPosY, 
+                                           imgPosZ, 
+                                           bitBlock, 
+                                           bitBlockColumns, 
+                                           bitBlockRows))
+                {
+                    // update real position
+                    localPosX = localNextX;
+                    localPosY = localNextY;
+                    localPosZ = localNextZ;                
+                }
+                else
+                {
+                    // walker hits wall and comes back to the same position
+                    // collisions count is incremented
+                    energyLvl = energyLvl * localDFactor;
+                }
+            }
+
+            // walker's energy device global memory update
+            // must be done for each echo
+            energy[walkerId + energy_OFFSET] = energyLvl;
+        }
+
+        // position and seed device global memory update
+        // must be done for each kernel
+        walker_px[walkerId] = localPosX;
+        walker_py[walkerId] = localPosY;
+        walker_pz[walkerId] = localPosZ;
+        seed[walkerId] = localSeed;
+    }
+}
+
 // GPU kernel for reducing energy array into a global energy vector
-__global__ void energyReduce_CPMG(double *energy,
+__global__ void CPMG_energyReduce(double *energy,
                                   double *collector,
                                   const uint energyArraySize,
                                   const uint collectorSize,
@@ -177,10 +436,19 @@ __global__ void energyReduce_CPMG(double *energy,
 
 // function to call GPU kernel to execute
 // walker's "walk" method in Graphics Processing Unit
-void NMR_cpmg::simulation_img_cuda()
+void NMR_cpmg::image_simulation_cuda()
 {
-    cout << "initializing RW-NMR simulation in GPU... ";
+    string bc = this->NMR.boundaryCondition;
+    cout << "- starting RW-CPMG simulation (in GPU) [bc:" << bc << "]...";
 
+    bool time_verbose = false;
+    double reset_time = 0.0;
+    double copy_time = 0.0;
+    double kernel_time = 0.0;
+    double buffer_time = 0.0;
+    double reduce_time = 0.0;
+    
+    double tick = omp_get_wtime();
     if(this->NMR.rwNMR_config.getOpenMPUsage())
     {
         // set omp variables for parallel loop throughout walker list
@@ -221,6 +489,9 @@ void NMR_cpmg::simulation_img_cuda()
     double energySum = ((double) this->NMR.walkers.size()) * this->NMR.walkers[0].getEnergy();
     this->NMR.globalEnergy.push_back(energySum);
 
+    reset_time += omp_get_wtime() - tick;
+
+
     // CUDA event recorder to measure computation time in device
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -239,12 +510,9 @@ void NMR_cpmg::simulation_img_cuda()
 
     uint numberOfEchoes = this->NMR.numberOfEchoes;
     uint stepsPerEcho = this->NMR.stepsPerEcho;
-
-    // number of echos that each walker in kernel call will perform
     uint echoesPerKernel = this->NMR.rwNMR_config.getEchoesPerKernel();
     uint kernelCalls = (uint) ceil(numberOfEchoes / (double) echoesPerKernel);
-    // uint lastEchoTail = numberOfEchoes - (kernelCalls * echoesPerKernel);
-
+    
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
     uint threadsPerBlock = this->NMR.rwNMR_config.getThreadsPerBlock();
     uint blocksPerKernel = this->NMR.rwNMR_config.getBlocks();
@@ -277,7 +545,6 @@ void NMR_cpmg::simulation_img_cuda()
     // assign pointer to bitBlock datastructure
     uint64_t *bitBlock;
     bitBlock = this->NMR.bitBlock.blocks;
-
     uint64_t *d_bitBlock;
     cudaMalloc((void **)&d_bitBlock, numberOfBitBlocks * sizeof(uint64_t));
     cudaMemcpy(d_bitBlock, bitBlock, numberOfBitBlocks * sizeof(uint64_t), cudaMemcpyHostToDevice);
@@ -297,11 +564,12 @@ void NMR_cpmg::simulation_img_cuda()
     double *temp_globalEnergy = arrayFactory.getDoubleArray((uint)echoesPerKernel);
     double *h_globalEnergy = arrayFactory.getDoubleArray(kernelCalls * echoesPerKernel);
 
-// #pragma omp parallel for
+    tick = omp_get_wtime();
     for (uint echo = 0; echo < numberOfEchoes; echo++)
     {
         h_globalEnergy[echo] = 0.0;
     }
+    buffer_time += omp_get_wtime() - tick;
 
     // Declaration of pointers to device data arrays
     int *d_walker_px;
@@ -321,11 +589,12 @@ void NMR_cpmg::simulation_img_cuda()
     cudaMalloc((void **)&d_energyCollector, echoesPerKernel * energyCollectorSize * sizeof(double));
     cudaMalloc((void **)&d_seed, walkersPerKernel * sizeof(uint64_t));
 
-// #pragma omp parallel for
+    tick = omp_get_wtime();
     for (uint i = 0; i < energyArraySize * echoesPerKernel; i++)
     {
         energy[i] = 0.0;
     }
+    buffer_time += omp_get_wtime() - tick;
 
     for (uint packId = 0; packId < (numberOfWalkerPacks - 1); packId++)
     {
@@ -334,6 +603,7 @@ void NMR_cpmg::simulation_img_cuda()
 
         // Host data copy
         // copy original walkers' data to temporary host arrays
+        tick = omp_get_wtime();
         if(this->NMR.rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
@@ -369,16 +639,19 @@ void NMR_cpmg::simulation_img_cuda()
                 energy[i + ((echoesPerKernel - 1) * energyArraySize)] = this->NMR.walkers[i + packOffset].energy;
                 seed[i] = this->NMR.walkers[i + packOffset].initialSeed;
             }
-        }        
+        }  
+        buffer_time += omp_get_wtime() - tick;      
 
         // Device data copy
         // copy host data to device
+        tick = omp_get_wtime();
         cudaMemcpy(d_walker_px, walker_px, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_py, walker_py, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_pz, walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_penalty, penalty, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_energy, energy, echoesPerKernel * energyArraySize * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_seed, seed, walkersPerKernel * sizeof(uint64_t), cudaMemcpyHostToDevice);
+        copy_time += omp_get_wtime() - tick;
 
         // Launch kernel for GPU computation
         for (uint kernelId = 0; kernelId < kernelCalls; kernelId++)
@@ -387,28 +660,76 @@ void NMR_cpmg::simulation_img_cuda()
             uint echoOffset = kernelId * echoesPerKernel;
             uint echoes = echoesPerKernel;
 
-            // call "walk" method kernel
-            walk_CPMG<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
-                                                          d_walker_py,
-                                                          d_walker_pz,
-                                                          d_penalty,
-                                                          d_energy,
-                                                          d_seed,
-                                                          d_bitBlock,
-                                                          bitBlockColumns,
-                                                          bitBlockRows,
-                                                          walkersPerKernel,
-                                                          energyArraySize,
-                                                          echoes,
-                                                          stepsPerEcho,
-                                                          map_columns,
-                                                          map_rows,
-                                                          map_depth,
-                                                          shiftConverter);
+            /* 
+                Call adequate RW kernel depending on the chosen boundary treatment
+            */
+            tick = omp_get_wtime();
+            if(bc == "periodic")
+            {
+                CPMG_walk_periodic<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                         d_walker_py,
+                                                                         d_walker_pz,
+                                                                         d_penalty,
+                                                                         d_energy,
+                                                                         d_seed,
+                                                                         d_bitBlock,
+                                                                         bitBlockColumns,
+                                                                         bitBlockRows,
+                                                                         walkersPerKernel,
+                                                                         energyArraySize,
+                                                                         echoes,
+                                                                         stepsPerEcho,
+                                                                         map_columns,
+                                                                         map_rows,
+                                                                         map_depth,
+                                                                         shiftConverter);
+            }
+            else if(bc == "mirror")
+            {
+                CPMG_walk_mirror<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                       d_walker_py,
+                                                                       d_walker_pz,
+                                                                       d_penalty,
+                                                                       d_energy,
+                                                                       d_seed,
+                                                                       d_bitBlock,
+                                                                       bitBlockColumns,
+                                                                       bitBlockRows,
+                                                                       walkersPerKernel,
+                                                                       energyArraySize,
+                                                                       echoes,
+                                                                       stepsPerEcho,
+                                                                       map_columns,
+                                                                       map_rows,
+                                                                       map_depth,
+                                                                       shiftConverter);
+            } else
+            {
+                CPMG_walk_noflux<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                       d_walker_py,
+                                                                       d_walker_pz,
+                                                                       d_penalty,
+                                                                       d_energy,
+                                                                       d_seed,
+                                                                       d_bitBlock,
+                                                                       bitBlockColumns,
+                                                                       bitBlockRows,
+                                                                       walkersPerKernel,
+                                                                       energyArraySize,
+                                                                       echoes,
+                                                                       stepsPerEcho,
+                                                                       map_columns,
+                                                                       map_rows,
+                                                                       map_depth,
+                                                                       shiftConverter);
+            }
             cudaDeviceSynchronize();
+            kernel_time += omp_get_wtime() - tick;
 
+            
             // launch globalEnergy "reduce" kernel
-            energyReduce_CPMG<<<blocksPerKernel / 2,
+            tick = omp_get_wtime();
+            CPMG_energyReduce<<<blocksPerKernel / 2,
                                 threadsPerBlock,
                                 threadsPerBlock * sizeof(double)>>>(d_energy,
                                                                     d_energyCollector,
@@ -416,26 +737,37 @@ void NMR_cpmg::simulation_img_cuda()
                                                                     energyCollectorSize,
                                                                     echoesPerKernel);
             cudaDeviceSynchronize();
+            reduce_time += omp_get_wtime() - tick;
 
             // copy data from gatherer array
+            tick = omp_get_wtime();
             cudaMemcpy(energyCollector,
                        d_energyCollector,
                        echoesPerKernel * energyCollectorSize * sizeof(double),
                        cudaMemcpyDeviceToHost);
+            copy_time += omp_get_wtime() - tick;
 
             //last reduce is done in CPU parallel-style using openMP
-            reduce_omp_CPMG(temp_globalEnergy, energyCollector, echoesPerKernel, blocksPerKernel / 2);
+            tick = omp_get_wtime();
+            CPMG_reduce_omp(temp_globalEnergy, energyCollector, echoesPerKernel, blocksPerKernel / 2);
+            reduce_time += omp_get_wtime() - tick;
 
             // copy data from temporary array to NMR_Simulation2D "globalEnergy" vector class member
+            tick = omp_get_wtime();
             for (uint echo = 0; echo < echoesPerKernel; echo++)
             {
                 h_globalEnergy[echo + echoOffset] += temp_globalEnergy[echo];
             }
+            buffer_time += omp_get_wtime() - tick;
 
             // recover last positions
+            tick = omp_get_wtime();
             cudaMemcpy(walker_px, d_walker_px, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);
             cudaMemcpy(walker_py, d_walker_py, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);
             cudaMemcpy(walker_pz, d_walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyDeviceToHost);      
+            copy_time = omp_get_wtime() - tick;
+
+            tick = omp_get_wtime();
             if(this->NMR.rwNMR_config.getOpenMPUsage())
             {
                 // set omp variables for parallel loop throughout walker list
@@ -465,7 +797,8 @@ void NMR_cpmg::simulation_img_cuda()
                     this->NMR.walkers[i + packOffset].position_y = walker_py[i];
                     this->NMR.walkers[i + packOffset].position_z = walker_pz[i];            
                 }
-            }  
+            }
+            buffer_time += omp_get_wtime() - tick;  
         }
     }
 
@@ -477,6 +810,7 @@ void NMR_cpmg::simulation_img_cuda()
 
         // Host data copy
         // copy original walkers' data to temporary host arrays
+        tick = omp_get_wtime();
         if(this->NMR.rwNMR_config.getOpenMPUsage())
         {
             // set omp variables for parallel loop throughout walker list
@@ -524,14 +858,20 @@ void NMR_cpmg::simulation_img_cuda()
                 }
             }
         }
+        buffer_time += omp_get_wtime() - tick;
+        
+
         // Device data copy
         // copy host data to device
+        tick = omp_get_wtime();
         cudaMemcpy(d_walker_px, walker_px, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_py, walker_py, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_pz, walker_pz, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_penalty, penalty, lastWalkerPackSize * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_energy, energy, echoesPerKernel * energyArraySize * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_seed, seed, lastWalkerPackSize * sizeof(uint64_t), cudaMemcpyHostToDevice);
+        copy_time += omp_get_wtime() - tick;
+        
 
         // Launch kernel for GPU computation
         for (uint kernelId = 0; kernelId < kernelCalls; kernelId++)
@@ -540,28 +880,76 @@ void NMR_cpmg::simulation_img_cuda()
             uint echoOffset = kernelId * echoesPerKernel;
             uint echoes = echoesPerKernel;
 
-            // call "walk" method kernel
-            walk_CPMG<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
-                                                          d_walker_py,
-                                                          d_walker_pz,
-                                                          d_penalty,
-                                                          d_energy,
-                                                          d_seed,
-                                                          d_bitBlock,
-                                                          bitBlockColumns,
-                                                          bitBlockRows,
-                                                          lastWalkerPackSize,
-                                                          energyArraySize,
-                                                          echoes,
-                                                          stepsPerEcho,
-                                                          map_columns,
-                                                          map_rows,
-                                                          map_depth,
-                                                          shiftConverter);
+            /* 
+                Call adequate RW kernel depending on the chosen boundary treatment
+            */
+            tick = omp_get_wtime();
+            if(bc == "periodic")
+            {
+                CPMG_walk_periodic<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                         d_walker_py,
+                                                                         d_walker_pz,
+                                                                         d_penalty,
+                                                                         d_energy,
+                                                                         d_seed,
+                                                                         d_bitBlock,
+                                                                         bitBlockColumns,
+                                                                         bitBlockRows,
+                                                                         lastWalkerPackSize,
+                                                                         energyArraySize,
+                                                                         echoes,
+                                                                         stepsPerEcho,
+                                                                         map_columns,
+                                                                         map_rows,
+                                                                         map_depth,
+                                                                         shiftConverter);
+            }
+            else if(bc == "mirror")
+            {
+                CPMG_walk_mirror<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                       d_walker_py,
+                                                                       d_walker_pz,
+                                                                       d_penalty,
+                                                                       d_energy,
+                                                                       d_seed,
+                                                                       d_bitBlock,
+                                                                       bitBlockColumns,
+                                                                       bitBlockRows,
+                                                                       lastWalkerPackSize,
+                                                                       energyArraySize,
+                                                                       echoes,
+                                                                       stepsPerEcho,
+                                                                       map_columns,
+                                                                       map_rows,
+                                                                       map_depth,
+                                                                       shiftConverter);
+            }
+            else
+            {
+                CPMG_walk_noflux<<<blocksPerKernel, threadsPerBlock>>>(d_walker_px,
+                                                                       d_walker_py,
+                                                                       d_walker_pz,
+                                                                       d_penalty,
+                                                                       d_energy,
+                                                                       d_seed,
+                                                                       d_bitBlock,
+                                                                       bitBlockColumns,
+                                                                       bitBlockRows,
+                                                                       lastWalkerPackSize,
+                                                                       energyArraySize,
+                                                                       echoes,
+                                                                       stepsPerEcho,
+                                                                       map_columns,
+                                                                       map_rows,
+                                                                       map_depth,
+                                                                       shiftConverter);
+            }
             cudaDeviceSynchronize();
+            kernel_time += omp_get_wtime() - tick;
 
             // launch globalEnergy "reduce" kernel
-            energyReduce_CPMG<<<blocksPerKernel / 2,
+            tick = omp_get_wtime();
+            CPMG_energyReduce<<<blocksPerKernel / 2,
                                 threadsPerBlock,
                                 threadsPerBlock * sizeof(double)>>>(d_energy,
                                                                     d_energyCollector,
@@ -569,26 +957,37 @@ void NMR_cpmg::simulation_img_cuda()
                                                                     energyCollectorSize,
                                                                     echoesPerKernel);
             cudaDeviceSynchronize();
+            reduce_time += omp_get_wtime() - tick;
 
             // copy data from gatherer array
+            tick = omp_get_wtime();
             cudaMemcpy(energyCollector,
                        d_energyCollector,
                        echoesPerKernel * energyCollectorSize * sizeof(double),
                        cudaMemcpyDeviceToHost);
+            copy_time += omp_get_wtime() - tick;
 
             //last reduce is done in CPU parallel-style using openMP
-            reduce_omp_CPMG(temp_globalEnergy, energyCollector, echoesPerKernel, blocksPerKernel / 2);
+            tick = omp_get_wtime();
+            CPMG_reduce_omp(temp_globalEnergy, energyCollector, echoesPerKernel, blocksPerKernel / 2);
+            reduce_time += omp_get_wtime() - tick;
 
             // copy data from temporary array
+            tick = omp_get_wtime();
             for (uint echo = 0; echo < echoesPerKernel; echo++)
             {
                 h_globalEnergy[echo + echoOffset] += temp_globalEnergy[echo];
             }
+            buffer_time += omp_get_wtime() - tick;
 
             // recover last positions
+            tick = omp_get_wtime();
             cudaMemcpy(walker_px, d_walker_px, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
             cudaMemcpy(walker_py, d_walker_py, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);
             cudaMemcpy(walker_pz, d_walker_pz, lastWalkerPackSize * sizeof(int), cudaMemcpyDeviceToHost);      
+            copy_time += omp_get_wtime() - tick;
+
+            tick = omp_get_wtime();
             if(this->NMR.rwNMR_config.getOpenMPUsage())
             {
                 // set omp variables for parallel loop throughout walker list
@@ -618,15 +1017,18 @@ void NMR_cpmg::simulation_img_cuda()
                     this->NMR.walkers[i + packOffset].position_y = walker_py[i];
                     this->NMR.walkers[i + packOffset].position_z = walker_pz[i];            
                 }
-            }  
+            }
+            buffer_time += omp_get_wtime() - tick;  
         }
     }
 
     // insert to object energy values computed in gpu
+    tick = omp_get_wtime();
     for (uint echo = 0; echo < numberOfEchoes; echo++)
     {
         this->NMR.globalEnergy.push_back(h_globalEnergy[echo]);
     }
+    buffer_time += omp_get_wtime() - tick;
 
     // free pointers in host
     free(walker_px);
@@ -669,16 +1071,26 @@ void NMR_cpmg::simulation_img_cuda()
 
     float elapsedTime;
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Completed.\telapsed time: " << elapsedTime * 1.0e-3 << endl;
-
+    cout << "Done.\nCpu/Gpu elapsed time: " << elapsedTime * 1.0e-3 << " s" << endl;
     cudaDeviceReset();
+
+    if(time_verbose)
+    {
+        cout << "--- Time analysis ---" << endl;
+        cout << "cpu data reset: " << reset_time << " s" << endl;
+        cout << "cpu data buffer: " << buffer_time << " s" << endl;
+        cout << "gpu data copy: " << copy_time << " s" << endl;
+        cout << "gpu kernel launch: " << kernel_time << " s" << endl;
+        cout << "gpu reduce launch: " << reduce_time << " s" << endl;
+        cout << "---------------------" << endl;
+    }
 }
 
 
 /////////////////////////////////////////////////////////////////////
 //////////////////////// HOST FUNCTIONS ///////////////////////////
 /////////////////////////////////////////////////////////////////////
-void reduce_omp_CPMG(double *temp_collector, double *array, int numberOfEchoes, uint arraySizePerEcho)
+void CPMG_reduce_omp(double *temp_collector, double *array, int numberOfEchoes, uint arraySizePerEcho)
 {
     // declaring shared variables
     uint offset;

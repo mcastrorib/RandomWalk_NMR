@@ -7,27 +7,64 @@
 #include "cuda_runtime.h"
 
 
+// Kernel declarations
 // walker class "walk" method GPU kernel
-__global__ void walk_CPMG(int *walker_px,
-                        int *walker_py,
-                        int *walker_pz,
-                        double *decreaseFactor,
-                        double *energy,
-                        uint64_t *seed,
-                        const uint64_t *bitBlock,
-                        const uint bitBlockColumns,
-                        const uint bitBlockRows,
-                        const uint numberOfWalkers,
-                        const uint energyArraySize,
-                        const uint echoesPerKernel,
-                        const uint stepsPerEcho,
-                        const uint map_columns,
-                        const uint map_rows,
-                        const uint map_depth,
-                        const uint shift_convert);
+__global__ void CPMG_walk_noflux(int *walker_px,
+                                 int *walker_py,
+                                 int *walker_pz,
+                                 double *decreaseFactor,
+                                 double *energy,
+                                 uint64_t *seed,
+                                 const uint64_t *bitBlock,
+                                 const uint bitBlockColumns,
+                                 const uint bitBlockRows,
+                                 const uint numberOfWalkers,
+                                 const uint energyArraySize,
+                                 const uint echoesPerKernel,
+                                 const uint stepsPerEcho,
+                                 const uint map_columns,
+                                 const uint map_rows,
+                                 const uint map_depth,
+                                 const uint shift_convert);
+
+__global__ void CPMG_walk_periodic(int *walker_px,
+                                   int *walker_py,
+                                   int *walker_pz,
+                                   double *decreaseFactor,
+                                   double *energy,
+                                   uint64_t *seed,
+                                   const uint64_t *bitBlock,
+                                   const uint bitBlockColumns,
+                                   const uint bitBlockRows,
+                                   const uint numberOfWalkers,
+                                   const uint energyArraySize,
+                                   const uint echoesPerKernel,
+                                   const uint stepsPerEcho,
+                                   const uint map_columns,
+                                   const uint map_rows,
+                                   const uint map_depth,
+                                   const uint shift_convert);
+
+__global__ void CPMG_walk_mirror(int *walker_px,
+                                 int *walker_py,
+                                 int *walker_pz,
+                                 double *decreaseFactor,
+                                 double *energy,
+                                 uint64_t *seed,
+                                 const uint64_t *bitBlock,
+                                 const uint bitBlockColumns,
+                                 const uint bitBlockRows,
+                                 const uint numberOfWalkers,
+                                 const uint energyArraySize,
+                                 const uint echoesPerKernel,
+                                 const uint stepsPerEcho,
+                                 const uint map_columns,
+                                 const uint map_rows,
+                                 const uint map_depth,
+                                 const uint shift_convert);
 
 // GPU kernel for reducing energy array into a global energy vector
-__global__ void energyReduce_CPMG(double *energy,
+__global__ void CPMG_energyReduce(double *energy,
                                   double *collector,
                                   const uint energyArraySize,
                                   const uint collectorSize,
@@ -36,7 +73,7 @@ __global__ void energyReduce_CPMG(double *energy,
 
 
 // Host functions
-void reduce_omp_CPMG(double *temp_collector, double *array, int numberOfEchoes, uint arraySizePerEcho);
+void CPMG_reduce_omp(double *temp_collector, double *array, int numberOfEchoes, uint arraySizePerEcho);
 
 
 // Device functions for 3D simulation

@@ -120,5 +120,5 @@ void rwnmrApp::PFGSE(uint command_idx)
 
 void rwnmrApp::GA(uint command_idx)
 {
-    cout << "-- GA is under contruction." << endl;
+    cout << "-- GA is under construction." << endl;
 }

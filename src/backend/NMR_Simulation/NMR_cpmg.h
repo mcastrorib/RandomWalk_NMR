@@ -56,9 +56,9 @@ public:
 
     // -- Simulations
     void run_simulation();
-    void simulation_img_cuda();
-	void simulation_img_omp();
-    void simulation_histogram();
+    void image_simulation_cuda();
+	void image_simulation_omp();
+    void histogram_simulation();
 	
 
 private:

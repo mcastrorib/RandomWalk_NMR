@@ -55,9 +55,12 @@ void NMR_cpmg::run()
 
 void NMR_cpmg::setName()
 {
-	string big_delta = std::to_string((int) this->exposureTime) + "-" 
-					   + std::to_string(((int) (this->exposureTime * 100)) % 100);
-	this->name = "/NMR_cpmg_" + big_delta + "ms";
+    int precisionVal = 2;
+    string bigDelta = std::to_string(this->exposureTime);
+    string trimmedDelta = bigDelta.substr(0, std::to_string(this->exposureTime).find(".") + precisionVal + 1);
+	// string big_delta = std::to_string((int) this->exposureTime) + "-" 
+					   // + std::to_string(((int) (this->exposureTime * 100)) % 100);
+	this->name = "/NMR_cpmg_t=" + trimmedDelta + "ms";
 }
 
 void NMR_cpmg::createDirectoryForData()
@@ -70,12 +73,21 @@ void NMR_cpmg::createDirectoryForData()
 
 void NMR_cpmg::setNMRTimeFramework()
 {
-	cout << endl << "running CPMG simulation:" << endl;
-	this->NMR.setTimeFramework((*this).getExposureTime());
-	cout << "CPMG exposure time: " << (*this).getExposureTime() << " ms";
-	cout << " (" << this->NMR.simulationSteps << " RW-steps)" << endl;
-	this->NMR.mapSimulation();
-	// this->NMR.updateRelaxativity(rho); but what rho to adopt?
+    this->NMR.setTimeFramework((*this).getExposureTime());  
+    cout << "- Initial map time: " << (*this).getExposureTime() << " ms ";
+    cout << "[" << this->NMR.simulationSteps << " RW-steps]" << endl;
+    this->NMR.mapSimulation();
+
+    // Update xi_rate and relaxivity of walkers
+    vector<double> rho = this->NMR.rwNMR_config.getRho();
+    if(this->NMR.rwNMR_config.getRhoType() == "uniform")    
+    {
+        this->NMR.updateWalkersRelaxativity(rho[0]);
+    } 
+    else if(this->NMR.rwNMR_config.getRhoType() == "sigmoid")
+    {
+        this->NMR.updateWalkersRelaxativity(rho);
+    }
 }
 
 // -- Simulations
@@ -84,8 +96,8 @@ void NMR_cpmg::run_simulation()
     if((*this).getMethod() == "image-based")
     {
         // Choose method considering GPU usage
-        if(this->NMR.getGPU()) (*this).simulation_img_cuda();
-        else (*this).simulation_img_omp();
+        if(this->NMR.getGPU()) (*this).image_simulation_cuda();
+        else (*this).image_simulation_omp();
 
     } else
     if((*this).getMethod() == "histogram")
@@ -94,14 +106,17 @@ void NMR_cpmg::run_simulation()
         rho = this->NMR.rwNMR_config.getRho();
         if(this->NMR.rwNMR_config.getRhoType() == "uniform") this->NMR.createPenaltiesVector(rho[0]);
         else if(this->NMR.rwNMR_config.getRhoType() == "sigmoid") this->NMR.createPenaltiesVector(rho);
-        (*this).simulation_histogram();
+        (*this).histogram_simulation();
     }
+
+    // Apply bulk relaxation
+    /* bulk code here */
 
     // Normalize global energy decay 
     this->NMR.normalizeEnergyDecay();
 }
 
-void NMR_cpmg::simulation_img_omp()
+void NMR_cpmg::image_simulation_omp()
 {
     double begin_time = omp_get_wtime();
 
@@ -162,7 +177,7 @@ void NMR_cpmg::simulation_img_omp()
 }
 
 
-void NMR_cpmg::simulation_histogram()
+void NMR_cpmg::histogram_simulation()
 {
     double begin_time = omp_get_wtime();
     cout << "initializing RW-NMR hist simulation... ";
@@ -305,10 +320,6 @@ void NMR_cpmg::save()
 
 void NMR_cpmg::writeResults()
 {
-	// string big_delta = std::to_string((int) this->exposureTime) + "-" 
-	// 				   + std::to_string(((int) (this->exposureTime * 100)) % 100);
-	// string tiny_delta = std::to_string((int) this->pulseWidth);
-	// string gamma = std::to_string((int) this->giromagneticRatio);
 	string filename = this->dir + "/cpmg_T2.txt";
 
 	ofstream file;

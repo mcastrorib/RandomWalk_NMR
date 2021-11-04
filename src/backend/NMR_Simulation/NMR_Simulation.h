@@ -272,10 +272,11 @@ public:
 private:
     mapSim_ptr mapSimulationPointer;
 
-    // simulations using openMP library for multicore CPU application
-    void mapSimulation_OMP();    
-
-    // simulations in CUDA language for GPU application
+    /* 
+        RW collision mapping simulations
+        CUDA/GPU routines generate collision histograms
+    */ 
+    void mapSimulation_OMP();
     void mapSimulation_CUDA_2D_histograms();
     void mapSimulation_CUDA_3D_histograms();
 

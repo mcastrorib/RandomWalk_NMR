@@ -316,8 +316,17 @@ void NMR_PFGSE::runInitialMapSimulation()
 		if(mapByTime) cout << longestTime << " ms ";
 		cout << "[" << this->NMR.simulationSteps << " RW-steps]" << endl;
 		this->NMR.mapSimulation();
-		(*this).updateWalkersXIrate(this->NMR.simulationSteps);
-		// this->NMR.updateRelaxativity(); but what rho to adopt?
+
+		// Update xi_rate and relaxivity of walkers
+		vector<double> rho = this->NMR.rwNMR_config.getRho();
+		if(this->NMR.rwNMR_config.getRhoType() == "uniform")    
+        {
+        	this->NMR.updateWalkersRelaxativity(rho[0]);
+    	} 
+    	else if(this->NMR.rwNMR_config.getRhoType() == "sigmoid")
+        {
+        	this->NMR.updateWalkersRelaxativity(rho);
+        }
 
 		string path = this->NMR.getDBPath();
 		if(this->PFGSE_config.getSaveCollisions())
