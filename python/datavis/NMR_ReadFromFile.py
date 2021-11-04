@@ -635,3 +635,47 @@ def count_points_to_apply_lhs_threshold(pfgse_lhs, threshold):
 	else:
 		return idx
 
+
+def read_T2_decay_from_rwnmr_file(file):
+	# Read Data From File
+	with open(file, 'r') as txt_file:
+		lines = [line.split() for line in txt_file]
+
+	# Amplitude and T2 Arrays Construction
+	size = len(lines)
+	times = np.zeros(size)
+	amps = np.zeros(size)
+	for i in range(size):
+		times[i] = float(lines[i][0])
+		amps[i] = float(lines[i][1])
+
+	T2_decay = {
+		'times': times,
+		'amps': amps
+	}
+	
+	return T2_decay
+
+def read_T2_distribution_from_rwnmr_file(file):
+	# Read Data From File
+	with open(file, 'r') as txt_file:
+		lines = [line.strip().split(',') for line in txt_file]
+
+	# Amplitude and T2 Arrays Construction
+	offset = 0
+	if(lines[0][0][-4:] == 'bins' or lines[0][1][-4:] == 'amps'):
+		offset = 1
+		
+	size = len(lines) - offset
+	bins = np.zeros(size)
+	amps = np.zeros(size)
+	for i in range(size):
+		bins[i] = float(lines[i + offset][0])
+		amps[i] = float(lines[i + offset][1])
+
+	T2_dist = {
+		'bins': bins,
+		'amps': amps
+	}
+	
+	return T2_dist
