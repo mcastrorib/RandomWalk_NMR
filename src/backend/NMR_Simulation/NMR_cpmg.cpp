@@ -34,6 +34,7 @@ NMR_cpmg::NMR_cpmg( NMR_Simulation &_NMR,
     vector<double> T2_amps();
 
     (*this).setExposureTime(this->CPMG_config.getObservationTime());
+    (*this).setApplyBulkRelaxation(this->CPMG_config.getApplyBulk());
     (*this).setMethod(this->CPMG_config.getMethod());
     (*this).set();
 }
@@ -110,7 +111,10 @@ void NMR_cpmg::run_simulation()
     }
 
     // Apply bulk relaxation
-    /* bulk code here */
+    if((*this).getApplyBulkRelaxation())
+    {
+        (*this).applyBulk();
+    }
 
     // Normalize global energy decay 
     this->NMR.normalizeEnergyDecay();
@@ -242,6 +246,20 @@ void NMR_cpmg::histogram_simulation()
     cout << "Completed.";
     double finish_time = omp_get_wtime();
     printElapsedTime(begin_time, finish_time);
+}
+
+// apply bulk relaxation to NMR signal
+void NMR_cpmg::applyBulk()
+{
+    double bulkTime = -1.0 / this->NMR.getBulkRelaxationTime();
+
+    if(this->NMR.globalEnergy.size() == this->NMR.decayTimes.size())
+    {
+        for(uint echo = 0; echo < this->NMR.globalEnergy.size(); echo++)
+        {
+            this->NMR.globalEnergy[echo] = exp(bulkTime * this->NMR.decayTimes[echo]) * this->NMR.globalEnergy[echo]; 
+        }
+    } 
 }
 
 // apply laplace inversion explicitly

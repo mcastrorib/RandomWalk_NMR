@@ -23,6 +23,7 @@ public:
 	string name;
 	string dir;
     double exposureTime;
+    bool applyBulkRelaxation;
     string method;
     vector<double> T2_bins;
     vector<double> T2_amps;
@@ -40,6 +41,7 @@ public:
 	void setNMRTimeFramework();
     void set();
     void run();
+    void applyBulk();
     void applyLaplace();
 	void save();
 	void writeResults();
@@ -48,11 +50,13 @@ public:
 
     // -- Set methods
 	void setExposureTime(double _value){ this->exposureTime = _value; }
+	void setApplyBulkRelaxation(bool _bulk){ this->applyBulkRelaxation = _bulk; }
     void setMethod(string _method){ this->method = _method; }
 	
     // -- Get methods
-	double getExposureTime() {return this->exposureTime; }
-    string getMethod() {return this->method;}
+	double getExposureTime() { return this->exposureTime; }
+	bool getApplyBulkRelaxation(){ return this->applyBulkRelaxation; }
+    string getMethod() { return this->method; }
 
     // -- Simulations
     void run_simulation();
