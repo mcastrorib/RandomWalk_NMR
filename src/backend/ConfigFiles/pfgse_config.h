@@ -17,6 +17,7 @@ public:
     // --- Physical attributes.
     double GIROMAGNETIC_RATIO;
     double D0;
+    bool APPLY_BULK;
     double PULSE_WIDTH;
     Vector3D MAX_GRADIENT;
     uint GRADIENT_SAMPLES;
@@ -66,6 +67,7 @@ public:
     // -- Read methods
     void readGiromagneticRatio(string s);
     void readD0(string s);
+    void readApplyBulk(string s);
     void readPulseWidth(string s);
     void readMaxGradient(string s);
     void readGradientSamples(string s);
@@ -91,6 +93,7 @@ public:
     string getConfigFilepath() {return this->config_filepath; } 
     double getGiromagneticRatio() { return this->GIROMAGNETIC_RATIO ; }
     double getD0() { return this->D0 ; }
+    bool getApplyBulk(){ return this->APPLY_BULK; }
     double getPulseWidth() { return this->PULSE_WIDTH ; }
     Vector3D getMaxGradient() { return this->MAX_GRADIENT ; }
     uint getGradientSamples() { return this->GRADIENT_SAMPLES ; }

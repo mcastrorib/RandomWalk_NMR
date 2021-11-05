@@ -81,6 +81,7 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
     (*this).setNumberOfWalkers(this->rwNMR_config.getWalkers());
     (*this).setWalkerSamples(this->rwNMR_config.getWalkerSamples());
     (*this).setFreeDiffusionCoefficient(this->rwNMR_config.getD0());
+    (*this).setBulkRelaxationTime(this->rwNMR_config.getBulkTime());
     (*this).setNumberOfStepsPerEcho(this->rwNMR_config.getStepsPerEcho());
     (*this).setGPU(this->rwNMR_config.getGPUUsage());
     if(this->rwNMR_config.getSeed() == 0)
@@ -146,9 +147,14 @@ void NMR_Simulation::setBoundaryCondition(string _bc)
     this->boundaryCondition = _bc;
 }
 
-void NMR_Simulation::setFreeDiffusionCoefficient(double _bulk)
+void NMR_Simulation::setFreeDiffusionCoefficient(double _D0)
 {
-    this->diffusionCoefficient = _bulk;
+    this->diffusionCoefficient = _D0;
+}
+
+void NMR_Simulation::setBulkRelaxationTime(double _bulkTime)
+{
+    this->bulkRelaxationTime = _bulkTime;
 }
 
 void NMR_Simulation::setImageResolution(double _resolution)

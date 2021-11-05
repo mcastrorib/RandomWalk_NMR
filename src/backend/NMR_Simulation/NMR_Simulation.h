@@ -68,6 +68,7 @@ public:
     // physical properties
     double timeInterval; // time interval between each walker step
     double diffusionCoefficient;
+    double bulkRelaxationTime;
 
     // image attributes
     ImagePath imagePath;
@@ -126,6 +127,7 @@ public:
 
         this->timeInterval = _otherSimulation.timeInterval;
         this->diffusionCoefficient = _otherSimulation.diffusionCoefficient;
+        this->bulkRelaxationTime = _otherSimulation.bulkRelaxationTime;
 
         this->imagePath = _otherSimulation.imagePath;
         this->numberOfImages = _otherSimulation.numberOfImages;
@@ -217,7 +219,8 @@ public:
     void setGPU(bool _useGPU);
     void setImageOccupancy(double _occupancy);
     void setInitialSeed(uint64_t _seed, bool _flag=false);
-    void setFreeDiffusionCoefficient(double _bulk);
+    void setFreeDiffusionCoefficient(double _D0);
+    void setBulkRelaxationTime(double _bulkTime);
     void setImageResolution(double _resolution);
     void setImageVoxelResolution();
     void setBoundaryCondition(string _bc);
@@ -327,6 +330,7 @@ public:
     // physical attributes
     inline double getTimeInterval() { return this->timeInterval; }
     inline double getDiffusionCoefficient() { return this->diffusionCoefficient; }
+    inline double getBulkRelaxationTime(){ return this->bulkRelaxationTime; }
 
     // image attributes
     inline string getImagePath() { return this->imagePath.completePath; }

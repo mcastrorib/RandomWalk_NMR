@@ -34,6 +34,7 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
     this->RHO_TYPE = otherConfig.RHO_TYPE;
     this->RHO = otherConfig.RHO;
     this->D0 = otherConfig.D0; 
+    this->BULK_TIME = otherConfig.BULK_TIME;
     this->STEPS_PER_ECHO = otherConfig.STEPS_PER_ECHO;
     this->SEED = otherConfig.SEED;
     this->BC = otherConfig.BC;
@@ -106,6 +107,7 @@ void rwnmr_config::readConfigFile(const string configFile)
 			else if(token == "RHO") (*this).readRho(content);
 			else if(token == "STEPS_PER_ECHO") (*this).readStepsPerEcho(content);
 			else if(token == "D0") (*this).readD0(content);
+			else if(token == "BULK_TIME") (*this).readBulkTime(content);
 			else if(token == "SEED") (*this).readSeed(content);
 			else if(token == "BC") (*this).readBC(content);
 			else if(token == "SAVE_IMG_INFO") (*this).readSaveImgInfo(content);
@@ -196,6 +198,11 @@ void rwnmr_config::readRho(string s) // vector?
 void rwnmr_config::readD0(string s)
 {
 	this->D0 = std::stod(s);
+}
+
+void rwnmr_config::readBulkTime(string s)
+{
+	this->BULK_TIME = std::stod(s);
 }
 
 void rwnmr_config::readStepsPerEcho(string s)

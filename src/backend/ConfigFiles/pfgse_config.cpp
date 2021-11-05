@@ -32,6 +32,7 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
     // --- Physical attributes.
     this->GIROMAGNETIC_RATIO = otherConfig.GIROMAGNETIC_RATIO;
     this->D0 = otherConfig.D0;
+    this->APPLY_BULK = otherConfig.APPLY_BULK;
     this->PULSE_WIDTH = otherConfig.PULSE_WIDTH;
     this->MAX_GRADIENT = otherConfig.MAX_GRADIENT;
     this->GRADIENT_SAMPLES = otherConfig.GRADIENT_SAMPLES;
@@ -90,6 +91,7 @@ void pfgse_config::readConfigFile(const string configFile)
 
 			if(token == "GIROMAGNETIC_RATIO")	(*this).readGiromagneticRatio(content);
             else if(token == "D0") (*this).readD0(content);
+            else if(token == "APPLY_BULK") (*this).readApplyBulk(content);
 			else if(token == "PULSE_WIDTH") (*this).readPulseWidth(content);
             else if(token == "MAX_GRADIENT") (*this).readMaxGradient(content);
             else if(token == "GRADIENT_SAMPLES") (*this).readGradientSamples(content);
@@ -124,6 +126,12 @@ void pfgse_config::readGiromagneticRatio(string s)
 void pfgse_config::readD0(string s)
 {
 	this->D0 = std::stod(s);
+}
+
+void pfgse_config::readApplyBulk(string s)
+{
+    if(s == "true") this->APPLY_BULK = true;
+    else this->APPLY_BULK = false;
 }
 
 void pfgse_config::readPulseWidth(string s)

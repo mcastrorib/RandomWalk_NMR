@@ -15,6 +15,7 @@ public:
     string config_filepath;
     // --- Physical attributes.
     double D0;
+    bool APPLY_BULK;
     double OBS_TIME;
     string METHOD;
 
@@ -56,6 +57,7 @@ public:
     
     // -- Read methods
     void readD0(string s);
+    void readApplyBulk(string s);
     void readObservationTime(string s);
     void readMethod(string s);
 
@@ -80,6 +82,7 @@ public:
     // -- Get methods
     string getConfigFilepath() {return this->config_filepath; }
     double getD0(){return this->D0; }
+    bool getApplyBulk(){ return this->APPLY_BULK; }
     double getObservationTime(){return this->OBS_TIME; }
     string getMethod() { return this->METHOD; }
 

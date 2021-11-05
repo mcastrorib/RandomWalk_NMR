@@ -26,6 +26,7 @@ cpmg_config::cpmg_config(const cpmg_config &otherConfig)
     this->config_filepath = otherConfig.config_filepath;
     // --- Physical attributes.
     this->D0 = otherConfig.D0;
+    this->APPLY_BULK = otherConfig.APPLY_BULK;
     this->OBS_TIME = otherConfig.OBS_TIME;
     this->METHOD = otherConfig.METHOD;
 
@@ -76,6 +77,7 @@ void cpmg_config::readConfigFile(const string configFile)
 			s.erase(0, pos + delimiter.length());
 
 			if(token == "D0") (*this).readD0(content);
+            else if(token == "APPLY_BULK") (*this).readApplyBulk(content);  
 			else if(token == "OBS_TIME") (*this).readObservationTime(content);  
             else if(token == "METHOD") (*this).readMethod(content);            
             else if(token == "MIN_T2") (*this).readMinT2(content);
@@ -103,6 +105,12 @@ void cpmg_config::readConfigFile(const string configFile)
 void cpmg_config::readD0(string s)
 {
 	this->D0 = std::stod(s);
+}
+
+void cpmg_config::readApplyBulk(string s)
+{
+    if(s == "true") this->APPLY_BULK = true;
+    else this->APPLY_BULK = false;
 }
 
 void cpmg_config::readObservationTime(string s)

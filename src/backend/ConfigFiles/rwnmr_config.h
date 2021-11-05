@@ -20,7 +20,8 @@ public:
     uint PLACEMENT_DEVIATION;
     string RHO_TYPE;
     vector<double> RHO;
-    double D0; 
+    double D0;
+    double BULK_TIME; 
     uint STEPS_PER_ECHO;
     uint64_t SEED;
     string BC;
@@ -80,8 +81,9 @@ public:
     void readWalkersPlacement(string s);
     void readPlacementDeviation(string s);
     void readRhoType(string s);
-    void readRho(string s); // vector?
+    void readRho(string s); 
     void readD0(string s); 
+    void readBulkTime(string s);
     void readStepsPerEcho(string s);
     void readSeed(string s);
     void readBC(string s);
@@ -128,6 +130,7 @@ public:
     string getRhoType(){ return this->RHO_TYPE;}
     vector<double> getRho(){ return this->RHO;}
     double getD0(){ return this->D0;}
+    double getBulkTime(){ return this->BULK_TIME; }
     uint getStepsPerEcho(){ return this->STEPS_PER_ECHO;}
     uint64_t getSeed(){ return  this->SEED;}
     string getBC() { return this->BC; }
