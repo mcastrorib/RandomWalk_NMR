@@ -68,6 +68,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	this->pulseWidth = this->PFGSE_config.getPulseWidth();
 	this->giromagneticRatio = this->PFGSE_config.getGiromagneticRatio();
 	if(this->PFGSE_config.getUseWaveVectorTwoPi()) this->giromagneticRatio *= TWO_PI;
+	(*this).setApplyBulkRelaxation(this->PFGSE_config.getApplyBulk());
 
 	(*this).setThresholdFromSamples(this->gradientPoints);
 	(*this).setGradientVector();
@@ -201,6 +202,14 @@ void NMR_PFGSE::updateWalkersXIrate(uint _rwsteps)
 
 void NMR_PFGSE::correctExposureTimes()
 {
+	// apply 'physical' scaling
+    if(this->PFGSE_config.getApplyScaleFactor())
+    {
+        double scale_factor = (this->PFGSE_config.getInspectionLength() * this->PFGSE_config.getInspectionLength()) / this->NMR.getDiffusionCoefficient();
+        cout << "applying scale factor: " << scale_factor << endl;
+        for(int time = 0; time < this->exposureTimes.size(); time++)
+        	this->exposureTimes[time] *= scale_factor;
+    }
 	
 	cout << "- Correcting time samples to rw parameters" << endl;
 	double timePerStep = this->NMR.getTimeInterval();
@@ -215,7 +224,9 @@ void NMR_PFGSE::correctExposureTimes()
 			stepsPerExpTime += stepsPerExpTime % (uint) stepsPerEcho;
 		}
 
+		cout << "exp_time[" << time << "] = " << this->exposureTimes[time];
 		this->exposureTimes[time] = stepsPerExpTime * timePerStep;
+		cout << "\t to \t" << this->exposureTimes[time] << endl;
 	}
 }
 
@@ -420,6 +431,19 @@ void NMR_PFGSE::runSequence()
 {
 	// run pfgse experiment -- this method will fill Mkt vector
 	(*this).simulation();
+
+	if((*this).getApplyBulkRelaxation())
+	{
+		(*this).applyBulk();
+	}
+}
+
+void NMR_PFGSE::applyBulk()
+{
+	double bulkTime = -1.0 / this->NMR.getBulkRelaxationTime();
+	double bulkMagnitude = exp(bulkTime * (*this).getExposureTime());
+	cout << "exp_time: " << (*this).getExposureTime() << " ms \t";
+	cout << "bulk dec: " << bulkMagnitude << endl;
 }
 
 void NMR_PFGSE::simulation()

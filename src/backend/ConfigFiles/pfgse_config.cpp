@@ -217,43 +217,22 @@ void pfgse_config::createTimeSamples()
     if(this->TIME_SEQ == "log")
     {
         // set logspace vector
-        this->TIME_VALUES = (*this).logspace(this->TIME_MIN, this->TIME_MAX, this->TIME_SAMPLES);
-        
-        // apply 'physical' aspect
-        if(this->APPLY_SCALE_FACTOR)
-        {
-            double scale_factor = (this->INSPECTION_LENGTH * this->INSPECTION_LENGTH) / this->D0;
-            for(uint idx = 0; idx < this->TIME_SAMPLES; idx++) this->TIME_VALUES[idx] *= scale_factor;
-        }
-    } else 
-    if(this->TIME_SEQ == "linear")
+        this->TIME_VALUES = (*this).logspace(this->TIME_MIN, this->TIME_MAX, this->TIME_SAMPLES);        
+    } 
+    else if(this->TIME_SEQ == "linear")
     {
-        // set logspace vector
+        // set linspace vector
         this->TIME_VALUES = (*this).linspace(this->TIME_MIN, this->TIME_MAX, this->TIME_SAMPLES);
         
-        // apply 'physical' aspect
-        if(this->APPLY_SCALE_FACTOR)
-        {
-            double scale_factor = (this->INSPECTION_LENGTH * this->INSPECTION_LENGTH) / this->D0;
-            for(uint idx = 0; idx < this->TIME_SAMPLES; idx++) this->TIME_VALUES[idx] *= scale_factor;
-        }
-    } else 
-    if(this->TIME_SEQ == "manual")
+    } 
+    else if(this->TIME_SEQ == "manual")
     {
         // Sort island individuals by fitness
         sort(this->TIME_VALUES.begin(), 
              this->TIME_VALUES.end(), 
              [](double const &a, double &b) 
              { return a < b; });
-
-        // apply 'physical' aspect
-        if(this->APPLY_SCALE_FACTOR)
-        {
-            double scale_factor = (this->INSPECTION_LENGTH * this->INSPECTION_LENGTH) / this->D0;
-            for(uint idx = 0; idx < this->TIME_SAMPLES; idx++) this->TIME_VALUES[idx] *= scale_factor;
-        }
-    }
-    
+    }    
 }
 
 

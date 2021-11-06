@@ -37,6 +37,7 @@ public:
 	double exposureTime;
 	double pulseWidth;
 	double giromagneticRatio;
+	bool applyBulkRelaxation;
 
 
 	double M0;
@@ -96,6 +97,7 @@ public:
 	void runSequenceWithoutSampling();
 	void runSequenceWithSampling();
 	void simulation();
+	void applyBulk();
 	void recoverD(string _method = "sat");
 	void recoverDsat();
 	void recoverDsatWithoutSampling();
@@ -120,6 +122,7 @@ public:
 	void setExposureTime(double _value){ this->exposureTime = _value; }
 	void setPulseWidth(double _value){ this->pulseWidth = _value; }
 	void setGiromagneticRatio(double _value){ this->giromagneticRatio = _value; }
+	void setApplyBulkRelaxation(bool _bulk) { this->applyBulkRelaxation = _bulk; }
 	void setD_sat(double _value) { this->D_sat = _value; }
 	void setD_sat_StdDev(double _value) { this->D_sat_stdev = _value; }
 	void setD_msd(double _value) { this->D_msd = _value; }
@@ -163,6 +166,7 @@ public:
 	double getExposureTime(uint _idx) {return this->exposureTimes[_idx]; }
 	double getPulseWidth() {return this->pulseWidth; }
 	double getGiromagneticRatio() {return this->giromagneticRatio; }
+	bool getApplyBulkRelaxation() { return this->applyBulkRelaxation; }
 	double getD_sat() { return this->D_sat; }
 	double getD_sat_stdev() { return this->D_sat_stdev; }
 	double getD_msd() { return this->D_msd; }
