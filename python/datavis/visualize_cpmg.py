@@ -51,7 +51,7 @@ def get_rwnmr_cpmg_folder(rwnmr_dir):
 		return r''
 
 def read_data_from_cpmg_folder(cpmg_folder):
-	decay_file = os.path.join(cpmg_folder, r'NMR_decay.txt')
+	decay_file = os.path.join(cpmg_folder, r'cpmg_decay.txt')
 	dist_file = os.path.join(cpmg_folder, r'cpmg_T2.txt')
 
 	T2_decay = read_T2_decay_from_rwnmr_file(decay_file)
@@ -66,14 +66,15 @@ def read_data_from_cpmg_folder(cpmg_folder):
 
 def plot_rw_T2_data(rw_wrap):
 	fig, axs = plt.subplots(2, 1, figsize=[9.6, 7.2])
-	axs[0].plot(rw_wrap['T2_decay']['times'], rw_wrap['T2_decay']['amps'])
+	axs[0].plot(rw_wrap['T2_decay']['time'], rw_wrap['T2_decay']['signal'], 'b', linewidth=2.0)
+	axs[0].plot(rw_wrap['T2_decay']['time'], rw_wrap['T2_decay']['noiseless'], 'r', linewidth=1.0)
 	axs[0].set_xlabel(r'exposure time' + '\t' + r'$[msec]$')
-	axs[0].set_xlim([0.0, 1.01*rw_wrap['T2_decay']['times'][-1]])
+	axs[0].set_xlim([0.0, 1.01*rw_wrap['T2_decay']['time'][-1]])
 	axs[0].set_ylabel(r'normalized magnetization')
-	axs[0].set_ylim([0.0, 1.01*rw_wrap['T2_decay']['amps'].max()])
+	axs[0].set_ylim([0.0, 1.01*rw_wrap['T2_decay']['signal'].max()])
 
 	axs[1].semilogx(rw_wrap['T2_dist']['bins'], rw_wrap['T2_dist']['amps'])
-	axs[1].set_xlabel(r'relaxation times $(T_{2})$')
+	axs[1].set_xlabel(r'relaxation times $(T_{2})$' + '\t' + r'$[msec]$')
 	axs[1].set_xlim([0.9*rw_wrap['T2_dist']['bins'][0], 1.1*rw_wrap['T2_dist']['bins'][-1]])
 	axs[1].set_ylabel(r'amplitudes')
 	axs[1].set_ylim([0.0, 1.1*rw_wrap['T2_dist']['amps'].max()])
