@@ -444,6 +444,13 @@ void NMR_PFGSE::applyBulk()
 	double bulkMagnitude = exp(bulkTime * (*this).getExposureTime());
 	cout << "exp_time: " << (*this).getExposureTime() << " ms \t";
 	cout << "bulk dec: " << bulkMagnitude << endl;
+
+	// Apply bulk relaxation in simulated signal
+	for(uint idx = 0; idx < this->Mkt.size(); idx++)
+	{
+		double rhs = (*this).computeRHS(this->gradient[idx]);
+		this->RHS.push_back(rhs);
+	}
 }
 
 void NMR_PFGSE::simulation()

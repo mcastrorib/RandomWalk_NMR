@@ -27,6 +27,7 @@ public:
     string method;
     vector<double> T2_bins;
     vector<double> T2_amps;
+    vector<double> noise;
     
 
 
@@ -43,8 +44,11 @@ public:
     void run();
     void applyBulk();
     void applyLaplace();
+    void setNoise(vector<double> _rawNoise) { this->noise = _rawNoise; }
 	void save();
 	void writeResults();
+	void saveT2decay();
+	void saveT2dist();
 	void setName();
 	void createDirectoryForData();
 

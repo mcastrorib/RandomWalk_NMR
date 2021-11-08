@@ -32,6 +32,7 @@ NMR_cpmg::NMR_cpmg( NMR_Simulation &_NMR,
 	// vectors object init
     vector<double> T2_bins();
     vector<double> T2_amps();
+    vector<double> noise();
 
     (*this).setExposureTime(this->CPMG_config.getObservationTime());
     (*this).setApplyBulkRelaxation(this->CPMG_config.getApplyBulk());
@@ -265,6 +266,9 @@ void NMR_cpmg::applyBulk()
 // apply laplace inversion explicitly
 void NMR_cpmg::applyLaplace()
 {   
+    cout << "Recovering T2 distribution [Tikhonov-ILT]...";
+    double tick = omp_get_wtime();
+
     // check if energy decay was done
     if(this->NMR.globalEnergy.size() == 0) 
     {
@@ -301,6 +305,30 @@ void NMR_cpmg::applyLaplace()
         this->T2_bins.push_back(nmr_inverter.used_t2_bins[i]);
         this->T2_amps.push_back(nmr_inverter.used_t2_amps[i]);
     }
+
+
+    // Get noise vector
+    vector<double> rawNoise = nmr_inverter.get_raw_noise();
+    vector<double> newNoise;
+    newNoise.reserve(this->NMR.globalEnergy.size());
+    newNoise.push_back(0.0);
+    if(rawNoise.size() == (this->NMR.globalEnergy.size() - 1))
+    {
+        for(int idx = 1; idx < this->NMR.globalEnergy.size(); idx++)
+        {
+            newNoise.push_back(rawNoise[idx-1]);
+        }
+    } else
+    {
+        for(int idx = 1; idx < this->NMR.globalEnergy.size(); idx++)
+        {
+            newNoise.push_back(0.0);
+        }
+    }
+    (*this).setNoise(newNoise);
+
+    double time = omp_get_wtime() - tick;
+    cout << "Done in " << time << " secs." << endl;
 }
 
 // -- Savings
@@ -330,7 +358,10 @@ void NMR_cpmg::save()
     }
 
     // write cpmg data
-	(*this).writeResults();
+    if(this->CPMG_config.getSaveDecay()) 
+    {
+        (*this).writeResults();
+    }
 
 	time = omp_get_wtime() - time;
     cout << "Ok. (" << time << " seconds)." << endl; 
@@ -338,9 +369,42 @@ void NMR_cpmg::save()
 
 void NMR_cpmg::writeResults()
 {
-	string filename = this->dir + "/cpmg_T2.txt";
+	(*this).saveT2decay();
+    (*this).saveT2dist();
+}
 
-	ofstream file;
+void NMR_cpmg::saveT2decay()
+{
+    string filename = this->dir + "/cpmg_decay.txt";
+
+    ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    const size_t num_points = this->NMR.globalEnergy.size();
+    const int precision = std::numeric_limits<double>::max_digits10;
+
+    file << "time, signal, noise, noiseless" << endl;
+    for (int idx = 0; idx < num_points; idx++)
+    {
+        file << setprecision(precision) << this->NMR.decayTimes[idx] << ", ";
+        file << setprecision(precision) << this->NMR.globalEnergy[idx] + this->noise[idx] << ", ";
+        file << setprecision(precision) << this->noise[idx] << ", ";
+        file << setprecision(precision) << this->NMR.globalEnergy[idx] << endl;    
+    }
+    
+    file.close();
+}
+
+void NMR_cpmg::saveT2dist()
+{
+    string filename = this->dir + "/cpmg_T2.txt";
+
+    ofstream file;
     file.open(filename, ios::out);
     if (file.fail())
     {

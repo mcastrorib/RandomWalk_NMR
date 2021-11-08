@@ -441,7 +441,7 @@ void NMR_cpmg::image_simulation_cuda()
     string bc = this->NMR.boundaryCondition;
     cout << "- starting RW-CPMG simulation (in GPU) [bc:" << bc << "]...";
 
-    bool time_verbose = false;
+    bool time_verbose = this->CPMG_config.getTimeVerbose();
     double reset_time = 0.0;
     double copy_time = 0.0;
     double kernel_time = 0.0;
@@ -1077,11 +1077,11 @@ void NMR_cpmg::image_simulation_cuda()
     if(time_verbose)
     {
         cout << "--- Time analysis ---" << endl;
-        cout << "cpu data reset: " << reset_time << " s" << endl;
-        cout << "cpu data buffer: " << buffer_time << " s" << endl;
-        cout << "gpu data copy: " << copy_time << " s" << endl;
-        cout << "gpu kernel launch: " << kernel_time << " s" << endl;
-        cout << "gpu reduce launch: " << reduce_time << " s" << endl;
+        cout << "cpu data reset:    \t" << reset_time << " s" << endl;
+        cout << "cpu data buffer:   \t" << buffer_time << " s" << endl;
+        cout << "gpu data copy:     \t" << copy_time << " s" << endl;
+        cout << "gpu kernel launch: \t" << kernel_time << " s" << endl;
+        cout << "gpu reduce launch: \t" << reduce_time << " s" << endl;
         cout << "---------------------" << endl;
     }
 }
