@@ -29,6 +29,7 @@ cpmg_config::cpmg_config(const cpmg_config &otherConfig)
     this->APPLY_BULK = otherConfig.APPLY_BULK;
     this->OBS_TIME = otherConfig.OBS_TIME;
     this->METHOD = otherConfig.METHOD;
+    this->TIME_VERBOSE = otherConfig.TIME_VERBOSE;
 
     this->MIN_T2 = otherConfig.MIN_T2;
     this->MAX_T2 = otherConfig.MAX_T2;
@@ -79,7 +80,8 @@ void cpmg_config::readConfigFile(const string configFile)
 			if(token == "D0") (*this).readD0(content);
             else if(token == "APPLY_BULK") (*this).readApplyBulk(content);  
 			else if(token == "OBS_TIME") (*this).readObservationTime(content);  
-            else if(token == "METHOD") (*this).readMethod(content);            
+            else if(token == "METHOD") (*this).readMethod(content);
+            else if(token == "TIME_VERBOSE") (*this).readTimeVerbose(content);            
             else if(token == "MIN_T2") (*this).readMinT2(content);
             else if(token == "MAX_T2") (*this).readMaxT2(content);
             else if(token == "USE_T2_LOGSPACE") (*this).readUseT2Logspace(content);
@@ -111,6 +113,12 @@ void cpmg_config::readApplyBulk(string s)
 {
     if(s == "true") this->APPLY_BULK = true;
     else this->APPLY_BULK = false;
+}
+
+void cpmg_config::readTimeVerbose(string s)
+{
+    if(s == "true") this->TIME_VERBOSE = true;
+    else this->TIME_VERBOSE = false;
 }
 
 void cpmg_config::readObservationTime(string s)

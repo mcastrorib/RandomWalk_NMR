@@ -18,6 +18,7 @@ public:
     bool APPLY_BULK;
     double OBS_TIME;
     string METHOD;
+    bool TIME_VERBOSE;
 
     // LAPLACE INVERSION
     double MIN_T2;
@@ -58,6 +59,7 @@ public:
     // -- Read methods
     void readD0(string s);
     void readApplyBulk(string s);
+    void readTimeVerbose(string s);
     void readObservationTime(string s);
     void readMethod(string s);
 
@@ -83,6 +85,7 @@ public:
     string getConfigFilepath() {return this->config_filepath; }
     double getD0(){return this->D0; }
     bool getApplyBulk(){ return this->APPLY_BULK; }
+    bool getTimeVerbose(){ return this->TIME_VERBOSE; }
     double getObservationTime(){return this->OBS_TIME; }
     string getMethod() { return this->METHOD; }
 
