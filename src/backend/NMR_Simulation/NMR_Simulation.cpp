@@ -272,8 +272,9 @@ void NMR_Simulation::readImage()
     (*this).countPoresInBitBlock();
     (*this).countInterfacePoreMatrix();
 
-    ChordLengthHistogram chordsHistogram(this->bitBlock);
-    chordsHistogram.save(this->simulationDirectory);
+    
+    // ChordLengthHistogram chordsHistogram(this->bitBlock);
+    // chordsHistogram.save(this->simulationDirectory);
 }
 
 void NMR_Simulation::setWalkers(void)
