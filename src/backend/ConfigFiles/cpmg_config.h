@@ -33,9 +33,9 @@ public:
 
     // --- cpmg SAVE. 
     bool SAVE_MODE;
+    bool SAVE_DECAY;
     bool SAVE_T2;
     bool SAVE_COLLISIONS;
-    bool SAVE_DECAY;
     bool SAVE_HISTOGRAM;
     bool SAVE_HISTOGRAM_LIST;
     

@@ -58,7 +58,6 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
     this->SAVE_MODE = otherConfig.SAVE_MODE;
     this->SAVE_PFGSE = otherConfig.SAVE_PFGSE;
     this->SAVE_COLLISIONS = otherConfig.SAVE_COLLISIONS;
-    this->SAVE_DECAY = otherConfig.SAVE_DECAY;
     this->SAVE_HISTOGRAM = otherConfig.SAVE_HISTOGRAM;
     this->SAVE_HISTOGRAM_LIST = otherConfig.SAVE_HISTOGRAM_LIST;
 }
@@ -109,7 +108,6 @@ void pfgse_config::readConfigFile(const string configFile)
             else if(token == "SAVE_MODE") (*this).readSaveMode(content);
             else if(token == "SAVE_PFGSE") (*this).readSavePFGSE(content);
             else if(token == "SAVE_COLLISIONS") (*this).readSaveCollisions(content);
-            else if(token == "SAVE_DECAY") (*this).readSaveDecay(content);
             else if(token == "SAVE_HISTOGRAM") (*this).readSaveHistogram(content);
             else if(token == "SAVE_HISTOGRAM_LIST") (*this).readSaveHistogramList(content); 			
 		}
@@ -295,12 +293,6 @@ void pfgse_config::readSaveCollisions(string s)
 {
     if(s == "true") this->SAVE_COLLISIONS = true;
     else this->SAVE_COLLISIONS = false;
-}
-
-void pfgse_config::readSaveDecay(string s)
-{
-    if(s == "true") this->SAVE_DECAY = true;
-    else this->SAVE_DECAY = false;
 }
 
 void pfgse_config::readSaveHistogram(string s)

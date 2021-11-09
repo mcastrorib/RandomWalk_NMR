@@ -1040,6 +1040,12 @@ void NMR_PFGSE::save()
 	double time = omp_get_wtime();
     cout << "- saving results...";
     
+    // write pfgse data
+	if(this->PFGSE_config.getSavePFGSE())
+	{
+		(*this).writeResults();
+	}
+
     if(this->PFGSE_config.getSaveCollisions())
     {
         this->NMR.saveWalkerCollisions(this->dir);
@@ -1053,13 +1059,7 @@ void NMR_PFGSE::save()
     if(this->PFGSE_config.getSaveHistogramList())
     {
         this->NMR.saveHistogramList(this->dir);
-    }
-
-    // write pfgse data
-	if(this->PFGSE_config.getSavePFGSE())
-	{
-		(*this).writeResults();
-	}
+    }  
 	
 	time = omp_get_wtime() - time;
     cout << "Ok. (" << time << " seconds)." << endl; 

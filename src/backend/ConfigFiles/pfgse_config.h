@@ -43,7 +43,6 @@ public:
     bool SAVE_MODE;
     bool SAVE_PFGSE;
     bool SAVE_COLLISIONS;
-    bool SAVE_DECAY;
     bool SAVE_HISTOGRAM;
     bool SAVE_HISTOGRAM_LIST;
 
@@ -85,7 +84,6 @@ public:
     void readSaveMode(string s);
     void readSavePFGSE(string s);
     void readSaveCollisions(string s);
-    void readSaveDecay(string s);
     void readSaveHistogram(string s);
     void readSaveHistogramList(string s);  
 
@@ -111,7 +109,6 @@ public:
     bool getSaveMode() { return this->SAVE_MODE; }
     bool getSavePFGSE() { return this->SAVE_PFGSE; }
     bool getSaveCollisions() { return this->SAVE_COLLISIONS; }
-    bool getSaveDecay() { return this->SAVE_DECAY; }
     bool getSaveHistogram() { return this->SAVE_HISTOGRAM; }
     bool getSaveHistogramList() { return this->SAVE_HISTOGRAM_LIST; }  
 
