@@ -11,14 +11,15 @@ from LeastSquaresRegression import LeastSquaresRegression
 def main():
 	# simulation parameters
 	Dp = 2.5
-	edge_length = [20.0] # [200.0, 100.0, 40.0, 20.0, 10.0, 5.0]
-	radius = [10.0] # [130.0, 65.0, 26.0, 13.0, 6.5, 3.25]
-	true_phi = [0.472] # [0.104, 0.104, 0.104, 0.098, 0.104, 0.064]
+	edge_length = [200.0, 100.0, 40.0, 20.0, 10.0, 5.0]
+	labels = ['cell'] #, 'cubic', 'uniform_nf', 'uniform']
+	radius = [130.0, 65.0, 26.0, 13.0, 6.5, 3.25]
+	true_phi = [0.104, 0.104, 0.104, 0.098, 0.104, 0.064]
 	number_of_lengths = len(edge_length)
 	walker_strings = [r'100k']
 	time_scales = [edge**2 / Dp for edge in edge_length] 
-	phi = 0.476
-	De_bergman = 0.722
+	phi = 0.104
+	De_bergman = 0.315
 	relaxation_strength = 0.0
 	rho = [relaxation_strength*Dp/edge for edge in edge_length]
 	resolution = 1.0
@@ -32,10 +33,8 @@ def main():
 	
 	# db_dir = r'/home/matheus/Documentos/doutorado_ic/tese/saved_data/bergman_test/new_version_tests/tests_periodic_bcs/'
 	
-	# db_dir = r'/home/matheus/Documentos/doutorado_ic/tese/saved_data/tortuosity_tests/tests_periodic/'
-	# db_dir += r'phi=' + str(phi) + r'/'
-
-	db_dir = r'/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/db/'
+	db_dir = r'/home/matheus/Documentos/doutorado_ic/tese/saved_data/tortuosity_tests/tests_periodic/'
+	db_dir += r'phi=' + str(phi) + r'/'
 	
 	for walkers in walker_strings:
 		# Plot title
@@ -49,7 +48,10 @@ def main():
 			# sim_dir = r'a=' + str(edge_length[idx]) + r'um_r=' + str(radius[idx]) + r'um/data/'
 			sim_dir = r'PFGSE_NMR_periodic_a=' + str(edge_length[idx]) + r'_r=' + str(radius[idx]) 
 			sim_dir += r'_rho=' + str(rho[idx]) + r'_res=' + str(resolution) + r'_shift=' + str(shift) + r'_w='+ walkers # + r'/'
-			complete_paths.append(db_dir + sim_dir + '/')
+
+			# assembly complete path to data directory
+			for label in labels:
+				complete_paths.append(db_dir + sim_dir + '_' + label + '/')
 
 		print(complete_paths)
 
