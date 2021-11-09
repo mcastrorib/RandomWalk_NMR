@@ -321,6 +321,12 @@ void NMRInverter::set_inversion_lambda(double tikhonov_lambda)
 	this->prepare_nnls_solvers(1, true);
 }
 
+double NMRInverter::get_inversion_lambda()
+{
+	if(this->lambda_set) return this->used_lambda;
+	else return 0.0;
+}
+
 
 void NMRInverter::prepare_nnls_solvers(const int num_threads, const bool lambda_changed)
 {

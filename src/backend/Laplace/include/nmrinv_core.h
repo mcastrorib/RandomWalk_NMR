@@ -146,6 +146,7 @@ public:
 		const int num_inversions, double* raw_noise_ptr, double* t2_amps_ptr);
 
 	vector<double> get_raw_noise() { return this->used_raw_noise; }
+	double get_inversion_lambda();
 };
 
 
