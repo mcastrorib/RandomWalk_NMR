@@ -57,16 +57,13 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
                                                          SVp(-1.0),
                                                          walkerOccupancy(-1.0),
                                                          voxelDivisionApplied(false),
-                                                         histogram(),
-                                                         penalties(NULL)
+                                                         histogram()
 {
     // init vector objects
     vector<Mat> binaryMap();
     vector<Pore> pores();
     vector<uint> walkersIDList();
     vector<Walker> walkers();
-    vector<double> globalEnergy();
-    vector<double> decayTimes();
     vector<double> T2_bins();
     vector<double> T2_input();
     vector<double> T2_simulated();
@@ -246,20 +243,6 @@ void NMR_Simulation::setTimeFramework(uint _steps)
     if(_steps < this->stepsPerEcho) _steps = this->stepsPerEcho;
     this->numberOfEchoes = (uint)ceil( _steps / (double)this->stepsPerEcho);
     this->simulationSteps = this->numberOfEchoes * this->stepsPerEcho;
-    
-    // reserve memory space for global energy vector
-    if(this->globalEnergy.size() != 0) this->globalEnergy.clear();
-    this->globalEnergy.reserve(this->numberOfEchoes);
-    if(this->decayTimes.size() != 0) this->decayTimes.clear();
-    this->decayTimes.reserve(this->numberOfEchoes);
-    
-    double time = 0.0;
-    double delta_t = this->stepsPerEcho * this->timeInterval;
-    for(int echo = 0; echo < this->numberOfEchoes; echo++)
-    {   
-        time += delta_t;
-        this->decayTimes.push_back(time);
-    }
 }
 
 // param @_time needs to be in miliseconds
@@ -268,22 +251,6 @@ void NMR_Simulation::setTimeFramework(double _time)
     (*this).setNumberOfStepsFromTime(_time);
     this->numberOfEchoes = (uint)ceil((double)this->simulationSteps / (double)this->stepsPerEcho);
     this->simulationSteps = this->numberOfEchoes * this->stepsPerEcho;
-    
-    // reserve memory space for global energy vector
-    if(this->globalEnergy.size() != 0) this->globalEnergy.clear();
-    this->globalEnergy.reserve(this->numberOfEchoes + 1);
-    if(this->decayTimes.size() != 0) this->decayTimes.clear();
-    this->decayTimes.reserve(this->numberOfEchoes + 1);
-    
-    // fill time array
-    double time = 0.0;
-    double delta_t = this->stepsPerEcho * this->timeInterval;
-    this->decayTimes.push_back(time);
-    for(int echo = 0; echo < this->numberOfEchoes; echo++)
-    {   
-        time += delta_t;
-        this->decayTimes.push_back(time);
-    }
 }
 
 void NMR_Simulation::readImage()
@@ -1654,22 +1621,6 @@ void NMR_Simulation::updateWalkersRelaxativity(double rho)
     }
 }
 
-void NMR_Simulation::normalizeEnergyDecay()
-{
-    // check if energy decay was done
-    if(this->globalEnergy.size() == 0) 
-    {
-        cout << "no data available, could not apply normalization." << endl;
-        return; 
-    } 
-
-    // normalize global energy signal
-    double normalizer = 1.0 / this->globalEnergy[0];
-    for(uint echo = 0; echo < this->globalEnergy.size(); echo++)
-    {
-        this->globalEnergy[echo] = normalizer * this->globalEnergy[echo]; 
-    } 
-}
 
 // associate methods
 void NMR_Simulation::associateMapSimulation()
@@ -1756,15 +1707,6 @@ void NMR_Simulation::saveImageInfo(string filedir)
                                  this->SVp);
 }
 
-void NMR_Simulation::saveEnergyDecay(string filePath)
-{
-
-    string fileName = filePath + "/NMR_decay.txt";
-
-    fileHandler external_file(fileName);
-    external_file.writeEnergyDecay(this->globalEnergy, this->decayTimes);
-}
-
 void NMR_Simulation::saveWalkerCollisions(string filePath)
 {
 
@@ -1817,8 +1759,6 @@ void NMR_Simulation::printDetails()
     cout << "Image resolution (um/voxel): " << this->imageVoxelResolution << endl;
     cout << "Diffusion coefficient (um^2/ms): " << this->diffusionCoefficient << endl;
     cout << "Number of images: " << this->numberOfImages << endl;
-    cout << "Number of steps in simulation: " << this->simulationSteps << endl;
-    cout << "Decay time (ms): " << this->simulationSteps * this->timeInterval << endl;
     cout << "Walkers pore occupancy in simulation: " << this->walkerOccupancy * 100.0 << "%" << endl;
     
 
@@ -1846,48 +1786,6 @@ void NMR_Simulation::printDetails()
 
     cout << "------------------------------------------------------" << endl;
     cout << endl;
-}
-
-void NMR_Simulation::createPenaltiesVector(vector<double> &_sigmoid)
-{
-    // initialize penalties array
-    if(this->penalties == NULL)
-        this->penalties = new double[this->histogram.size];
-    
-    Walker toy;
-    double artificial_xirate;
-    double artificial_steps = (double) this->stepsPerEcho;
-    for(int idx = 0; idx < this->histogram.size; idx++)
-    {   
-        artificial_xirate = this->histogram.bins[idx];
-        toy.setXIrate(artificial_xirate);
-        toy.setSurfaceRelaxivity(_sigmoid);
-        toy.computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
-        this->penalties[idx] = pow(toy.getDecreaseFactor(), (artificial_xirate * artificial_steps));
-
-        // debug
-        // cout << "delta[" << artificial_xirate << "] = " << penalties[idx] << endl;
-    }
-}
-
-void NMR_Simulation::createPenaltiesVector(double rho)
-{
-    // initialize penalties array
-    penalties = new double[this->histogram.size];
-    Walker toy;
-    double artificial_xirate;
-    double artificial_steps = (double) this->stepsPerEcho;
-    for(int idx = 0; idx < this->histogram.size; idx++)
-    {   
-        artificial_xirate = this->histogram.bins[idx];
-        toy.setXIrate(artificial_xirate);
-        toy.setSurfaceRelaxivity(rho);
-        toy.computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
-        penalties[idx] = pow(toy.getDecreaseFactor(), (artificial_xirate * artificial_steps));
-
-        // debug
-        // cout << "delta[" << artificial_xirate << "] = " << penalties[idx] << endl;
-    }
 }
 
 // mapping simulation using bitblock data structure

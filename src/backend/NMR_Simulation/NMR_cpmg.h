@@ -25,9 +25,12 @@ public:
     double exposureTime;
     bool applyBulkRelaxation;
     string method;
+    vector<double> signal_amps;
+    vector<double> signal_times;
     vector<double> T2_bins;
     vector<double> T2_amps;
     vector<double> noise;
+    double *penalties;
     
 
 
@@ -36,12 +39,21 @@ public:
 			  int _mpi_rank = 0, 
 			  int _mpi_processes = 0);	
 
-	virtual ~NMR_cpmg(){};
+	virtual ~NMR_cpmg()
+	{
+		if(this->penalties != NULL)
+        {
+            delete[] this->penalties;
+            this->penalties = NULL;
+        }
+	};
 
     // -- Essentials
 	void setNMRTimeFramework();
     void set();
     void run();
+    void resetSignal();
+    void normalizeSignal();
     void applyBulk();
     void applyLaplace();
     void setNoise(vector<double> _rawNoise) { this->noise = _rawNoise; }
@@ -61,11 +73,16 @@ public:
 	double getExposureTime() { return this->exposureTime; }
 	bool getApplyBulkRelaxation(){ return this->applyBulkRelaxation; }
     string getMethod() { return this->method; }
+    vector<double> getSignalAmps() { return this->signal_amps; }
+    vector<double> getSignalTimes() { return this->signal_times; }
+
 
     // -- Simulations
     void run_simulation();
     void image_simulation_cuda();
 	void image_simulation_omp();
+	void createPenaltiesVector(vector<double> &_sigmoid);
+    void createPenaltiesVector(double rho);
     void histogram_simulation();
 	
 

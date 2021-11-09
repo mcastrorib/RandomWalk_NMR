@@ -40,6 +40,8 @@ public:
 		this->bins.clear();
 	}
 
+	int getSize(){return this->size;}
+
 	void createBlankHistogram(int _size, string scale);
 	void fillHistogram(vector<Walker> &_walkers, uint _numberOfSteps);
 	void createBinsLinearVector(vector<Walker> &_walkers);

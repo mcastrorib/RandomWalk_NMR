@@ -1040,11 +1040,6 @@ void NMR_PFGSE::save()
 	double time = omp_get_wtime();
     cout << "- saving results...";
     
-    if(this->PFGSE_config.getSaveDecay()) 
-    {
-        this->NMR.saveEnergyDecay(this->dir);
-	}
-    
     if(this->PFGSE_config.getSaveCollisions())
     {
         this->NMR.saveWalkerCollisions(this->dir);
@@ -1226,15 +1221,6 @@ void NMR_PFGSE::simulation_omp()
         this->NMR.walkers[id].resetSeed();
         this->NMR.walkers[id].resetEnergy();
     }
-
-    // reset vector to store energy decay
-    this->NMR.resetGlobalEnergy();
-    this->NMR.globalEnergy.reserve(this->NMR.numberOfEchoes + 1); // '+1' to accomodate time 0.0
-
-    // get initial energy global state
-    double energySum = ((double) this->NMR.walkers.size()) * this->NMR.walkers[0].getEnergy();
-    this->NMR.globalEnergy.push_back(energySum);
-
 
     // set derivables
     double gamma = this->giromagneticRatio;

@@ -1266,10 +1266,10 @@ void NMR_PFGSE::simulation_cuda()
     }
 
     // collect energy data -- REVISE!!!!
-    for (uint point = 0; point < gradientPoints; point++)
-    {
-        this->NMR.globalEnergy.push_back(h_globalEnergy);
-    }
+    // for (uint point = 0; point < gradientPoints; point++)
+    // {
+    //     this->NMR.globalEnergy.push_back(h_globalEnergy);
+    // }
 
     // get magnitudes M(k,t) - new
     if(this->Mkt.size() > 0) this->Mkt.clear();

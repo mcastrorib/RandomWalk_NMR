@@ -27,9 +27,12 @@ NMR_cpmg::NMR_cpmg( NMR_Simulation &_NMR,
                     int _mpi_processes) : NMR(_NMR),
                                         CPMG_config(_cpmgConfig),
                                         mpi_rank(_mpi_rank),
-                                        mpi_processes(_mpi_processes)
+                                        mpi_processes(_mpi_processes),
+                                        penalties(NULL)
 {
 	// vectors object init
+    vector<double> signal_amps();
+    vector<double> signal_times();
     vector<double> T2_bins();
     vector<double> T2_amps();
     vector<double> noise();
@@ -75,7 +78,24 @@ void NMR_cpmg::createDirectoryForData()
 
 void NMR_cpmg::setNMRTimeFramework()
 {
-    this->NMR.setTimeFramework((*this).getExposureTime());  
+    this->NMR.setTimeFramework((*this).getExposureTime()); 
+
+    // reserve memory space for signal amps
+    if(this->signal_amps.size() != 0) this->signal_amps.clear();
+    this->signal_amps.reserve(this->NMR.getNumberOfEchoes() + 1);
+    
+    // reserve memory space for signal times
+    double time = 0.0;
+    double delta_t = this->NMR.getStepsPerEcho() * this->NMR.getTimeInterval();
+    if(this->signal_times.size() != 0) this->signal_times.clear();
+    this->signal_times.reserve(this->NMR.getNumberOfEchoes() + 1);
+    this->signal_times.push_back(time);
+    for(int echo = 0; echo < this->NMR.getNumberOfEchoes(); echo++)
+    {   
+        time += delta_t;
+        this->signal_times.push_back(time);
+    }
+
     cout << "- Initial map time: " << (*this).getExposureTime() << " ms ";
     cout << "[" << this->NMR.simulationSteps << " RW-steps]" << endl;
     this->NMR.mapSimulation();
@@ -106,8 +126,8 @@ void NMR_cpmg::run_simulation()
     {
         vector<double> rho;
         rho = this->NMR.rwNMR_config.getRho();
-        if(this->NMR.rwNMR_config.getRhoType() == "uniform") this->NMR.createPenaltiesVector(rho[0]);
-        else if(this->NMR.rwNMR_config.getRhoType() == "sigmoid") this->NMR.createPenaltiesVector(rho);
+        if(this->NMR.rwNMR_config.getRhoType() == "uniform") (*this).createPenaltiesVector(rho[0]);
+        else if(this->NMR.rwNMR_config.getRhoType() == "sigmoid") (*this).createPenaltiesVector(rho);
         (*this).histogram_simulation();
     }
 
@@ -118,7 +138,7 @@ void NMR_cpmg::run_simulation()
     }
 
     // Normalize global energy decay 
-    this->NMR.normalizeEnergyDecay();
+    (*this).normalizeSignal();
 }
 
 void NMR_cpmg::image_simulation_omp()
@@ -127,8 +147,6 @@ void NMR_cpmg::image_simulation_omp()
 
     cout << "initializing CPMG-NMR simulation... ";
 
-    // reset walker's initial state with omp parallel for
-// #pragma if(NMR_OPENMP) omp parallel for private(id) shared(walkers)
     for (uint id = 0; id < this->NMR.walkers.size(); id++)
     {
         this->NMR.walkers[id].resetPosition();
@@ -137,8 +155,8 @@ void NMR_cpmg::image_simulation_omp()
     }
 
     // reset vector to store energy decay
-    this->NMR.resetGlobalEnergy();
-    this->NMR.globalEnergy.reserve(this->NMR.numberOfEchoes);
+    this->resetSignal();
+    this->signal_amps.reserve(this->NMR.numberOfEchoes);
 
     // get initial energy state
     double energySum = 0.0;
@@ -146,7 +164,7 @@ void NMR_cpmg::image_simulation_omp()
     {
         energySum += this->NMR.walkers[id].energy;
     }
-    this->NMR.globalEnergy.push_back(energySum);
+    this->signal_amps.push_back(energySum);
 
 
     energySum = 0.0;
@@ -173,7 +191,7 @@ void NMR_cpmg::image_simulation_omp()
         }
 
         //energySum = energySum / (double)numberOfWalkers;
-        this->NMR.globalEnergy.push_back(energySum);
+        this->signal_amps.push_back(energySum);
     }
 
     cout << "Completed.";
@@ -181,18 +199,64 @@ void NMR_cpmg::image_simulation_omp()
     printElapsedTime(begin_time, finish_time);
 }
 
+void NMR_cpmg::createPenaltiesVector(vector<double> &_sigmoid)
+{
+    // initialize penalties array
+    if(this->penalties != NULL)
+    {
+        delete[] this->penalties;
+        this->penalties = NULL;
+    } 
+    this->penalties = new double[this->NMR.histogram.getSize()];
+    
+    Walker toy;
+    double artificial_xirate;
+    double artificial_steps = (double) this->NMR.getStepsPerEcho();
+    for(int idx = 0; idx < this->NMR.histogram.getSize(); idx++)
+    {   
+        artificial_xirate = this->NMR.histogram.bins[idx];
+        toy.setXIrate(artificial_xirate);
+        toy.setSurfaceRelaxivity(_sigmoid);
+        toy.computeDecreaseFactor(this->NMR.getImageVoxelResolution(), this->NMR.getDiffusionCoefficient());
+        this->penalties[idx] = pow(toy.getDecreaseFactor(), (artificial_xirate * artificial_steps));
+    }
+}
+
+void NMR_cpmg::createPenaltiesVector(double rho)
+{
+    // initialize penalties array
+    if(this->penalties != NULL)
+    {
+        delete[] this->penalties;
+        this->penalties = NULL;
+    } 
+    this->penalties = new double[this->NMR.histogram.getSize()];
+    
+    Walker toy;
+    double artificial_xirate;
+    double artificial_steps = (double) this->NMR.getStepsPerEcho();
+    for(int idx = 0; idx < this->NMR.histogram.getSize(); idx++)
+    {   
+        artificial_xirate = this->NMR.histogram.bins[idx];
+        toy.setXIrate(artificial_xirate);
+        toy.setSurfaceRelaxivity(rho);
+        toy.computeDecreaseFactor(this->NMR.getImageVoxelResolution(), this->NMR.getDiffusionCoefficient());
+        this->penalties[idx] = pow(toy.getDecreaseFactor(), (artificial_xirate * artificial_steps));
+    }
+}
 
 void NMR_cpmg::histogram_simulation()
 {
-    double begin_time = omp_get_wtime();
-    cout << "initializing RW-NMR hist simulation... ";
+    double beginTime = omp_get_wtime();
+    string bc = this->NMR.boundaryCondition;
+    cout << "- starting RW-CPMG simulation (histrogram) [bc:" << bc << "]...";
 
     if(this->NMR.histogramList.size() == 0)  
     {
         cout << "could not start simulation without histogram list" << endl;
         return;
     }
-    if(this->NMR.penalties == NULL)
+    if(this->penalties == NULL)
     {
         cout << "could not start simulation without penalties vector" << endl;
         return;
@@ -204,15 +268,15 @@ void NMR_cpmg::histogram_simulation()
 
 
     // reset vector to store energy decay
-    this->NMR.resetGlobalEnergy();
-    this->NMR.globalEnergy.push_back(1.0);
+    (*this).resetSignal();
+    this->signal_amps.push_back(1.0);
 
     // histogram simulation main loop    
     for(int hst_ID = 0; hst_ID < this->NMR.histogramList.size(); hst_ID++)
     {
         for(uint id = 0; id < this->NMR.histogram.size; id++)
         {
-            energyDistribution[id] = this->NMR.globalEnergy.back() * this->NMR.histogramList[hst_ID].amps[id];
+            energyDistribution[id] = this->signal_amps.back() * this->NMR.histogramList[hst_ID].amps[id];
         }
 
         double energyLvl;
@@ -223,7 +287,7 @@ void NMR_cpmg::histogram_simulation()
             // apply penalties
             for(uint id = 0; id < this->NMR.histogram.size; id++)
             {
-                energyDistribution[id] *= this->NMR.penalties[id];
+                energyDistribution[id] *= this->penalties[id];
             }
 
             // get global energy
@@ -234,32 +298,55 @@ void NMR_cpmg::histogram_simulation()
             }
 
             // add to global energy vector
-            this->NMR.globalEnergy.push_back(energyLvl);
+            this->signal_amps.push_back(energyLvl);
         }
     }
-
-    // cut out unnecessary computations 
-    // this->globalEnergy.resize(this->numberOfEchoes);
 
     delete[] energyDistribution;
     energyDistribution = NULL;
 
-    cout << "Completed.";
-    double finish_time = omp_get_wtime();
-    printElapsedTime(begin_time, finish_time);
+    double elapsedTime = omp_get_wtime() - beginTime;
+    cout << "Done.\nCpu elapsed time: " << elapsedTime << " s" << endl;
 }
 
 // apply bulk relaxation to NMR signal
 void NMR_cpmg::applyBulk()
 {
+    cout << "applying bulk relaxation." << endl;
     double bulkTime = -1.0 / this->NMR.getBulkRelaxationTime();
 
-    if(this->NMR.globalEnergy.size() == this->NMR.decayTimes.size())
+    if(this->signal_amps.size() == this->signal_times.size())
     {
-        for(uint echo = 0; echo < this->NMR.globalEnergy.size(); echo++)
+        for(uint echo = 0; echo < this->signal_amps.size(); echo++)
         {
-            this->NMR.globalEnergy[echo] = exp(bulkTime * this->NMR.decayTimes[echo]) * this->NMR.globalEnergy[echo]; 
+            this->signal_amps[echo] = exp(bulkTime * this->signal_times[echo]) * this->signal_amps[echo]; 
         }
+    } 
+    cout << "Ok." << endl;
+}
+
+void NMR_cpmg::resetSignal() 
+{
+    if (this->signal_amps.size() > 0)
+    {
+        this->signal_amps.clear();
+    }
+}
+
+void NMR_cpmg::normalizeSignal()
+{
+    // check if energy decay was done
+    if(this->signal_amps.size() == 0) 
+    {
+        cout << "no data available, could not apply normalization." << endl;
+        return; 
+    } 
+
+    // normalize global energy signal
+    double normalizer = 1.0 / this->signal_amps[0];
+    for(uint echo = 0; echo < this->signal_amps.size(); echo++)
+    {
+        this->signal_amps[echo] = normalizer * this->signal_amps[echo]; 
     } 
 }
 
@@ -270,7 +357,7 @@ void NMR_cpmg::applyLaplace()
     double tick = omp_get_wtime();
 
     // check if energy decay was done
-    if(this->NMR.globalEnergy.size() == 0) 
+    if(this->signal_amps.size() == 0) 
     {
         cout << "no data available, could not apply inversion." << endl;
         return; 
@@ -281,8 +368,8 @@ void NMR_cpmg::applyLaplace()
     if(this->T2_amps.size() > 0) this->T2_amps.clear();
 
     // get copy of decay info and remove first elements
-    vector<double> decay = this->NMR.getGlobalEnergy();
-    vector<double> times = this->NMR.getDecayTimes();
+    vector<double> decay = (*this).getSignalAmps();
+    vector<double> times = this->getSignalTimes();
     times.erase(times.begin());
     decay.erase(decay.begin());     
 
@@ -310,17 +397,17 @@ void NMR_cpmg::applyLaplace()
     // Get noise vector
     vector<double> rawNoise = nmr_inverter.get_raw_noise();
     vector<double> newNoise;
-    newNoise.reserve(this->NMR.globalEnergy.size());
+    newNoise.reserve(this->signal_amps.size());
     newNoise.push_back(0.0);
-    if(rawNoise.size() == (this->NMR.globalEnergy.size() - 1))
+    if(rawNoise.size() == (this->signal_amps.size() - 1))
     {
-        for(int idx = 1; idx < this->NMR.globalEnergy.size(); idx++)
+        for(int idx = 1; idx < this->signal_amps.size(); idx++)
         {
             newNoise.push_back(rawNoise[idx-1]);
         }
     } else
     {
-        for(int idx = 1; idx < this->NMR.globalEnergy.size(); idx++)
+        for(int idx = 1; idx < this->signal_amps.size(); idx++)
         {
             newNoise.push_back(0.0);
         }
@@ -336,12 +423,7 @@ void NMR_cpmg::save()
 {
 	double time = omp_get_wtime();
     cout << "saving results...";
-    
-    if(this->CPMG_config.getSaveDecay()) 
-    {
-        this->NMR.saveEnergyDecay(this->dir);
-	}
-    
+       
     if(this->CPMG_config.getSaveCollisions())
     {
         this->NMR.saveWalkerCollisions(this->dir);
@@ -385,16 +467,16 @@ void NMR_cpmg::saveT2decay()
         exit(1);
     }
 
-    const size_t num_points = this->NMR.globalEnergy.size();
+    const size_t num_points = this->signal_amps.size();
     const int precision = std::numeric_limits<double>::max_digits10;
 
     file << "time, signal, noise, noiseless" << endl;
     for (int idx = 0; idx < num_points; idx++)
     {
-        file << setprecision(precision) << this->NMR.decayTimes[idx] << ", ";
-        file << setprecision(precision) << this->NMR.globalEnergy[idx] + this->noise[idx] << ", ";
+        file << setprecision(precision) << this->signal_times[idx] << ", ";
+        file << setprecision(precision) << this->signal_amps[idx] + this->noise[idx] << ", ";
         file << setprecision(precision) << this->noise[idx] << ", ";
-        file << setprecision(precision) << this->NMR.globalEnergy[idx] << endl;    
+        file << setprecision(precision) << this->signal_amps[idx] << endl;    
     }
     
     file.close();

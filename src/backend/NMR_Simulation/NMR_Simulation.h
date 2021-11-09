@@ -61,9 +61,6 @@ public:
     vector<Pore> pores;
     vector<uint> walkersIDList;
     vector<Walker> walkers;
-    vector<double> globalEnergy;
-    vector<double> decayTimes;
-
 
     // physical properties
     double timeInterval; // time interval between each walker step
@@ -89,7 +86,6 @@ public:
     // Collision histogram 
     CollisionHistogram histogram;
     vector<CollisionHistogram> histogramList;
-    double *penalties;
 
     // NMR_3D methods:
     // default constructors
@@ -122,8 +118,6 @@ public:
         this->pores = _otherSimulation.pores;
         this->walkersIDList = _otherSimulation.walkersIDList;
         this->walkers = _otherSimulation.walkers;
-        this->globalEnergy = _otherSimulation.globalEnergy;
-        this->decayTimes = _otherSimulation.decayTimes;
 
         this->timeInterval = _otherSimulation.timeInterval;
         this->diffusionCoefficient = _otherSimulation.diffusionCoefficient;
@@ -143,7 +137,6 @@ public:
 
         this->histogram = _otherSimulation.histogram;
         this->histogramList = _otherSimulation.histogramList;
-        this->penalties = _otherSimulation.penalties;
 
         // pointers-to-method
         this->mapSimulationPointer = _otherSimulation.mapSimulationPointer;
@@ -162,21 +155,8 @@ public:
         {
             walkers.clear();
         }
-        if (this->globalEnergy.size() > 0)
-        {
-            globalEnergy.clear();
-        }
-
         // free(this->bitBlock.blocks);
         // this->bitBlock.blocks = NULL;
-    }
-
-    void resetGlobalEnergy()
-    {
-        if (this->globalEnergy.size() > 0)
-        {
-            globalEnergy.clear();
-        }
     }
 
     void clear()
@@ -188,8 +168,6 @@ public:
         // vector objects
         this->pores.clear();
         this->walkers.clear();
-        this->globalEnergy.clear();
-        this->decayTimes.clear();
 
         // image attributes
         this->binaryMap.clear();
@@ -198,11 +176,6 @@ public:
         // histogram used in fast simulations
         this->histogram.clear();
         this->histogramList.clear();
-        if(this->penalties != NULL)
-        {
-            delete[] this->penalties;
-            this->penalties = NULL;
-        }
     }
 
     // Class methods:
@@ -262,9 +235,6 @@ public:
     void createHistogram();
     void createHistogram(uint histID, uint _steps);
 
-    // Global energy normalization
-    void normalizeEnergyDecay();
-
     // cost function methods
     void updateWalkersRelaxativity(vector<double> &parameters);
     void updateWalkersRelaxativity(double rho);
@@ -291,8 +261,6 @@ public:
     }
     void associateMapSimulation();
 
-    void createPenaltiesVector(vector<double> &_sigmoid);
-    void createPenaltiesVector(double rho);
 
     // Class supermethod:
     void saveInfo();
@@ -324,8 +292,6 @@ public:
     inline uint getWalkerSamples() { return this->walkerSamples; }
     inline vector<Pore> getPores() { return this->pores; }
     inline vector<Walker> getWalkers() { return this->walkers; }
-    inline vector<double> getGlobalEnergy() { return this->globalEnergy; }
-    inline vector<double> getDecayTimes() { return this->decayTimes; }
 
     // physical attributes
     inline double getTimeInterval() { return this->timeInterval; }
@@ -353,7 +319,6 @@ public:
     // output generation class methods
     string createDirectoryForResults(string _root);
     void saveImageInfo(string filedir);
-    void saveEnergyDecay(string filedir);
     void saveWalkerCollisions(string filedir);
     void saveBitBlock(string filedir);
     void saveHistogram(string filedir);
