@@ -73,12 +73,16 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	(*this).setThresholdFromSamples(this->gradientPoints);
 	(*this).setGradientVector();
 	(*this).setVectorK();
+
+	// new
+	(*this).setName();
+	(*this).createDirectoryForData();
 }
 
 void NMR_PFGSE::set()
 {
-	(*this).setName();
-	(*this).createDirectoryForData();
+	// (*this).setName();
+	// (*this).createDirectoryForData();
 	(*this).setNMRTimeFramework();
 	(*this).setVectorMkt();
 	(*this).setVectorLHS();
@@ -94,6 +98,7 @@ void NMR_PFGSE::run()
 	(*this).correctExposureTimes();
 	(*this).runInitialMapSimulation();
 	(*this).resetNMR();
+	(*this).presave();
 	cout << "-- Done in " << omp_get_wtime() - tick << " seconds." << endl;
 
 	double interiorTick;
@@ -232,19 +237,19 @@ void NMR_PFGSE::correctExposureTimes()
 
 void NMR_PFGSE::setName()
 {
-	// string big_delta = std::to_string((int) this->exposureTime) + "-" 
-	// 				   + std::to_string(((int) (this->exposureTime * 100)) % 100);
-	// string tiny_delta = std::to_string((int) this->pulseWidth);
-	// string gamma = std::to_string((int) this->giromagneticRatio);
-	// this->name = "/NMR_pfgse_" + big_delta + "ms_" + tiny_delta + "ms_" + gamma + "_sT";
-	this->name = "/NMR_pfgse_timesample_" + std::to_string((*this).getCurrentTime());
+	// this->name = "/NMR_pfgse_timesample_" + std::to_string((*this).getCurrentTime());
+
+	// new
+	this->name = "/NMR_pfgse";
 }
 
 void NMR_PFGSE::createDirectoryForData()
 {
-	string path = this->NMR.getDBPath();
-    createDirectory(path, this->NMR.simulationName + "/" + this->name);
-    this->dir = (path + this->NMR.simulationName + "/" + this->name);
+	string path = this->NMR.getDBPath() + this->NMR.getSimulationName();
+    createDirectory(path, this->name);
+    this->dir = (path + "/" + this->name);
+    createDirectory(this->dir, "/timesamples");
+    
 }
 
 void NMR_PFGSE::setGradientVector(double _GF, int _GPoints)
@@ -1062,6 +1067,17 @@ void NMR_PFGSE::clear()
 	if(this->RHS.size() > 0) this->RHS.clear();
 }
 
+void NMR_PFGSE::presave()
+{
+	// write pfgse data
+	if(this->PFGSE_config.getSavePFGSE())
+	{
+		(*this).createResultsFile();
+		(*this).writeParameters();
+		(*this).writeGvector();
+	}
+}
+
 void NMR_PFGSE::save()
 {
 	double time = omp_get_wtime();
@@ -1071,6 +1087,8 @@ void NMR_PFGSE::save()
 	if(this->PFGSE_config.getSavePFGSE())
 	{
 		(*this).writeResults();
+		(*this).writeEchoes();
+		(*this).writeMsd();
 	}
 
     if(this->PFGSE_config.getSaveCollisions())
@@ -1092,49 +1110,6 @@ void NMR_PFGSE::save()
     cout << "Ok. (" << time << " seconds)." << endl; 
 }
 
-void NMR_PFGSE::writeResults()
-{
-	(*this).writeParameters();
-	(*this).writeEchoes();
-	(*this).writeGvector();
-	(*this).writeMsd();
-}
-
-void NMR_PFGSE::writeEchoes()
-{
-	string filename = this->dir + "/PFGSE_echoes.txt";
-
-	ofstream file;
-    file.open(filename, ios::out);
-    if (file.fail())
-    {
-        cout << "Could not open file from disc." << endl;
-        exit(1);
-    }
-
-    file << "PFGSE - Echoes and Stejskal-Tanner equation terms" << endl;
-    file << "id, ";
-    file << "Gradient, ";
-    file << "NMR_signal (mean), NMR_signal (noise), NMR_signal (std),";
-    file << "SAT_lhs (mean), SAT_lhs (std), ";
-    file << "SAT_rhs" << endl;
-
-    uint size = this->gradientPoints;
-    for (uint index = 0; index < size; index++)
-    {
-        file << index << ", ";
-        file << this->gradient[index] << ", ";
-        file << this->Mkt[index] << ", ";
-        file << this->rawNoise[index] << ", ";
-        file << this->Mkt_stdev[index] << ", ";
-        file << this->LHS[index] << ", ";
-        file << this->LHS_stdev[index] << ", ";
-        file << this->RHS[index] << endl;
-    }
-
-    file.close();
-}
-
 void NMR_PFGSE::writeParameters()
 {
 	string filename = this->dir + "/PFGSE_parameters.txt";
@@ -1147,26 +1122,26 @@ void NMR_PFGSE::writeParameters()
         exit(1);
     }
 
-	file << "RWNMR-PFGSE Results" << endl; 
-	file << "Points: " << this->gradientPoints << endl;
-    file << "Time: " << this->exposureTime << endl;
-    file << "Pulse width: " << this->pulseWidth << endl;
-    file << "Giromagnetic Ratio: " << this->giromagneticRatio << endl;
-	file << "D_0: " << this->NMR.getDiffusionCoefficient() << endl;
-    file << "D_sat: " << this->D_sat << endl;
-    file << "D_sat (stdev): " << this->D_sat_stdev << endl;
-    file << "D_sat adjust points: " << this->DsatAdjustSamples << endl;
-    file << "D_msd: " << this->D_msd << endl;
-    file << "D_msd (stdev): " << this->D_msd_stdev << endl;
-    file << "MSD: " << this->msd << endl;
-    file << "MSD (stdev): " << this->msd_stdev << endl;   
-
+    const int precision = std::numeric_limits<double>::max_digits10;  
+	file << "RWNMR-PFGSE Parameters" << endl; 
+	file << setprecision(precision) << "D_0: " << this->NMR.getDiffusionCoefficient() << endl;  
+    file << setprecision(precision) << "Pulse width: " << this->pulseWidth << endl;
+    file << setprecision(precision) << "Giromagnetic Ratio: " << this->giromagneticRatio << endl;
+	file << setprecision(precision) << "Gradients: " << this->gradientPoints << endl;
+	file << "Times: [";
+	for(int time = 0; time < this->exposureTimes.size(); time++)
+	{
+		if(time > 0) file << ", ";
+		file << setprecision(precision) << this->exposureTimes[time];
+	}
+	file << "]" << endl; 
+    
     file.close();
 }
 
 void NMR_PFGSE::writeGvector()
 {
-	string filename = this->dir + "/PFGSE_gradient.txt";
+	string filename = this->dir + "/PFGSE_gradient.csv";
 
 	ofstream file;
     file.open(filename, ios::out);
@@ -1176,25 +1151,60 @@ void NMR_PFGSE::writeGvector()
         exit(1);
     }
 
-    file << "PFGSE - Gradient values" << endl;
-    file << "id, ";
-    file << "Gx, ";
-    file << "Gy, ";
-    file << "Gz, ";
-    file << "Kx, ";
-    file << "Ky, ";
+    file << "Id,";
+    file << "Gx,";
+    file << "Gy,";
+    file << "Gz,";
+    file << "Kx,";
+    file << "Ky,";
     file << "Kz" << endl;
 
     uint size = this->gradientPoints;
+    const int precision = std::numeric_limits<double>::max_digits10;    
     for (uint index = 0; index < size; index++)
     {
-        file << index << ", ";
-        file << this->vecGradient[index].getX() << ", ";
-        file << this->vecGradient[index].getY() << ", ";
-        file << this->vecGradient[index].getZ() << ", ";
-        file << this->vecK[index].getX() << ", ";
-        file << this->vecK[index].getY() << ", ";
-        file << this->vecK[index].getZ() << endl;
+        file << setprecision(precision) << index
+        << "," << this->vecGradient[index].getX()
+        << "," << this->vecGradient[index].getY()
+        << "," << this->vecGradient[index].getZ()
+        << "," << this->vecK[index].getX()
+        << "," << this->vecK[index].getY()
+        << "," << this->vecK[index].getZ() << endl;
+    }
+
+    file.close();
+}
+
+void NMR_PFGSE::writeEchoes()
+{
+	string filename = this->dir + "/timesamples/echoes_" + std::to_string((*this).getCurrentTime()) + ".csv";
+
+	ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    file << "Idx,";
+    file << "Gradient,";
+    file << "NMR_signal(mean),NMR_signal(noise),NMR_signal(std),";
+    file << "SAT_lhs(mean), SAT_lhs(std),";
+    file << "SAT_rhs" << endl;
+
+    uint size = this->gradientPoints;
+    const int precision = std::numeric_limits<double>::max_digits10;
+    for (uint index = 0; index < size; index++)
+    {
+        file << setprecision(precision) << index
+        << "," << this->gradient[index]
+        << "," << this->Mkt[index]
+        << "," << this->rawNoise[index]
+        << "," << this->Mkt_stdev[index]
+        << "," << this->LHS[index]
+        << "," << this->LHS_stdev[index]
+        << "," << this->RHS[index] << endl;
     }
 
     file.close();
@@ -1202,7 +1212,7 @@ void NMR_PFGSE::writeGvector()
 
 void NMR_PFGSE::writeMsd()
 {
-	string filename = this->dir + "/PFGSE_msd.txt";
+	string filename = this->dir + "/timesamples/msd_" + std::to_string((*this).getCurrentTime()) + ".csv";
 
 	ofstream file;
     file.open(filename, ios::out);
@@ -1216,22 +1226,71 @@ void NMR_PFGSE::writeMsd()
 	if(this->PFGSE_config.getAllowWalkerSampling())
 		walkersPerSample /= this->NMR.walkerSamples;
     
-	file << "PFGSE - Mean squared displacement values - " << this->NMR.walkerSamples << " samples of " << walkersPerSample << " walkers" << endl;
-    file << "msdX[mean, std], ";
-    file << "msdX[mean, std], ";
-    file << "msdZ[mean, std], ";
-    file << "DmsdX[mean, std], ";
-    file << "DmsdY[mean, std], ";
-    file << "DmsdZ[mean, std]" << endl;
+    file << "msdX(mean),msdX(std),";
+    file << "msdY(mean),msdY(std),";
+    file << "msdZ(mean),msdZ(std),";
+    file << "DmsdX(mean),DmsdX(std),";
+    file << "DmsdY(mean),DmsdY(std),";
+    file << "DmsdZ(mean),DmsdZ(std)" << endl;
 
-    file << this->vecMsd.getX() << ", " << this->vecMsd_stdev.getX() << ", ";
-    file << this->vecMsd.getY() << ", " << this->vecMsd_stdev.getY() << ", ";
-    file << this->vecMsd.getZ() << ", " << this->vecMsd_stdev.getZ() << ", ";
-    file << this->vecDmsd.getX() << ", " << this->vecDmsd_stdev.getX() << ", ";
-    file << this->vecDmsd.getY() << ", " << this->vecDmsd_stdev.getY() << ", ";
-    file << this->vecDmsd.getZ() << ", " << this->vecDmsd_stdev.getZ();  
+    const int precision = std::numeric_limits<double>::max_digits10;
+    file << setprecision(precision) << this->vecMsd.getX() << "," << this->vecMsd_stdev.getX() << ",";
+    file << setprecision(precision) << this->vecMsd.getY() << "," << this->vecMsd_stdev.getY() << ",";
+    file << setprecision(precision) << this->vecMsd.getZ() << "," << this->vecMsd_stdev.getZ() << ",";
+    file << setprecision(precision) << this->vecDmsd.getX() << "," << this->vecDmsd_stdev.getX() << ",";
+    file << setprecision(precision) << this->vecDmsd.getY() << "," << this->vecDmsd_stdev.getY() << ",";
+    file << setprecision(precision) << this->vecDmsd.getZ() << "," << this->vecDmsd_stdev.getZ();  
 
     file.close();
+}
+
+void NMR_PFGSE::createResultsFile()
+{
+	string filename = this->dir + "/PFGSE_results.csv";
+
+	ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+	file << "Time";
+    file << ",D_sat";
+    file << ",D_sat(std)";
+    file << ",D_sat(pts)";
+    file << ",D_msd";
+    file << ",D_msd(std)";
+    file << ",MSD";
+    file << ",MSD(std)";
+    file << endl;
+    file.close();
+}
+
+void NMR_PFGSE::writeResults()
+{
+	string filename = this->dir + "/PFGSE_results.csv";
+
+	ofstream file;
+    file.open(filename, ios::app);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    const int precision = std::numeric_limits<double>::max_digits10;
+    file << setprecision(precision)  << this->exposureTimes[this->getCurrentTime()]
+    << "," << this->D_sat
+    << "," << this->D_sat_stdev
+    << "," << this->DsatAdjustSamples
+    << "," << this->D_msd
+    << "," << this->D_msd_stdev
+    << "," << this->msd
+    << "," << this->msd_stdev
+    << endl; 
+	file.close();
 }
 
 // pfgse simulation cpu-only implementation -- needs revision! 

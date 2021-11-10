@@ -458,7 +458,7 @@ void NMR_cpmg::writeResults()
 
 void NMR_cpmg::saveT2decay()
 {
-    string filename = this->dir + "/cpmg_decay.txt";
+    string filename = this->dir + "/cpmg_decay.csv";
 
     ofstream file;
     file.open(filename, ios::out);
@@ -471,12 +471,12 @@ void NMR_cpmg::saveT2decay()
     const size_t num_points = this->signal_amps.size();
     const int precision = std::numeric_limits<double>::max_digits10;
 
-    file << "time, signal, noise, noiseless" << endl;
+    file << "time,signal,noise,noiseless" << endl;
     for (int idx = 0; idx < num_points; idx++)
     {
-        file << setprecision(precision) << this->signal_times[idx] << ", ";
-        file << setprecision(precision) << this->signal_amps[idx] + this->noise[idx] << ", ";
-        file << setprecision(precision) << this->noise[idx] << ", ";
+        file << setprecision(precision) << this->signal_times[idx] << ",";
+        file << setprecision(precision) << this->signal_amps[idx] + this->noise[idx] << ",";
+        file << setprecision(precision) << this->noise[idx] << ",";
         file << setprecision(precision) << this->signal_amps[idx] << endl;    
     }
     
@@ -485,7 +485,7 @@ void NMR_cpmg::saveT2decay()
 
 void NMR_cpmg::saveT2dist()
 {
-    string filename = this->dir + "/cpmg_T2.txt";
+    string filename = this->dir + "/cpmg_T2.csv";
 
     ofstream file;
     file.open(filename, ios::out);
@@ -496,10 +496,12 @@ void NMR_cpmg::saveT2dist()
     }
 
     const size_t num_points = T2_bins.size();
-    file << "NMRT2_bins, NMRT2_amps" << endl;
+    const int precision = std::numeric_limits<double>::max_digits10;
+
+    file << "NMRT2_bins,NMRT2_amps" << endl;
     for (int idx = 0; idx < num_points; idx++)
     {
-        file << this->T2_bins[idx] << ", " << this->T2_amps[idx] << endl;
+        file << setprecision(precision) << this->T2_bins[idx] << "," << this->T2_amps[idx] << endl;
     }
     
     file.close();

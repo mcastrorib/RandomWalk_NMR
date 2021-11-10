@@ -111,6 +111,7 @@ public:
 	void updateWalkersXIrate(uint _rwsteps);
 	void reset(double _newBigDelta);
 	void reset();
+	void presave();
 	void save();
 	void writeResults();
 	void writeParameters();
@@ -119,6 +120,7 @@ public:
 	void writeMsd();
 	void setName();
 	void createDirectoryForData();
+	void createResultsFile();
 
 	// Inline methods
 	void setExposureTime(double _value){ this->exposureTime = _value; }

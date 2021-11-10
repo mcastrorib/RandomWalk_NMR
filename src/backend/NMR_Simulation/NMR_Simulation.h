@@ -276,6 +276,7 @@ public:
 
     // 'get' inline methods
     // simulation parameters
+    inline string getSimulationName() { return this->simulationName; }
     inline string getDBPath() { return this->DBPath; }
     inline uint getSimulationSteps() { return this->simulationSteps; }
     inline uint getStepsPerEcho() { return this->stepsPerEcho; }
