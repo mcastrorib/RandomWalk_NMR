@@ -47,6 +47,7 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
     this->INSPECTION_LENGTH = otherConfig.INSPECTION_LENGTH;
 
     // --- Threshold application for D(t) recovering.
+    this->NOISE_AMP = otherConfig.NOISE_AMP;
     this->THRESHOLD_TYPE = otherConfig.THRESHOLD_TYPE;
     this->THRESHOLD_VALUE = otherConfig.THRESHOLD_VALUE;
 
@@ -100,6 +101,7 @@ void pfgse_config::readConfigFile(const string configFile)
             else if(token == "TIME_MIN") (*this).readTimeMin(content);
             else if(token == "TIME_MAX") (*this).readTimeMax(content);
             else if(token == "APPLY_SCALE_FACTOR") (*this).readApplyScaleFactor(content);
+            else if(token == "NOISE_AMP") (*this).readNoiseAmp(content);
             else if(token == "INSPECTION_LENGTH") (*this).readInspectionLength(content);
             else if(token == "THRESHOLD_TYPE") (*this).readThresholdType(content);
             else if(token == "THRESHOLD_VALUE") (*this).readThresholdValue(content);
@@ -253,6 +255,11 @@ void pfgse_config::readApplyScaleFactor(string s)
 void pfgse_config::readInspectionLength(string s)
 {
     this->INSPECTION_LENGTH = std::stod(s);
+}
+
+void pfgse_config::readNoiseAmp(string s)
+{
+    this->NOISE_AMP = std::stod(s);
 }
 
 void pfgse_config::readThresholdType(string s)

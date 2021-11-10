@@ -32,6 +32,7 @@ public:
     double INSPECTION_LENGTH;
 
     // --- Threshold application for D(t) recovering.
+    double NOISE_AMP;
     string THRESHOLD_TYPE;
     double THRESHOLD_VALUE;
 
@@ -77,6 +78,7 @@ public:
     void readTimeMax(string s);
     void readApplyScaleFactor(string s);
     void readInspectionLength(string s);
+    void readNoiseAmp(string s);
     void readThresholdType(string s);
     void readThresholdValue(string s);
     void readUseWaveVectorTwoPi(string s);
@@ -102,6 +104,7 @@ public:
     double getTimeMax() { return this->TIME_MAX; }
     bool getApplyScaleFactor() { return this->APPLY_SCALE_FACTOR; }
     double getInspectionLength() { return this->INSPECTION_LENGTH; }
+    double getNoiseAmp() { return this->NOISE_AMP; }
     string getThresholdType() { return this->THRESHOLD_TYPE; }
     double getThresholdValue() { return this->THRESHOLD_VALUE; }
     bool getUseWaveVectorTwoPi() { return this->USE_WAVEVECTOR_TWOPI; }

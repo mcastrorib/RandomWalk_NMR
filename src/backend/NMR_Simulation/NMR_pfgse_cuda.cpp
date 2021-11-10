@@ -1276,7 +1276,7 @@ void NMR_PFGSE::simulation_cuda()
     this->Mkt.reserve(this->gradientPoints);
     for(int point = 0; point < this->gradientPoints; point++)
     {
-        this->Mkt.push_back((h_globalPhase[point]/h_globalEnergy));
+        this->Mkt.push_back((h_globalPhase[point]));
     }
 
     // free pointers in host

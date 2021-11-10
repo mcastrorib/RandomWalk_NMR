@@ -24,6 +24,8 @@ public:
 	string dir;
 	vector<double> gradient;
 	double gradient_max;
+	double noiseAmp;	
+	vector<double> rawNoise;
 
 	double gradient_X;
 	double gradient_Y;
@@ -39,8 +41,6 @@ public:
 	double giromagneticRatio;
 	bool applyBulkRelaxation;
 
-
-	double M0;
 	vector<double> Mkt;
 	vector<double> Mkt_stdev;
 	vector<double> LHS;
@@ -73,6 +73,7 @@ public:
 	void runInitialMapSimulation();
 	void setGradientVector(double _GF, int _GPoints);
 	void setGradientVector();
+	void createNoiseVector();
 	void setVectorK();
 	void setVectorMkt();
 	void setVectorRHS();
@@ -119,6 +120,7 @@ public:
 	void setName();
 	void createDirectoryForData();
 
+	// Inline methods
 	void setExposureTime(double _value){ this->exposureTime = _value; }
 	void setPulseWidth(double _value){ this->pulseWidth = _value; }
 	void setGiromagneticRatio(double _value){ this->giromagneticRatio = _value; }
@@ -127,6 +129,7 @@ public:
 	void setD_sat_StdDev(double _value) { this->D_sat_stdev = _value; }
 	void setD_msd(double _value) { this->D_msd = _value; }
 	void setD_msd_StdDev(double _value) { this->D_msd_stdev = _value; }
+	void setNoiseAmp(double _amp) { this->noiseAmp = _amp; }
 	
 	void setMsd(double _value) { this->msd = _value; }
 	void setMsdStdDev(double _value) { this->msd_stdev = _value; }	
@@ -162,11 +165,13 @@ public:
 	void resetCurrentTime() { this->currentTime = 0; }
 	void incrementCurrentTime() { this->currentTime++; }
 
+	int getGradientPoints() { return this->gradientPoints; }
 	double getExposureTime() {return this->exposureTime; }
 	double getExposureTime(uint _idx) {return this->exposureTimes[_idx]; }
 	double getPulseWidth() {return this->pulseWidth; }
 	double getGiromagneticRatio() {return this->giromagneticRatio; }
 	bool getApplyBulkRelaxation() { return this->applyBulkRelaxation; }
+	double getNoiseAmp() { return this->noiseAmp; }
 	double getD_sat() { return this->D_sat; }
 	double getD_sat_stdev() { return this->D_sat_stdev; }
 	double getD_msd() { return this->D_msd; }
@@ -192,6 +197,7 @@ private:
 	double stdDev(vector<double> &_vec, double mean);
 	double stdDev(double *_vec, int _size);
 	double stdDev(double *_vec, int _size, double mean);
+	vector<double> getNormalDistributionSamples(const double loc, const double std, const int size);
 };
 
 #endif

@@ -416,7 +416,7 @@ void NMR_cpmg::applyLaplace()
 
     double time = omp_get_wtime() - tick;
     cout << "Done in " << time << " secs." << endl;
-    cout << "inverstion lambda: " << nmr_inverter.get_inversion_lambda() << endl;
+    cout << "filtering lambda: " << nmr_inverter.get_inversion_lambda() << endl;
 }
 
 // -- Savings

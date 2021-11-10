@@ -30,7 +30,6 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 					 int _mpi_rank,
 					 int _mpi_processes) : NMR(_NMR),
 										   PFGSE_config(_pfgseConfig),
-										   M0(0.0),
 										   D_sat(0.0),
 										   D_sat_stdev(0.0),
 										   D_msd(0.0),
@@ -50,6 +49,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	// vectors object init
 	vector<double> exposureTimes();
 	vector<double> gradient();
+	vector<double> rawNoise();
 	vector<double> RHS();
 	vector<double> Mkt();
 	vector<double> Mkt_stdev();
@@ -69,7 +69,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	this->giromagneticRatio = this->PFGSE_config.getGiromagneticRatio();
 	if(this->PFGSE_config.getUseWaveVectorTwoPi()) this->giromagneticRatio *= TWO_PI;
 	(*this).setApplyBulkRelaxation(this->PFGSE_config.getApplyBulk());
-
+	(*this).setNoiseAmp(this->PFGSE_config.getNoiseAmp());
 	(*this).setThresholdFromSamples(this->gradientPoints);
 	(*this).setGradientVector();
 	(*this).setVectorK();
@@ -442,15 +442,20 @@ void NMR_PFGSE::applyBulk()
 {
 	double bulkTime = -1.0 / this->NMR.getBulkRelaxationTime();
 	double bulkMagnitude = exp(bulkTime * (*this).getExposureTime());
-	cout << "exp_time: " << (*this).getExposureTime() << " ms \t";
-	cout << "bulk dec: " << bulkMagnitude << endl;
-
+	
 	// Apply bulk relaxation in simulated signal
 	for(uint idx = 0; idx < this->Mkt.size(); idx++)
 	{
-		double rhs = (*this).computeRHS(this->gradient[idx]);
-		this->RHS.push_back(rhs);
+		
 	}
+}
+
+void NMR_PFGSE::createNoiseVector()
+{
+	if(this->rawNoise.size() != (*this).getGradientPoints()) 
+		this->rawNoise.clear();
+
+	this->rawNoise = getNormalDistributionSamples(0.0, (*this).getNoiseAmp(), (*this).getGradientPoints());
 }
 
 void NMR_PFGSE::simulation()
@@ -470,7 +475,8 @@ void NMR_PFGSE::recoverDsat()
 	cout << "- Stejskal-Tanner (s&t) ";
 	double time = omp_get_wtime();
 
-	if(this->PFGSE_config.getAllowWalkerSampling())
+	(*this).createNoiseVector();
+	if((this->NMR.getWalkerSamples() > 1) and this->PFGSE_config.getAllowWalkerSampling())
 	{
 		cout << "with sampling:" <<  endl;
 		(*this).recoverDsatWithSampling();
@@ -506,17 +512,27 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 	// Get magnetization levels 
 	// get M0 (reference value)
 	int idx_begin = 0;
-	int idx_end = this->gradientPoints;	
+	int idx_end = this->gradientPoints;
 
-	this->M0 = this->Mkt[0];
-	this->LHS.push_back((*this).computeLHS(M0, M0));
-	idx_begin++;
+	// Normalize for k=0
+	double M0 = this->Mkt[0];
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		this->Mkt[kIdx] /= M0;
+	}
+	
+	// Add noise to signal
+	if((*this).getNoiseAmp() > 0.0)
+	{
+		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+		{
+			this->Mkt[kIdx] += this->rawNoise[kIdx];
+		}			
+	}	
 
-	double lhs_value;
 	for(uint point = idx_begin; point < idx_end; point++)
 	{	
-		lhs_value = (*this).computeLHS(this->Mkt[point], M0);
-		this->LHS.push_back(lhs_value);
+		this->LHS.push_back((*this).computeLHS(this->Mkt[point], this->Mkt[0]));
 	}
 
 	// fill standard deviation vectors with null values
@@ -698,8 +714,9 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	Mkt_samples = (*this).getSamplesMagnitude();	
 	phaseTime = omp_get_wtime() - tick;
 
-	// Normalize for k=0
+
 	tick = omp_get_wtime();
+	// Normalize for k=0
 	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
 	{
 		double M0t = Mkt_samples[0][sample];
@@ -707,6 +724,18 @@ void NMR_PFGSE::recoverDsatWithSampling()
 		{
 			Mkt_samples[kIdx][sample] /= M0t;
 		}
+	}
+
+	// Add noise to signal
+	if((*this).getNoiseAmp() > 0.0)
+	{
+		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+		{
+			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+			{
+				Mkt_samples[kIdx][sample] += this->rawNoise[kIdx];
+			}
+		}	
 	}
 	normTime = omp_get_wtime() - tick;
 
@@ -1026,8 +1055,6 @@ void NMR_PFGSE::reset()
 	(*this).setThresholdFromSamples(this->gradientPoints);
 }
 
-
-
 void NMR_PFGSE::clear()
 {
 	if(this->gradient.size() > 0) this->gradient.clear();
@@ -1088,9 +1115,9 @@ void NMR_PFGSE::writeEchoes()
     file << "PFGSE - Echoes and Stejskal-Tanner equation terms" << endl;
     file << "id, ";
     file << "Gradient, ";
-    file << "M(k,t) [mean, std], ";
-    file << "LHS [mean, std], ";
-    file << "RHS" << endl;
+    file << "NMR_signal (mean), NMR_signal (noise), NMR_signal (std),";
+    file << "SAT_lhs (mean), SAT_lhs (std), ";
+    file << "SAT_rhs" << endl;
 
     uint size = this->gradientPoints;
     for (uint index = 0; index < size; index++)
@@ -1098,6 +1125,7 @@ void NMR_PFGSE::writeEchoes()
         file << index << ", ";
         file << this->gradient[index] << ", ";
         file << this->Mkt[index] << ", ";
+        file << this->rawNoise[index] << ", ";
         file << this->Mkt_stdev[index] << ", ";
         file << this->LHS[index] << ", ";
         file << this->LHS_stdev[index] << ", ";
@@ -1416,4 +1444,17 @@ double NMR_PFGSE::stdDev(double *_vec, int _size, double mean)
     }
 
     return sqrt(sum/((double) _size));
+}
+
+vector<double> NMR_PFGSE::getNormalDistributionSamples(const double loc, const double std, const int size)
+{
+	std::default_random_engine generator;
+	std::normal_distribution<double> distribution(loc, std);
+	vector<double> normal_dist;
+	normal_dist.reserve(size);
+	for (int i = 0; i < size; i++)
+	{
+		normal_dist.emplace_back(distribution(generator));
+	}
+	return normal_dist;
 }
