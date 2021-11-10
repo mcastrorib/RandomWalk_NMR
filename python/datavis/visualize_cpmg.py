@@ -51,11 +51,11 @@ def get_rwnmr_cpmg_folder(rwnmr_dir):
 		return r''
 
 def read_data_from_cpmg_folder(cpmg_folder):
-	decay_file = os.path.join(cpmg_folder, r'cpmg_decay.txt')
-	dist_file = os.path.join(cpmg_folder, r'cpmg_T2.txt')
+	decay_file = os.path.join(cpmg_folder, r'cpmg_decay.csv')
+	dist_file = os.path.join(cpmg_folder, r'cpmg_T2.csv')
 
-	T2_decay = read_T2_decay_from_rwnmr_file(decay_file)
-	T2_dist = read_T2_distribution_from_rwnmr_file(dist_file)
+	T2_decay = read_data_from_rwnmr_csvfile(decay_file)
+	T2_dist = read_data_from_rwnmr_csvfile(dist_file)
 
 	rw_wrap = {
 		'T2_decay': T2_decay,
@@ -73,11 +73,11 @@ def plot_rw_T2_data(rw_wrap):
 	axs[0].set_ylabel(r'normalized magnetization')
 	axs[0].set_ylim([0.0, 1.01*rw_wrap['T2_decay']['signal'].max()])
 
-	axs[1].semilogx(rw_wrap['T2_dist']['bins'], rw_wrap['T2_dist']['amps'])
+	axs[1].semilogx(rw_wrap['T2_dist']['NMRT2_bins'], rw_wrap['T2_dist']['NMRT2_amps'])
 	axs[1].set_xlabel(r'relaxation times $(T_{2})$' + '\t' + r'$[msec]$')
-	axs[1].set_xlim([0.9*rw_wrap['T2_dist']['bins'][0], 1.1*rw_wrap['T2_dist']['bins'][-1]])
+	axs[1].set_xlim([0.9*rw_wrap['T2_dist']['NMRT2_bins'][0], 1.1*rw_wrap['T2_dist']['NMRT2_bins'][-1]])
 	axs[1].set_ylabel(r'amplitudes')
-	axs[1].set_ylim([0.0, 1.1*rw_wrap['T2_dist']['amps'].max()])
+	axs[1].set_ylim([0.0, 1.1*rw_wrap['T2_dist']['NMRT2_amps'].max()])
 	
 	plt.tight_layout()
 	plt.show()
@@ -85,7 +85,7 @@ def plot_rw_T2_data(rw_wrap):
 
 def main():
 	# Database dir
-	db_dir = r'/home/matheus/Documentos/doutorado_ic/tese/NMR/rwnmr_2.0/db/'
+	db_dir = r'./db/'
 	
 	quit = False
 	while(quit != True):

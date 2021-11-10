@@ -2,6 +2,7 @@ import json
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import math
 
 def read_T2_from_csv(_filename, _skiplines = 0):
@@ -350,6 +351,16 @@ def read_T2_decay_from_rwnmr_file(file):
 		T2_decay[columns[col]] = column_data[col]
 
 	return T2_decay
+
+def read_data_from_rwnmr_csvfile(file):
+	df = pd.read_csv(file)
+	columns = df.columns
+	
+	data = {}
+	for col in range(columns.size):
+		data[columns[col]] = df[columns[col]].to_numpy()
+
+	return data
 
 def read_T2_distribution_from_rwnmr_file(file):
 	# Read Data From File
