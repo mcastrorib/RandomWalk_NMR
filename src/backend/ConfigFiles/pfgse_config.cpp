@@ -58,7 +58,7 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
     // --- PFGSE SAVE. 
     this->SAVE_MODE = otherConfig.SAVE_MODE;
     this->SAVE_PFGSE = otherConfig.SAVE_PFGSE;
-    this->SAVE_COLLISIONS = otherConfig.SAVE_COLLISIONS;
+    this->SAVE_WALKERS = otherConfig.SAVE_WALKERS;
     this->SAVE_HISTOGRAM = otherConfig.SAVE_HISTOGRAM;
     this->SAVE_HISTOGRAM_LIST = otherConfig.SAVE_HISTOGRAM_LIST;
 }
@@ -109,7 +109,7 @@ void pfgse_config::readConfigFile(const string configFile)
             else if(token == "ALLOW_WALKER_SAMPLING") (*this).readAllowWalkerSampling(content);
             else if(token == "SAVE_MODE") (*this).readSaveMode(content);
             else if(token == "SAVE_PFGSE") (*this).readSavePFGSE(content);
-            else if(token == "SAVE_COLLISIONS") (*this).readSaveCollisions(content);
+            else if(token == "SAVE_WALKERS") (*this).readSaveWalkers(content);
             else if(token == "SAVE_HISTOGRAM") (*this).readSaveHistogram(content);
             else if(token == "SAVE_HISTOGRAM_LIST") (*this).readSaveHistogramList(content); 			
 		}
@@ -296,10 +296,10 @@ void pfgse_config::readSavePFGSE(string s)
     else this->SAVE_PFGSE = false;
 }
 
-void pfgse_config::readSaveCollisions(string s)
+void pfgse_config::readSaveWalkers(string s)
 {
-    if(s == "true") this->SAVE_COLLISIONS = true;
-    else this->SAVE_COLLISIONS = false;
+    if(s == "true") this->SAVE_WALKERS = true;
+    else this->SAVE_WALKERS = false;
 }
 
 void pfgse_config::readSaveHistogram(string s)

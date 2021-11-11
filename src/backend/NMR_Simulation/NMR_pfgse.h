@@ -118,6 +118,9 @@ public:
 	void writeEchoes();
 	void writeGvector();
 	void writeMsd();
+	void writeWalkers();
+	void writeHistogram();
+	void writeHistogramList();
 	void setName();
 	void createDirectoryForData();
 	void createResultsFile();

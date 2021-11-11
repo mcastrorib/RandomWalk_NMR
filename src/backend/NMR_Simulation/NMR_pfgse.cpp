@@ -343,12 +343,6 @@ void NMR_PFGSE::runInitialMapSimulation()
         {
         	this->NMR.updateWalkersRelaxativity(rho);
         }
-
-		string path = this->NMR.getDBPath();
-		if(this->PFGSE_config.getSaveCollisions())
-	    {
-	        this->NMR.saveWalkerCollisions(path + this->NMR.simulationName);
-	    }
 	}
 }
 
@@ -519,21 +513,24 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 	int idx_begin = 0;
 	int idx_end = this->gradientPoints;
 
-	// Normalize for k=0
+	// Add noise to signal
 	double M0 = this->Mkt[0];
+	if((*this).getNoiseAmp() > 0.0)
+	{
+		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+		{
+			this->Mkt[kIdx] += M0 * this->rawNoise[kIdx];
+		}			
+	}	
+
+	// Normalize for k=0
+	M0 = this->Mkt[0];
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 	{
 		this->Mkt[kIdx] /= M0;
 	}
 	
-	// Add noise to signal
-	if((*this).getNoiseAmp() > 0.0)
-	{
-		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
-		{
-			this->Mkt[kIdx] += this->rawNoise[kIdx];
-		}			
-	}	
+	
 
 	for(uint point = idx_begin; point < idx_end; point++)
 	{	
@@ -721,27 +718,28 @@ void NMR_PFGSE::recoverDsatWithSampling()
 
 
 	tick = omp_get_wtime();
-	// Normalize for k=0
-	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
-	{
-		double M0t = Mkt_samples[0][sample];
-		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
-		{
-			Mkt_samples[kIdx][sample] /= M0t;
-		}
-	}
-
 	// Add noise to signal
 	if((*this).getNoiseAmp() > 0.0)
 	{
 		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
 		{
+			double M0 = Mkt_samples[0][sample];
 			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 			{
-				Mkt_samples[kIdx][sample] += this->rawNoise[kIdx];
+				Mkt_samples[kIdx][sample] += M0 * this->rawNoise[kIdx];
 			}
 		}	
 	}
+
+	// Normalize for k=0
+	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+	{
+		double M0 = Mkt_samples[0][sample];
+		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+		{
+			Mkt_samples[kIdx][sample] /= M0;
+		}
+	}	
 	normTime = omp_get_wtime() - tick;
 
 	/* 
@@ -1091,19 +1089,19 @@ void NMR_PFGSE::save()
 		(*this).writeMsd();
 	}
 
-    if(this->PFGSE_config.getSaveCollisions())
+    if(this->PFGSE_config.getSaveWalkers())
     {
-        this->NMR.saveWalkerCollisions(this->dir);
+        (*this).writeWalkers();
     }
 
     if(this->PFGSE_config.getSaveHistogram())
     {
-        this->NMR.saveHistogram(this->dir);
+    	(*this).writeHistogram();
     }    
 
     if(this->PFGSE_config.getSaveHistogramList())
     {
-        this->NMR.saveHistogramList(this->dir);
+        (*this).writeHistogramList();;
     }  
 	
 	time = omp_get_wtime() - time;
@@ -1213,7 +1211,6 @@ void NMR_PFGSE::writeEchoes()
 void NMR_PFGSE::writeMsd()
 {
 	string filename = this->dir + "/timesamples/msd_" + std::to_string((*this).getCurrentTime()) + ".csv";
-
 	ofstream file;
     file.open(filename, ios::out);
     if (file.fail())
@@ -1242,6 +1239,107 @@ void NMR_PFGSE::writeMsd()
     file << setprecision(precision) << this->vecDmsd.getZ() << "," << this->vecDmsd_stdev.getZ();  
 
     file.close();
+}
+
+void NMR_PFGSE::writeWalkers()
+{
+	string filename = this->dir + "/timesamples/walkers_" + std::to_string((*this).getCurrentTime()) + ".csv";
+    ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    file << "Id";
+    file << ",PositionXi";
+    file << ",PositionYi";
+    file << ",PositionZi";
+    file << ",PositionXf";
+    file << ",PositionYf";
+    file << ",PositionZf";
+    file << ",Collisions";
+    file << ",XIRate"; 
+    file << ",RNGSeed" << endl;
+
+    const int precision = std::numeric_limits<double>::max_digits10;
+    for (uint index = 0; index < this->NMR.walkers.size(); index++)
+    {
+        file << setprecision(precision) << index
+        << "," << this->NMR.walkers[index].getInitialPositionX()
+        << "," << this->NMR.walkers[index].getInitialPositionY()
+        << "," << this->NMR.walkers[index].getInitialPositionZ()
+        << "," << this->NMR.walkers[index].getPositionX() 
+        << "," << this->NMR.walkers[index].getPositionY() 
+        << "," << this->NMR.walkers[index].getPositionZ() 
+        << "," << this->NMR.walkers[index].getCollisions() 
+        << "," << this->NMR.walkers[index].getXIrate() 
+        << "," << this->NMR.walkers[index].getInitialSeed() << endl;
+    }
+
+    file.close();
+}
+
+void NMR_PFGSE::writeHistogram()
+{
+	string filename = this->dir + "/timesamples/histogram_" + std::to_string((*this).getCurrentTime()) + ".csv";
+	ofstream file;
+	file.open(filename, ios::out);
+	if (file.fail())
+	{
+		cout << "Could not open file from disc." << endl;
+		exit(1);
+	}
+
+	file << "Bins"; 
+	file << ",Amps" << endl;
+	const int num_points = this->NMR.histogram.getSize();
+	const int precision = std::numeric_limits<double>::max_digits10;
+	for (int i = 0; i < num_points; i++)
+	{
+		file << setprecision(precision) 
+		<< this->NMR.histogram.bins[i] 
+		<< "," << this->NMR.histogram.amps[i] << endl;
+	}
+
+	file.close();
+}
+
+void NMR_PFGSE::writeHistogramList()
+{
+	string filename = this->dir + "/timesamples/histList_" + std::to_string((*this).getCurrentTime()) + ".csv";
+	ofstream file;
+	file.open(filename, ios::out);
+	if (file.fail())
+	{
+		cout << "Could not open file from disc." << endl;
+		exit(1);
+	}
+
+	const int histograms = this->NMR.histogramList.size();
+
+	for(int hIdx = 0; hIdx < histograms; hIdx++)
+	{
+		file << "Bins" << hIdx << ",";
+		file << "Amps" << hIdx << ",";
+	}
+	file << endl;
+
+	const int num_points = this->NMR.histogram.getSize();
+	const int precision = std::numeric_limits<double>::max_digits10;
+	for (int i = 0; i < num_points; i++)
+	{
+		for(int hIdx = 0; hIdx < histograms; hIdx++)
+		{
+			file << setprecision(precision)	<< this->NMR.histogramList[hIdx].bins[i] << ",";
+			file << setprecision(precision)	<< this->NMR.histogramList[hIdx].amps[i] << ",";
+		}
+
+		file << endl;
+	}
+
+	file.close();
 }
 
 void NMR_PFGSE::createResultsFile()

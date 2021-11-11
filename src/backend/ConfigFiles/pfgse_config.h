@@ -43,7 +43,7 @@ public:
     // --- PFGSE SAVE. 
     bool SAVE_MODE;
     bool SAVE_PFGSE;
-    bool SAVE_COLLISIONS;
+    bool SAVE_WALKERS;
     bool SAVE_HISTOGRAM;
     bool SAVE_HISTOGRAM_LIST;
 
@@ -85,7 +85,7 @@ public:
     void readAllowWalkerSampling(string s);
     void readSaveMode(string s);
     void readSavePFGSE(string s);
-    void readSaveCollisions(string s);
+    void readSaveWalkers(string s);
     void readSaveHistogram(string s);
     void readSaveHistogramList(string s);  
 
@@ -111,7 +111,7 @@ public:
     bool getAllowWalkerSampling() { return this->ALLOW_WALKER_SAMPLING; }
     bool getSaveMode() { return this->SAVE_MODE; }
     bool getSavePFGSE() { return this->SAVE_PFGSE; }
-    bool getSaveCollisions() { return this->SAVE_COLLISIONS; }
+    bool getSaveWalkers() { return this->SAVE_WALKERS; }
     bool getSaveHistogram() { return this->SAVE_HISTOGRAM; }
     bool getSaveHistogramList() { return this->SAVE_HISTOGRAM_LIST; }  
 
