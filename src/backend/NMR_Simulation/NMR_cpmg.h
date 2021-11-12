@@ -58,9 +58,11 @@ public:
     void applyLaplace();
     void setNoise(vector<double> _rawNoise) { this->noise = _rawNoise; }
 	void save();
-	void writeResults();
-	void saveT2decay();
-	void saveT2dist();
+	void writeWalkers();
+	void writeHistogram();
+	void writeHistogramList();
+	void writeT2decay();
+	void writeT2dist();
 	void setName();
 	void createDirectoryForData();
 

@@ -425,38 +425,33 @@ void NMR_cpmg::save()
 	double time = omp_get_wtime();
     cout << "saving results...";
        
-    if(this->CPMG_config.getSaveCollisions())
+    if(this->CPMG_config.getSaveWalkers())
     {
-        this->NMR.saveWalkerCollisions(this->dir);
+        (*this).writeWalkers();
     }
 
     if(this->CPMG_config.getSaveHistogram())
     {
-        this->NMR.saveHistogram(this->dir);
+        (*this).writeHistogram();
     }    
 
     if(this->CPMG_config.getSaveHistogramList())
     {
-        this->NMR.saveHistogramList(this->dir);
+        (*this).writeHistogramList();
     }
 
     // write cpmg data
     if(this->CPMG_config.getSaveDecay()) 
     {
-        (*this).writeResults();
+        (*this).writeT2decay();
+        (*this).writeT2dist();
     }
 
 	time = omp_get_wtime() - time;
     cout << "Ok. (" << time << " seconds)." << endl; 
 }
 
-void NMR_cpmg::writeResults()
-{
-	(*this).saveT2decay();
-    (*this).saveT2dist();
-}
-
-void NMR_cpmg::saveT2decay()
+void NMR_cpmg::writeT2decay()
 {
     string filename = this->dir + "/cpmg_decay.csv";
 
@@ -483,7 +478,7 @@ void NMR_cpmg::saveT2decay()
     file.close();
 }
 
-void NMR_cpmg::saveT2dist()
+void NMR_cpmg::writeT2dist()
 {
     string filename = this->dir + "/cpmg_T2.csv";
 
@@ -504,5 +499,106 @@ void NMR_cpmg::saveT2dist()
         file << setprecision(precision) << this->T2_bins[idx] << "," << this->T2_amps[idx] << endl;
     }
     
+    file.close();
+}
+
+void NMR_cpmg::writeWalkers()
+{
+    string filename = this->dir + "/cpmg_walkers.csv";
+    ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    file << "Id";
+    file << ",PositionXi";
+    file << ",PositionYi";
+    file << ",PositionZi";
+    file << ",PositionXf";
+    file << ",PositionYf";
+    file << ",PositionZf";
+    file << ",Collisions";
+    file << ",XIRate"; 
+    file << ",RNGSeed" << endl;
+
+    const int precision = std::numeric_limits<double>::max_digits10;
+    for (uint index = 0; index < this->NMR.walkers.size(); index++)
+    {
+        file << setprecision(precision) << index
+        << "," << this->NMR.walkers[index].getInitialPositionX()
+        << "," << this->NMR.walkers[index].getInitialPositionY()
+        << "," << this->NMR.walkers[index].getInitialPositionZ()
+        << "," << this->NMR.walkers[index].getPositionX() 
+        << "," << this->NMR.walkers[index].getPositionY() 
+        << "," << this->NMR.walkers[index].getPositionZ() 
+        << "," << this->NMR.walkers[index].getCollisions() 
+        << "," << this->NMR.walkers[index].getXIrate() 
+        << "," << this->NMR.walkers[index].getInitialSeed() << endl;
+    }
+
+    file.close();
+}
+
+void NMR_cpmg::writeHistogram()
+{
+    string filename = this->dir + "/cpmg_histogram.csv";
+    ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    file << "Bins"; 
+    file << ",Amps" << endl;
+    const int num_points = this->NMR.histogram.getSize();
+    const int precision = std::numeric_limits<double>::max_digits10;
+    for (int i = 0; i < num_points; i++)
+    {
+        file << setprecision(precision) 
+        << this->NMR.histogram.bins[i] 
+        << "," << this->NMR.histogram.amps[i] << endl;
+    }
+
+    file.close();
+}
+
+void NMR_cpmg::writeHistogramList()
+{
+    string filename = this->dir + "/cpmg_histList.csv";
+    ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    const int histograms = this->NMR.histogramList.size();
+
+    for(int hIdx = 0; hIdx < histograms; hIdx++)
+    {
+        file << "Bins" << hIdx << ",";
+        file << "Amps" << hIdx << ",";
+    }
+    file << endl;
+
+    const int num_points = this->NMR.histogram.getSize();
+    const int precision = std::numeric_limits<double>::max_digits10;
+    for (int i = 0; i < num_points; i++)
+    {
+        for(int hIdx = 0; hIdx < histograms; hIdx++)
+        {
+            file << setprecision(precision) << this->NMR.histogramList[hIdx].bins[i] << ",";
+            file << setprecision(precision) << this->NMR.histogramList[hIdx].amps[i] << ",";
+        }
+
+        file << endl;
+    }
+
     file.close();
 }

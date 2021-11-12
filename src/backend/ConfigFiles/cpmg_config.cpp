@@ -44,7 +44,7 @@ cpmg_config::cpmg_config(const cpmg_config &otherConfig)
     // --- cpmg SAVE. 
     this->SAVE_MODE = otherConfig.SAVE_MODE;
     this->SAVE_T2 = otherConfig.SAVE_T2;
-    this->SAVE_COLLISIONS = otherConfig.SAVE_COLLISIONS;
+    this->SAVE_WALKERS = otherConfig.SAVE_WALKERS;
     this->SAVE_DECAY = otherConfig.SAVE_DECAY;
     this->SAVE_HISTOGRAM = otherConfig.SAVE_HISTOGRAM;
     this->SAVE_HISTOGRAM_LIST = otherConfig.SAVE_HISTOGRAM_LIST;
@@ -93,7 +93,7 @@ void cpmg_config::readConfigFile(const string configFile)
             else if(token == "NOISE_AMP") (*this).readNoiseAmp(content);                      
             else if(token == "SAVE_MODE") (*this).readSaveMode(content);
             else if(token == "SAVE_T2") (*this).readSaveT2(content);
-            else if(token == "SAVE_COLLISIONS") (*this).readSaveCollisions(content);
+            else if(token == "SAVE_WALKERS") (*this).readSaveWalkers(content);
             else if(token == "SAVE_DECAY") (*this).readSaveDecay(content);
             else if(token == "SAVE_HISTOGRAM") (*this).readSaveHistogram(content);
             else if(token == "SAVE_HISTOGRAM_LIST") (*this).readSaveHistogramList(content); 
@@ -183,10 +183,10 @@ void cpmg_config::readSaveMode(string s)
     else this->SAVE_MODE = false;
 }
 
-void cpmg_config::readSaveCollisions(string s)
+void cpmg_config::readSaveWalkers(string s)
 {
-    if(s == "true") this->SAVE_COLLISIONS = true;
-    else this->SAVE_COLLISIONS = false;
+    if(s == "true") this->SAVE_WALKERS = true;
+    else this->SAVE_WALKERS = false;
 }
 
 void cpmg_config::readSaveDecay(string s)

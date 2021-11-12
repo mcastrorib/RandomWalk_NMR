@@ -35,7 +35,7 @@ public:
     bool SAVE_MODE;
     bool SAVE_DECAY;
     bool SAVE_T2;
-    bool SAVE_COLLISIONS;
+    bool SAVE_WALKERS;
     bool SAVE_HISTOGRAM;
     bool SAVE_HISTOGRAM_LIST;
     
@@ -75,7 +75,7 @@ public:
     
 
     void readSaveMode(string s);
-    void readSaveCollisions(string s);
+    void readSaveWalkers(string s);
     void readSaveDecay(string s);
     void readSaveHistogram(string s);
     void readSaveHistogramList(string s);   
@@ -100,7 +100,7 @@ public:
     double getNoiseAmp(){ return this->NOISE_AMP; }
 
     bool getSaveMode(){return this->SAVE_MODE; }
-    bool getSaveCollisions(){return this->SAVE_COLLISIONS; }
+    bool getSaveWalkers(){return this->SAVE_WALKERS; }
     bool getSaveDecay() {return this->SAVE_DECAY; }
     bool getSaveHistogram() {return this->SAVE_HISTOGRAM; }
     bool getSaveHistogramList() {return this->SAVE_HISTOGRAM_LIST; }  
