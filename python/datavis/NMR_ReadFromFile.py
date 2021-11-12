@@ -385,3 +385,28 @@ def read_T2_distribution_from_rwnmr_file(file):
 	}
 	
 	return T2_dist
+
+def read_pfgse_parameters_from_rwnmr_file(file):
+	# Read lines
+	lines = []
+	with open(file, 'r') as txt:
+		lines = txt.readlines()
+
+	PFGSE_params = {}
+	for line in lines:
+		if(len(line.split(": ")) == 2):
+			tag = line.split(": ")[0]
+
+			if(tag == "Times"):
+				values = line.split(": ")[1][1:-2].split(", ")
+				content = []
+				for value in values:
+					content.append(float(value))
+				content = np.array(content)
+			
+			else:
+				content = float(line.split(": ")[1])
+
+			PFGSE_params[tag] = content
+
+	return PFGSE_params

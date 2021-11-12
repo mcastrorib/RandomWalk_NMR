@@ -53,19 +53,34 @@ def get_rwnmr_cpmg_folder(rwnmr_dir):
 def read_data_from_cpmg_folder(cpmg_folder):
 	decay_file = os.path.join(cpmg_folder, r'cpmg_decay.csv')
 	dist_file = os.path.join(cpmg_folder, r'cpmg_T2.csv')
+	hist_file = os.path.join(cpmg_folder, r'cpmg_histogram.csv')
 
 	T2_decay = read_data_from_rwnmr_csvfile(decay_file)
 	T2_dist = read_data_from_rwnmr_csvfile(dist_file)
 
+	T2_hist = {}
+	use_histogram = True
+	try:
+		T2_hist = read_data_from_rwnmr_csvfile(hist_file)
+	except:
+		use_histogram = False
+
 	rw_wrap = {
 		'T2_decay': T2_decay,
 		'T2_dist': T2_dist,
+		'use_hist': use_histogram,
+		'T2_hist': T2_hist
 	}
 
 	return rw_wrap
 
 def plot_rw_T2_data(rw_wrap):
-	fig, axs = plt.subplots(2, 1, figsize=[9.6, 7.2])
+	rows = 2
+	cols = 1
+	if(rw_wrap['use_hist']):
+		rows += 1
+
+	fig, axs = plt.subplots(rows, cols, figsize=[6.0*cols, 3.0*rows])
 	axs[0].plot(rw_wrap['T2_decay']['time'], rw_wrap['T2_decay']['signal'], 'b', linewidth=2.0)
 	axs[0].plot(rw_wrap['T2_decay']['time'], rw_wrap['T2_decay']['noiseless'], 'r', linewidth=1.0)
 	axs[0].set_xlabel(r'exposure time' + '\t' + r'$[msec]$')
@@ -78,7 +93,15 @@ def plot_rw_T2_data(rw_wrap):
 	axs[1].set_xlim([0.9*rw_wrap['T2_dist']['NMRT2_bins'][0], 1.1*rw_wrap['T2_dist']['NMRT2_bins'][-1]])
 	axs[1].set_ylabel(r'amplitudes')
 	axs[1].set_ylim([0.0, 1.1*rw_wrap['T2_dist']['NMRT2_amps'].max()])
-	
+
+	if(rw_wrap['use_hist']):
+		width = rw_wrap['T2_hist']['Bins'][1] - rw_wrap['T2_hist']['Bins'][0]
+		axs[2].bar(rw_wrap['T2_hist']['Bins'], 100.0*rw_wrap['T2_hist']['Amps'], width=width)
+		axs[2].set_xlabel(r'collision rates $(\xi)$')
+		axs[2].set_xlim([0.0, 1.0])
+		axs[2].set_ylabel(r'occurs (%)')
+		axs[2].set_ylim([0.0, 1.1*100.0*rw_wrap['T2_hist']['Amps'].max()])
+
 	plt.tight_layout()
 	plt.show()
 	return
