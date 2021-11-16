@@ -39,6 +39,7 @@ public:
     // --- Wave-vector 'k' computation.
     bool USE_WAVEVECTOR_TWOPI;
     bool ALLOW_WALKER_SAMPLING;
+    bool APPLY_ABSORPTION;
 
     // --- PFGSE SAVE. 
     bool SAVE_MODE;
@@ -83,6 +84,7 @@ public:
     void readThresholdValue(string s);
     void readUseWaveVectorTwoPi(string s);
     void readAllowWalkerSampling(string s);
+    void readApplyAbsorption(string s);
     void readSaveMode(string s);
     void readSavePFGSE(string s);
     void readSaveWalkers(string s);
@@ -109,6 +111,7 @@ public:
     double getThresholdValue() { return this->THRESHOLD_VALUE; }
     bool getUseWaveVectorTwoPi() { return this->USE_WAVEVECTOR_TWOPI; }
     bool getAllowWalkerSampling() { return this->ALLOW_WALKER_SAMPLING; }
+    bool getApplyAbsorption() { return this->APPLY_ABSORPTION; }
     bool getSaveMode() { return this->SAVE_MODE; }
     bool getSavePFGSE() { return this->SAVE_PFGSE; }
     bool getSaveWalkers() { return this->SAVE_WALKERS; }

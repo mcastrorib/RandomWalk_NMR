@@ -878,6 +878,16 @@ void NMR_PFGSE::recoverDmsdWithoutSampling()
 	double nDx = 0.0; double nDy = 0.0; double nDz = 0.0;
 	double resolution = this->NMR.getImageVoxelResolution();
 	double aliveWalkerFraction = 0.0;
+	
+	// Relaxation / Absorption equivalence
+	double absorptionFraction;
+	double absorption = 0.0;
+	double nonAbsorption = 1.0;
+	if(this->PFGSE_config.getApplyAbsorption())
+	{
+		absorption = 1.0;
+		nonAbsorption = 0.0;
+	}
 
 	// debug
 	// int imgX, imgY, imgZ;
@@ -890,27 +900,27 @@ void NMR_PFGSE::recoverDmsdWithoutSampling()
 		X0 = (double) particle.initialPosition.x;
 		XF = (double) particle.position_x;
 		displacementX = resolution * (XF - X0);
+		displacementX *= displacementX;
 		
 		// Y:
 		Y0 = (double) particle.initialPosition.y;
 		YF = (double) particle.position_y;
 		displacementY = resolution * (YF - Y0);
-		
+		displacementY *= displacementY;
+
 		// Z:
 		Z0 = (double) particle.initialPosition.z;
 		ZF = (double) particle.position_z;
 		displacementZ = resolution * (ZF - Z0);
+		displacementZ *= displacementZ;
 
-		nDx += (particle.energy * displacementX * displacementX);
-		nDy += (particle.energy * displacementY * displacementY);
-		nDz += (particle.energy * displacementZ * displacementZ);
-
-		normalizedDisplacement = displacementX*displacementX + 
-								 displacementY*displacementY + 
-								 displacementZ*displacementZ;
-
-		squaredDisplacement += (particle.energy * normalizedDisplacement);
-		aliveWalkerFraction += particle.energy;
+		absorptionFraction = (absorption * particle.energy + nonAbsorption);
+		aliveWalkerFraction += absorptionFraction;
+		nDx += (absorptionFraction * displacementX);
+		nDy += (absorptionFraction * displacementY);
+		nDz += (absorptionFraction * displacementZ);
+		normalizedDisplacement = displacementX + displacementY + displacementZ;
+		squaredDisplacement += (absorptionFraction * normalizedDisplacement);
  	}
 
 	// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
@@ -946,6 +956,16 @@ void NMR_PFGSE::recoverDmsdWithSampling()
 	double resolution = this->NMR.getImageVoxelResolution();
 	double aliveWalkerFraction;
 
+	// Relaxation / Absorption equivalence
+	double absorptionFraction;
+	double absorption = 0.0;
+	double nonAbsorption = 1.0;
+	if(this->PFGSE_config.getApplyAbsorption())
+	{
+		absorption = 1.0;
+		nonAbsorption = 0.0;
+	}
+
 	vector<double> Dmsd; Dmsd.reserve(this->NMR.walkerSamples);
 	vector<double> DmsdX; DmsdX.reserve(this->NMR.walkerSamples);
 	vector<double> DmsdY; DmsdY.reserve(this->NMR.walkerSamples);
@@ -972,27 +992,27 @@ void NMR_PFGSE::recoverDmsdWithSampling()
 			X0 = (double) particle.initialPosition.x;
 			XF = (double) particle.position_x;
 			displacementX = resolution * (XF - X0);
+			displacementX *= displacementX;
 			
 			// Y:
 			Y0 = (double) particle.initialPosition.y;
 			YF = (double) particle.position_y;
 			displacementY = resolution * (YF - Y0);
-			
+			displacementY *= displacementY;
+
 			// Z:
 			Z0 = (double) particle.initialPosition.z;
 			ZF = (double) particle.position_z;
 			displacementZ = resolution * (ZF - Z0);
+			displacementZ *= displacementZ;
 
-			nDx += (particle.energy * displacementX * displacementX);
-			nDy += (particle.energy * displacementY * displacementY);
-			nDz += (particle.energy * displacementZ * displacementZ);
-
-			normalizedDisplacement = displacementX*displacementX + 
-									 displacementY*displacementY + 
-									 displacementZ*displacementZ;
-
-			squaredDisplacement += (particle.energy * normalizedDisplacement);
-			aliveWalkerFraction += particle.energy;
+			absorptionFraction = (absorption * particle.energy + nonAbsorption);
+			aliveWalkerFraction += absorptionFraction;
+			nDx += (absorptionFraction * displacementX);
+			nDy += (absorptionFraction * displacementY);
+			nDz += (absorptionFraction * displacementZ);
+			normalizedDisplacement = displacementX + displacementY + displacementZ;
+			squaredDisplacement += (absorptionFraction * normalizedDisplacement);
 	 	}
 
 		// set diffusion coefficient (see eq 2.18 - ref. Bergman 1995)
