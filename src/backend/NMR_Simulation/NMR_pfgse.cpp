@@ -1141,11 +1141,16 @@ void NMR_PFGSE::writeParameters()
         exit(1);
     }
 
+    Vector3D maxGradient(this->vecGradient[this->vecGradient.size() - 1]);
     const int precision = std::numeric_limits<double>::max_digits10;  
 	file << "RWNMR-PFGSE Parameters" << endl; 
 	file << setprecision(precision) << "D_0: " << this->NMR.getDiffusionCoefficient() << endl;  
     file << setprecision(precision) << "Pulse width: " << this->pulseWidth << endl;
     file << setprecision(precision) << "Giromagnetic Ratio: " << this->giromagneticRatio << endl;
+	file << setprecision(precision) << "Gradient direction: {" 
+		 << (maxGradient.getX() / maxGradient.getNorm()) << ", "
+		 << (maxGradient.getY() / maxGradient.getNorm()) << ", "
+		 << (maxGradient.getZ() / maxGradient.getNorm()) << "}" << endl;
 	file << setprecision(precision) << "Gradients: " << this->gradientPoints << endl;
 	file << "Times: [";
 	for(int time = 0; time < this->exposureTimes.size(); time++)
@@ -1381,8 +1386,12 @@ void NMR_PFGSE::createResultsFile()
     file << ",D_sat(pts)";
     file << ",D_msd";
     file << ",D_msd(std)";
-    file << ",MSD";
-    file << ",MSD(std)";
+    file << ",D_msdX";
+    file << ",D_msdX(std)";
+    file << ",D_msdY";
+    file << ",D_msdY(std)";
+    file << ",D_msdZ";
+    file << ",D_msdZ(std)";
     file << endl;
     file.close();
 }
@@ -1406,8 +1415,12 @@ void NMR_PFGSE::writeResults()
     << "," << this->DsatAdjustSamples
     << "," << this->D_msd
     << "," << this->D_msd_stdev
-    << "," << this->msd
-    << "," << this->msd_stdev
+    << "," << this->vecDmsd.getX()
+    << "," << this->vecDmsd_stdev.getX()
+    << "," << this->vecDmsd.getY()
+    << "," << this->vecDmsd_stdev.getY()
+    << "," << this->vecDmsd.getZ()
+    << "," << this->vecDmsd_stdev.getZ()
     << endl; 
 	file.close();
 }
