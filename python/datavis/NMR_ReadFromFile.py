@@ -403,6 +403,13 @@ def read_pfgse_parameters_from_rwnmr_file(file):
 				for value in values:
 					content.append(float(value))
 				content = np.array(content)
+
+			elif(tag == "Gradient direction"):
+				values = line.split(": ")[1][1:-2].split(", ")
+				content = []
+				for value in values:
+					content.append(float(value))
+				content = np.array(content)
 			
 			else:
 				content = float(line.split(": ")[1])

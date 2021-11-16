@@ -65,26 +65,37 @@ def read_data_from_pfgse_folder(cpmg_folder):
 	return rw_wrap
 
 def plot_rw_diffusion_data(rw_wrap):
-	rows = 1
-	cols = 2
-	fig, axs = plt.subplots(rows, cols, figsize=[cols*6, rows*5])
+	rows = 3
+	cols = 1
+	fig, axs = plt.subplots(rows, cols, figsize=[6.0*cols, 3.0*rows]) #, sharex=True, sharey=True)
 
 	axs[0].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_sat']/rw_wrap['params']['D_0'], marker='^', color='blue', label='S&T')
-	axs[0].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_msd']/rw_wrap['params']['D_0'], marker='v', color='red', label='msd')
-	axs[0].set_xlabel(r'Time' + '\t' + r'$[msec]$')
-	axs[0].set_xlim([0.0, 1.01*rw_wrap['results']['Time'][-1]])
-	axs[0].set_ylabel(r'$D(t)/D_{0}$')
-	axs[0].set_ylim([0.0, 1.0])
+	if(rw_wrap['params']['Gradient direction'][0] != 0):
+		axs[0].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_msdX']/rw_wrap['params']['D_0'], marker='v', color='red', label='msd_x')
+	elif(rw_wrap['params']['Gradient direction'][1] != 0):
+		axs[0].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_msdY']/rw_wrap['params']['D_0'], marker='v', color='red', label='msd_y')
+	elif(rw_wrap['params']['Gradient direction'][2] != 0):
+		axs[0].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_msdZ']/rw_wrap['params']['D_0'], marker='v', color='red', label='msd_z')
 	axs[0].legend(loc='upper right', frameon=False)
 
-	axs[1].scatter(np.sqrt(rw_wrap['results']['Time']), rw_wrap['results']['D_sat']/rw_wrap['params']['D_0'], marker='^', color='blue', label='S&T')
-	axs[1].scatter(np.sqrt(rw_wrap['results']['Time']), rw_wrap['results']['D_msd']/rw_wrap['params']['D_0'], marker='v', color='red', label='msd')
-	axs[1].set_xlabel(r'Time$^{1/2}$' + '\t' + r'$[msec^{1/2}]$')
-	axs[1].set_xlim([0.0, 1.01*np.sqrt(rw_wrap['results']['Time'])[-1]])
-	axs[1].set_ylabel(r'$D(t)/D_{0}$')
-	axs[1].set_ylim([0.0, 1.0])
-	axs[1].legend(loc='upper right', frameon=False)
+	axs[1].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_sat']/rw_wrap['params']['D_0'], marker='^', color='blue', label='S&T')
 	
+	if(rw_wrap['params']['Gradient direction'][0] != 0):
+		axs[2].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_msdX']/rw_wrap['params']['D_0'], marker='v', color='red', label='msd_x')
+	if(rw_wrap['params']['Gradient direction'][1] != 0):
+		axs[2].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_msdY']/rw_wrap['params']['D_0'], marker='v', color='red', label='msd_y')
+	if(rw_wrap['params']['Gradient direction'][2] != 0):
+		axs[2].scatter(rw_wrap['results']['Time'], rw_wrap['results']['D_msdZ']/rw_wrap['params']['D_0'], marker='v', color='red', label='msd_z')
+	
+	for ax in axs:
+		ax.set_xlabel(r'Time' + '\t' + r'$[msec]$')
+		ax.set_xlim([0.0, 1.01*rw_wrap['results']['Time'][-1]])
+		ax.set_ylabel(r'$D(t)/D_{0}$')
+		ax.set_ylim([0.0, 1.0])
+
+	for ax in axs:
+		ax.label_outer()
+
 	plt.tight_layout()
 	plt.show()
 	return
