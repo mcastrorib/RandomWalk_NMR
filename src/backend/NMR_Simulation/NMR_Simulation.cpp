@@ -1601,6 +1601,11 @@ void NMR_Simulation::createHistogram(uint histID, uint _steps)
     this->histogramList[histID].fillHistogram(this->walkers, _steps);       
 }
 
+void NMR_Simulation::updateHistogram()
+{
+    this->histogram.updateHistogram(this->walkers, this->simulationSteps);
+}
+
 // cost function methods
 void NMR_Simulation::updateWalkersRelaxativity(vector<double> &sigmoid)
 {
@@ -1790,16 +1795,19 @@ void NMR_Simulation::printDetails()
 }
 
 // mapping simulation using bitblock data structure
-void NMR_Simulation::mapSimulation_OMP()
+void NMR_Simulation::mapSimulation_OMP(bool reset)
 {
     double begin_time = omp_get_wtime();
     cout << "initializing mapping simulation... ";
-    for (uint id = 0; id < this->walkers.size(); id++)
+    if(reset)
     {
-        this->walkers[id].resetPosition();
-        this->walkers[id].resetSeed();
-        this->walkers[id].resetCollisions();
-        this->walkers[id].resetTCollisions();
+        for (uint id = 0; id < this->walkers.size(); id++)
+        {
+            this->walkers[id].resetPosition();
+            this->walkers[id].resetSeed();
+            this->walkers[id].resetCollisions();
+            this->walkers[id].resetTCollisions();
+        }
     }
 
     // initialize list of collision histograms

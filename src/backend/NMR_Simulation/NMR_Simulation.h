@@ -234,12 +234,13 @@ public:
     void initHistogramList();
     void createHistogram();
     void createHistogram(uint histID, uint _steps);
+    void updateHistogram();
 
     // cost function methods
     void updateWalkersRelaxativity(vector<double> &parameters);
     void updateWalkersRelaxativity(double rho);
 
-    typedef void (NMR_Simulation::*mapSim_ptr)();
+    typedef void (NMR_Simulation::*mapSim_ptr)(bool);
     typedef void (NMR_Simulation::*walkSim_ptr)();
 
 private:
@@ -249,15 +250,15 @@ private:
         RW collision mapping simulations
         CUDA/GPU routines generate collision histograms
     */ 
-    void mapSimulation_OMP();
-    void mapSimulation_CUDA_2D_histograms();
-    void mapSimulation_CUDA_3D_histograms();
+    void mapSimulation_OMP(bool reset=true);
+    void mapSimulation_CUDA_2D_histograms(bool reset=true);
+    void mapSimulation_CUDA_3D_histograms(bool reset=true);
 
 
 public:
-    void mapSimulation(void)
+    void mapSimulation(bool reset=true)
     {
-        (this->*mapSimulationPointer)();
+        (this->*mapSimulationPointer)(reset);
     }
     void associateMapSimulation();
 

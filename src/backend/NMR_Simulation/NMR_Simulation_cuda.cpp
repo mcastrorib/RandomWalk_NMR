@@ -98,16 +98,20 @@ __global__ void map_2D( int *walker_px,
     }
 }
 
-void NMR_Simulation::mapSimulation_CUDA_2D_histograms()
+void NMR_Simulation::mapSimulation_CUDA_2D_histograms(bool reset)
 {
     cout << "- starting RW-Mapping simulation (in GPU)... ";
+    
     // reset walkers
-    for (uint id = 0; id < this->walkers.size(); id++)
+    if(reset)
     {
-        this->walkers[id].resetPosition();
-        this->walkers[id].resetSeed();
-        this->walkers[id].resetCollisions();
-        this->walkers[id].resetTCollisions();
+        for (uint id = 0; id < this->walkers.size(); id++)
+        {
+            this->walkers[id].resetPosition();
+            this->walkers[id].resetSeed();
+            this->walkers[id].resetCollisions();
+            this->walkers[id].resetTCollisions();
+        }
     }
 
     // CUDA event recorder to measure computation time in device
@@ -719,43 +723,46 @@ __global__ void map_3D_mirror(int *walker_px,
 
 // function to call GPU kernel to execute
 // walker's "map" method in Graphics Processing Unit
-void NMR_Simulation::mapSimulation_CUDA_3D_histograms()
+void NMR_Simulation::mapSimulation_CUDA_3D_histograms(bool reset)
 {   
     string bc = (*this).getBoundaryCondition();
 
     cout << "- starting 3DRW-Mapping simulation (in GPU) [bc:" << bc << "]...";
         
     // reset walkers
-    if(this->rwNMR_config.getOpenMPUsage())
+    if(reset)
     {
-        // set omp variables for parallel loop throughout walker list
-        const int num_cpu_threads = omp_get_max_threads();
-        const int loop_size = this->walkers.size();
-        int loop_start, loop_finish;
-
-        #pragma omp parallel shared(walkers) private(loop_start, loop_finish) 
+        if(this->rwNMR_config.getOpenMPUsage())
         {
-            const int thread_id = omp_get_thread_num();
-            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
-            loop_start = looper.getStart();
-            loop_finish = looper.getFinish(); 
+            // set omp variables for parallel loop throughout walker list
+            const int num_cpu_threads = omp_get_max_threads();
+            const int loop_size = this->walkers.size();
+            int loop_start, loop_finish;
 
-            for (uint id = loop_start; id < loop_finish; id++)
+            #pragma omp parallel shared(walkers) private(loop_start, loop_finish) 
+            {
+                const int thread_id = omp_get_thread_num();
+                OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
+                loop_start = looper.getStart();
+                loop_finish = looper.getFinish(); 
+
+                for (uint id = loop_start; id < loop_finish; id++)
+                {
+                    this->walkers[id].resetPosition();
+                    this->walkers[id].resetSeed();
+                    this->walkers[id].resetCollisions();
+                    this->walkers[id].resetTCollisions();
+                }
+            }
+        } else
+        {
+            for (uint id = 0; id < this->walkers.size(); id++)
             {
                 this->walkers[id].resetPosition();
                 this->walkers[id].resetSeed();
                 this->walkers[id].resetCollisions();
                 this->walkers[id].resetTCollisions();
             }
-        }
-    } else
-    {
-        for (uint id = 0; id < this->walkers.size(); id++)
-        {
-            this->walkers[id].resetPosition();
-            this->walkers[id].resetSeed();
-            this->walkers[id].resetCollisions();
-            this->walkers[id].resetTCollisions();
         }
     }
 

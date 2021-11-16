@@ -25,6 +25,7 @@ public:
 	vector<double> bins;
 	int firstEcho;
 	int lastEcho;
+	bool isSet;
 	
 
 	CollisionHistogram();
@@ -38,12 +39,14 @@ public:
 		this->gap = 0;
 		this->amps.clear();
 		this->bins.clear();
+		this->isSet = false;
 	}
 
 	int getSize(){return this->size;}
 
 	void createBlankHistogram(int _size, string scale);
 	void fillHistogram(vector<Walker> &_walkers, uint _numberOfSteps);
+	void updateHistogram(vector<Walker> &_walkers, uint _numberOfSteps);
 	void createBinsLinearVector(vector<Walker> &_walkers);
 	void createAmpsLinearVector(vector<Walker> &_walkers, uint _numberOfSteps);
 	void createBinsLogVector(vector<Walker> &_walkers, uint _numberOfSteps);

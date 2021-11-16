@@ -21,7 +21,8 @@ CollisionHistogram::CollisionHistogram():size(0),
 										 scale("linear"),
 										 gap(0.0),
 										 firstEcho(0),
-										 lastEcho(0)
+										 lastEcho(0),
+										 isSet(false)
 {
 	vector<double> amps();
 	vector<double> bins();
@@ -31,7 +32,8 @@ CollisionHistogram::CollisionHistogram(int _size, string _scale):size(_size),
 														 		 scale(_scale),
 																 gap(0.0),
 																 firstEcho(0),
-																 lastEcho(0)
+																 lastEcho(0),
+																 isSet(false)
 {	
 	// Initialize stl vectors
 	vector<double> amps();
@@ -51,6 +53,7 @@ CollisionHistogram::CollisionHistogram(const CollisionHistogram &_otherHistogram
 	this->bins = _otherHistogram.bins;
 	this->firstEcho = _otherHistogram.firstEcho;
 	this->lastEcho = _otherHistogram.lastEcho;
+	this->isSet = _otherHistogram.isSet;
 }
 
 void CollisionHistogram::createBlankHistogram(int _size, string _scale)
@@ -82,6 +85,31 @@ void CollisionHistogram::fillHistogram(vector<Walker> &_walkers, uint _numberOfS
 	{
 		(*this).createBinsLinearVector(_walkers);
 		(*this).createAmpsLinearVector(_walkers, _numberOfSteps);
+	}
+
+	// assign set flag
+	this->isSet = true;
+}
+
+void CollisionHistogram::updateHistogram(vector<Walker> &_walkers, uint _numberOfSteps)
+{
+	if(this->isSet)
+	{
+		// clear previous amps 
+		if(this->amps.size() > 0) this->amps.clear();
+		
+		// create new amps
+		if(this->scale == "log") 
+		{
+			if(this->bins.size() > 0) 
+			{
+				this->bins.clear();			
+				this->bins.reserve(this->size);
+			}
+			(*this).createBinsLogVector(_walkers, _numberOfSteps);
+			(*this).createAmpsLogVector(_walkers, _numberOfSteps);
+		}
+		else (*this).createAmpsLinearVector(_walkers, _numberOfSteps);
 	}
 }
 

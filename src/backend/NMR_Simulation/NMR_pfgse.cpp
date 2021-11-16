@@ -1096,6 +1096,7 @@ void NMR_PFGSE::save()
 
     if(this->PFGSE_config.getSaveHistogram())
     {
+    	this->NMR.updateHistogram();
     	(*this).writeHistogram();
     }    
 
