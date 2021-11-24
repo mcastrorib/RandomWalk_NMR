@@ -521,7 +521,8 @@ void NMR_cpmg::writeWalkers()
     file << ",PositionYf";
     file << ",PositionZf";
     file << ",Collisions";
-    file << ",XIRate"; 
+    file << ",XIRate";
+    file << ",Energy"; 
     file << ",RNGSeed" << endl;
 
     const int precision = std::numeric_limits<double>::max_digits10;
@@ -536,6 +537,7 @@ void NMR_cpmg::writeWalkers()
         << "," << this->NMR.walkers[index].getPositionZ() 
         << "," << this->NMR.walkers[index].getCollisions() 
         << "," << this->NMR.walkers[index].getXIrate() 
+        << "," << this->NMR.walkers[index].getEnergy() 
         << "," << this->NMR.walkers[index].getInitialSeed() << endl;
     }
 

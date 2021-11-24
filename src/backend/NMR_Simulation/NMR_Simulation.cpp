@@ -8,6 +8,7 @@
 // include C++ standard libraries
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <random>
 #include <vector>
 #include <string>
@@ -326,7 +327,7 @@ void NMR_Simulation::setWalkers(uint _numberOfWalkers, bool _randomInsertion)
 
     if(_randomInsertion == false)
     {
-        (*this),createPoreList();
+        (*this).createPoreList();
         (*this).createWalkersIDList();
         (*this).placeWalkersUniformly(); 
         (*this).freePoreList();
@@ -833,7 +834,7 @@ void NMR_Simulation::countInterfacePoreMatrix()
                     this->interfacePoreMatrix++;
                 }
 
-                if (dim3 == true and this->bitBlock.checkIfBitIsWall(currentBlock, currentBit) != this->bitBlock.checkIfBitIsWall(yBlock, yBit))
+                if (dim3 == true and this->bitBlock.checkIfBitIsWall(currentBlock, currentBit) != this->bitBlock.checkIfBitIsWall(zBlock, zBit))
                 {
                     this->interfacePoreMatrix++;
                 }
@@ -1703,14 +1704,30 @@ void NMR_Simulation::saveImageInfo(string filedir)
 {
     string filename = filedir + "/ImageInfo.txt";
 
-    fileHandler external_file(filename);
-    external_file.writeImageInfo(this->imagePath.completePath, 
-                                 this->bitBlock.imageColumns, 
-                                 this->bitBlock.imageRows, 
-                                 this->bitBlock.imageDepth, 
-                                 this->imageVoxelResolution,
-                                 this->porosity,
-                                 this->SVp);
+    // file object init
+    ofstream fileObject;
+
+    // open file
+    fileObject.open(filename, ios::out);
+    if (fileObject.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    // write info 
+    fileObject << "image path: " << this->imagePath.completePath << endl;
+    fileObject << "width(x): " << this->bitBlock.imageColumns << endl;
+    fileObject << "height(y): " << this->bitBlock.imageRows << endl;
+    fileObject << "depth(z): " << this->bitBlock.imageDepth << endl;
+    fileObject << "resolution: " << this->imageResolution << endl;
+    fileObject << "voxel shift: " << this->voxelDivision << endl;
+    fileObject << "step length: " << this->imageVoxelResolution << endl;
+    fileObject << "porosity: " << this->porosity << endl;
+    fileObject << "SVp: " << this->SVp << endl;
+
+    // close file
+    fileObject.close();
 }
 
 void NMR_Simulation::saveWalkerCollisions(string filePath)
