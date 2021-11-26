@@ -1274,8 +1274,7 @@ void NMR_PFGSE::writeWalkers()
         exit(1);
     }
 
-    file << "Id";
-    file << ",PositionXi";
+    file << "PositionXi";
     file << ",PositionYi";
     file << ",PositionZi";
     file << ",PositionXf";
@@ -1286,11 +1285,10 @@ void NMR_PFGSE::writeWalkers()
     file << ",Energy"; 
     file << ",RNGSeed" << endl;
 
-    const int precision = std::numeric_limits<double>::max_digits10;
+    const int precision = 6;
     for (uint index = 0; index < this->NMR.walkers.size(); index++)
     {
-        file << setprecision(precision) << index
-        << "," << this->NMR.walkers[index].getInitialPositionX()
+        file << setprecision(precision) << this->NMR.walkers[index].getInitialPositionX()
         << "," << this->NMR.walkers[index].getInitialPositionY()
         << "," << this->NMR.walkers[index].getInitialPositionZ()
         << "," << this->NMR.walkers[index].getPositionX() 
