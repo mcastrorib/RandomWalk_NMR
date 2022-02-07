@@ -535,15 +535,17 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 
 	// Normalize for k=0
 	double M0 = this->Mkt[0];
+	vector<double> normMkt;
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 	{
-		this->Mkt[kIdx] /= M0;
+		normMkt.push_back(this->Mkt[kIdx] / M0);
 	}
 	
 
 	for(uint point = idx_begin; point < idx_end; point++)
 	{	
-		this->LHS.push_back((*this).computeLHS(this->Mkt[point], this->Mkt[0]));
+		// this->LHS.push_back((*this).computeLHS(this->Mkt[point], this->Mkt[0]));
+		this->LHS.push_back((*this).computeLHS(normMkt[point], this->Mkt[0]));
 	}
 
 	// fill standard deviation vectors with null values
@@ -746,12 +748,12 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	if((*this).getNoiseAmp() > 0.0)
 	{
 		// this factor is applied beacuse of the decreased magnetization Mkt
-		double sampleFactor = 1.0 / ((double) this->NMR.walkerSamples);
+		double M0 = 1.0 / ((double) this->NMR.walkerSamples);
 		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
 		{
 			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 			{
-				Mkt_samples[kIdx][sample] += sampleFactor * this->rawNoise[kIdx];
+				Mkt_samples[kIdx][sample] += M0 * this->rawNoise[kIdx];
 			}
 		}	
 	}
@@ -858,7 +860,7 @@ void NMR_PFGSE::recoverDsatWithSampling()
 
 	// log results	
 	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat();
-	cout << " +/- " << (*this).getD_sat_stdev() << endl;
+	cout << " +/- " << 1.96 * (*this).getD_sat_stdev() << endl;
 
 	if(time_verbose)
     {
@@ -1083,9 +1085,9 @@ void NMR_PFGSE::recoverDmsdWithSampling()
 	// print results
 	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {msd} = " << (*this).getD_msd();
 	cout << " +/- " << (*this).getD_msd_stdev() << endl;
-	cout << "Dxx = " << this->vecDmsd.getX() << " +/- " << this->vecDmsd_stdev.getX() << endl;
-	cout << "Dyy = " << this->vecDmsd.getY() << " +/- " << this->vecDmsd_stdev.getY() << endl;
-	cout << "Dzz = " << this->vecDmsd.getZ() << " +/- " << this->vecDmsd_stdev.getZ() << endl;	
+	cout << "Dxx = " << this->vecDmsd.getX() << " +/- " << 1.96 * this->vecDmsd_stdev.getX() << endl;
+	cout << "Dyy = " << this->vecDmsd.getY() << " +/- " << 1.96 * this->vecDmsd_stdev.getY() << endl;
+	cout << "Dzz = " << this->vecDmsd.getZ() << " +/- " << 1.96 * this->vecDmsd_stdev.getZ() << endl;	
 }
 
 void NMR_PFGSE::reset(double newBigDelta)
