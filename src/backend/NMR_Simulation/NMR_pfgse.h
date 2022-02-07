@@ -99,6 +99,7 @@ public:
 	void runSequenceWithSampling();
 	void simulation();
 	void applyBulk();
+	void applyNoiseToSignal();
 	void recoverD(string _method = "sat");
 	void recoverDsat();
 	void recoverDsatWithoutSampling();

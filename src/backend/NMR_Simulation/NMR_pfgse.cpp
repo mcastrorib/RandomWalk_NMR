@@ -427,9 +427,17 @@ void NMR_PFGSE::runSequence()
 	// run pfgse experiment -- this method will fill Mkt vector
 	(*this).simulation();
 
+	// apply bulk relaxation to signal
 	if((*this).getApplyBulkRelaxation())
 	{
 		(*this).applyBulk();
+	}
+
+	// apply white noise to signal
+	(*this).createNoiseVector();
+	if((*this).getNoiseAmp() > 0.0)
+	{
+		(*this).applyNoiseToSignal();
 	}
 }
 
@@ -439,9 +447,9 @@ void NMR_PFGSE::applyBulk()
 	double bulkMagnitude = exp(bulkTime * (*this).getExposureTime());
 	
 	// Apply bulk relaxation in simulated signal
-	for(uint idx = 0; idx < this->Mkt.size(); idx++)
+	for(uint kIdx = 0; kIdx < this->Mkt.size(); kIdx++)
 	{
-		
+		this->Mkt[kIdx] *= bulkMagnitude;
 	}
 }
 
@@ -450,7 +458,24 @@ void NMR_PFGSE::createNoiseVector()
 	if(this->rawNoise.size() != (*this).getGradientPoints()) 
 		this->rawNoise.clear();
 
-	this->rawNoise = getNormalDistributionSamples(0.0, (*this).getNoiseAmp(), (*this).getGradientPoints());
+	this->rawNoise = getNormalDistributionSamples(0.0, 1.0, (*this).getGradientPoints());
+	double M0 = (double) this->NMR.getNumberOfWalkers(); 
+	for(int idx = 0; idx < (*this).getGradientPoints(); idx++)
+	{
+		this->rawNoise[idx] *= M0 * (*this).getNoiseAmp();
+	}
+}
+
+void NMR_PFGSE::applyNoiseToSignal()
+{
+	// Add noise to signal
+	if((*this).getNoiseAmp() > 0.0 and this->Mkt.size() == this->getGradientPoints())
+	{
+		for(uint kIdx = 0; kIdx < this->getGradientPoints(); kIdx++)
+		{
+			this->Mkt[kIdx] += this->rawNoise[kIdx];		
+		}			
+	}
 }
 
 void NMR_PFGSE::simulation()
@@ -470,7 +495,6 @@ void NMR_PFGSE::recoverDsat()
 	cout << "- Stejskal-Tanner (s&t) ";
 	double time = omp_get_wtime();
 
-	(*this).createNoiseVector();
 	if((this->NMR.getWalkerSamples() > 1) and this->PFGSE_config.getAllowWalkerSampling())
 	{
 		cout << "with sampling:" <<  endl;
@@ -509,23 +533,12 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 	int idx_begin = 0;
 	int idx_end = this->gradientPoints;
 
-	// Add noise to signal
-	double M0 = this->Mkt[0];
-	if((*this).getNoiseAmp() > 0.0)
-	{
-		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
-		{
-			this->Mkt[kIdx] += M0 * this->rawNoise[kIdx];
-		}			
-	}	
-
 	// Normalize for k=0
-	M0 = this->Mkt[0];
+	double M0 = this->Mkt[0];
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 	{
 		this->Mkt[kIdx] /= M0;
 	}
-	
 	
 
 	for(uint point = idx_begin; point < idx_end; point++)
@@ -714,15 +727,31 @@ void NMR_PFGSE::recoverDsatWithSampling()
 
 
 	tick = omp_get_wtime();
+
+	// Apply bulk relaxation in simulated signal
+	if((*this).getApplyBulkRelaxation())
+	{
+		double bulkTime = -1.0 / this->NMR.getBulkRelaxationTime();
+		double bulkMagnitude = exp(bulkTime * (*this).getExposureTime());
+		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+		{
+			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+			{
+				Mkt_samples[kIdx][sample] *= bulkMagnitude;
+			}
+		}
+	}
+
 	// Add noise to signal
 	if((*this).getNoiseAmp() > 0.0)
 	{
+		// this factor is applied beacuse of the decreased magnetization Mkt
+		double sampleFactor = 1.0 / ((double) this->NMR.walkerSamples);
 		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
 		{
-			double M0 = Mkt_samples[0][sample];
 			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 			{
-				Mkt_samples[kIdx][sample] += M0 * this->rawNoise[kIdx];
+				Mkt_samples[kIdx][sample] += sampleFactor * this->rawNoise[kIdx];
 			}
 		}	
 	}

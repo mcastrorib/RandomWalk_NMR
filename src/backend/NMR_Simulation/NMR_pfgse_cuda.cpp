@@ -1278,7 +1278,7 @@ void NMR_PFGSE::simulation_cuda()
     {
         this->Mkt.push_back((h_globalPhase[point]));
     }
-
+ 
     // free pointers in host
     free(h_walker_x0);
     free(h_walker_y0);
