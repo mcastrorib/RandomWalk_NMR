@@ -25,12 +25,15 @@ public:
 
     double getMeanX(){ return this->meanX; }
     double getMeanY(){ return this->meanY; }
-    double getA(){ return this->A; }
-    double getB(){ return this->B; }
+    double getA();
+    double getB();
+    double getMSE();
+    double getSMSE();
+    bool isSolved() { return this->solved; }
 
 private:
     double meanX, meanY;
-    double A, B;
+    double A, B, residual;
     bool solved;
 
     int begin, end;
@@ -40,8 +43,9 @@ private:
     double computeMean(vector<double> &_vector);
     void computeB();
     void computeA();
-    void setAsSolved();
-    void setAsUnsolved();
+    void setSolved(bool isSolved);
+    void computeMeanSquaredResiduals(); 
+    double evaluate(double point);
 };
 
 #endif

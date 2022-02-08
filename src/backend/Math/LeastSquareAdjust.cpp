@@ -20,6 +20,7 @@ LeastSquareAdjust::LeastSquareAdjust(vector<double> &_x, vector<double> &_y): X(
 															meanY(0.0),
 															A(0.0),
 															B(0.0),
+															residual(0.0),
 															solved(false)
 {
 	this->begin = 0;
@@ -31,13 +32,13 @@ LeastSquareAdjust::LeastSquareAdjust(vector<double> &_x, vector<double> &_y): X(
 void LeastSquareAdjust::setX(vector<double> &_x)
 {
 	this->X = _x;
-	(*this).setAsUnsolved();
+	(*this).setSolved(false);
 }
 
 void LeastSquareAdjust::setY(vector<double> &_y)
 {
 	this->Y = _y;
-	(*this).setAsUnsolved();
+	(*this).setSolved(false);
 }
 
 void LeastSquareAdjust::setThreshold(double _threshold)
@@ -77,7 +78,8 @@ void LeastSquareAdjust::solve()
 	this->meanY = computeMean(this->Y);
 	(*this).computeB();
 	(*this).computeA();
-	(*this).setAsSolved();
+	(*this).computeMeanSquaredResiduals();
+	(*this).setSolved(true);
 }    
 
 double LeastSquareAdjust::computeMean(vector<double> &_vector)
@@ -118,12 +120,47 @@ void LeastSquareAdjust::computeA()
 	this->A = this->meanY - (this->B * this->meanX);
 }
 
-void LeastSquareAdjust::setAsSolved()
+void LeastSquareAdjust::computeMeanSquaredResiduals()
 {
-	this->solved = true;
+	this->residual = 0.0;
+	for(int idx = this->begin; idx < this->end; idx++)
+	{
+		this->residual += pow((this->Y[idx] - (*this).evaluate(this->X[idx])), 2.0);
+	}
+	this->residual /= (double) this->points;
 }
 
-void LeastSquareAdjust::setAsUnsolved()
+double LeastSquareAdjust::evaluate(double point)
 {
-	this->solved = false;
+	return (this->B * point + this->A);
+}
+
+void LeastSquareAdjust::setSolved(bool isSolved)
+{
+	this->solved = isSolved;
+}
+
+
+double LeastSquareAdjust::getA()
+{ 
+	if((*this).isSolved()) return this->A;
+	else return 0; 
+}
+
+double LeastSquareAdjust::getB()
+{ 
+	if((*this).isSolved()) return this->B;
+	else return 0;
+}
+
+double LeastSquareAdjust::getMSE()
+{
+	if((*this).isSolved()) return this->residual;
+	else return 0;
+}
+
+double LeastSquareAdjust::getSMSE()
+{
+	if((*this).isSolved()) return sqrt(this->residual);
+	else return 0;
 }
