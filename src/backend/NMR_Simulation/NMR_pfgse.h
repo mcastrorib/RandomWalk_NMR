@@ -48,6 +48,7 @@ public:
 	
 	int DsatAdjustSamples;
 	double D_sat;
+	double D_sat_error;
 	double D_sat_stdev;
 	double D_msd;
 	double D_msd_stdev;
@@ -132,6 +133,7 @@ public:
 	void setGiromagneticRatio(double _value){ this->giromagneticRatio = _value; }
 	void setApplyBulkRelaxation(bool _bulk) { this->applyBulkRelaxation = _bulk; }
 	void setD_sat(double _value) { this->D_sat = _value; }
+	void setD_sat_error(double _value) { this->D_sat_error = _value; }
 	void setD_sat_StdDev(double _value) { this->D_sat_stdev = _value; }
 	void setD_msd(double _value) { this->D_msd = _value; }
 	void setD_msd_StdDev(double _value) { this->D_msd_stdev = _value; }
@@ -179,6 +181,7 @@ public:
 	bool getApplyBulkRelaxation() { return this->applyBulkRelaxation; }
 	double getNoiseAmp() { return this->noiseAmp; }
 	double getD_sat() { return this->D_sat; }
+	double getD_sat_error() { return this->D_sat_error; }
 	double getD_sat_stdev() { return this->D_sat_stdev; }
 	double getD_msd() { return this->D_msd; }
 	double getD_msd_stdev() { return this->D_msd_stdev; }
@@ -197,6 +200,8 @@ private:
 
 	void simulation_cuda();
 	void simulation_omp();
+	double sum(vector<double> &_vec);
+	double sum(double *_vec, int _size);
 	double mean(vector<double> &_vec);
 	double mean(double *_vec, int _size);
 	double stdDev(vector<double> &_vec);

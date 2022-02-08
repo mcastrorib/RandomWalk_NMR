@@ -31,6 +31,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 					 int _mpi_processes) : NMR(_NMR),
 										   PFGSE_config(_pfgseConfig),
 										   D_sat(0.0),
+										   D_sat_error(0.0),
 										   D_sat_stdev(0.0),
 										   D_msd(0.0),
 										   D_msd_stdev(0.0),
@@ -568,10 +569,14 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 	LeastSquareAdjust lsa(RHS_buffer, LHS_buffer);
 	lsa.setPoints(this->DsatAdjustSamples);
 	lsa.solve();
+	
 	(*this).setD_sat(lsa.getB());
+	double DstdError = sqrt(lsa.getMSE() * (((double) this->DsatAdjustSamples) /((double) this->DsatAdjustSamples - 1.0)));
+	(*this).setD_sat_error(DstdError);
 
 	// log results
-	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat() << endl;	
+	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat();
+	cout << " +/- " << 1.96 * (*this).getD_sat_error() << endl;	
 }
 
 double ** NMR_PFGSE::getSamplesMagnitude()
@@ -823,6 +828,8 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	*/
 	tick = omp_get_wtime();
 	vector<double> Dsat; Dsat.reserve(this->NMR.walkerSamples);
+	vector<double> Dsat_error; Dsat_error.reserve(this->NMR.walkerSamples);
+	double DstdError;
 	(*this).applyThreshold();
 	cout << "points to sample: " << this->DsatAdjustSamples << endl;
 
@@ -849,18 +856,23 @@ void NMR_PFGSE::recoverDsatWithSampling()
 		LeastSquareAdjust lsa(RHS_buffer, LHS_buffer);
 		lsa.setPoints(this->DsatAdjustSamples);
 		lsa.solve();
-		Dsat.push_back(lsa.getB());		
+		Dsat.push_back(lsa.getB());
+		DstdError = sqrt(lsa.getMSE() * (((double) this->DsatAdjustSamples) /((double) this->DsatAdjustSamples - 1.0)));
+		Dsat_error.push_back(DstdError);		
 	}
 	lsTime = omp_get_wtime() - tick;	
 
 	// 
 	double meanDsat = (*this).mean(Dsat);
+	double meanDsatError = (*this).mean(Dsat_error);
 	(*this).setD_sat(meanDsat);
+	(*this).setD_sat_error(meanDsatError);
 	(*this).setD_sat_StdDev(((*this).stdDev(Dsat, meanDsat)));
 
 	// log results	
 	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat();
-	cout << " +/- " << 1.96 * (*this).getD_sat_stdev() << endl;
+	cout << " +/- " << 1.96 * (*this).getD_sat_error();
+	cout << " [+/- " << (*this).getD_sat_stdev() << "]"<< endl;
 
 	if(time_verbose)
     {
@@ -1409,6 +1421,7 @@ void NMR_PFGSE::createResultsFile()
 
 	file << "Time";
     file << ",D_sat";
+    file << ",D_sat(error)";
     file << ",D_sat(std)";
     file << ",D_sat(pts)";
     file << ",D_msd";
@@ -1438,6 +1451,7 @@ void NMR_PFGSE::writeResults()
     const int precision = std::numeric_limits<double>::max_digits10;
     file << setprecision(precision)  << this->exposureTimes[this->getCurrentTime()]
     << "," << this->D_sat
+    << "," << this->D_sat_error
     << "," << this->D_sat_stdev
     << "," << this->DsatAdjustSamples
     << "," << this->D_msd
@@ -1602,6 +1616,31 @@ void NMR_PFGSE::simulation_omp()
     double finish_time = omp_get_wtime();
     cout << "Completed."; printElapsedTime(begin_time, finish_time);
     return;
+}
+
+double NMR_PFGSE::sum(vector<double> &_vec)
+{
+	double sum = 0;
+	double size = (double) _vec.size();
+
+    for (uint id = 0; id < _vec.size(); id++)
+    {
+        sum += _vec[id];
+    }
+
+    return sum;
+}
+
+double NMR_PFGSE::sum(double *_vec, int _size)
+{
+	double sum = 0;
+
+    for (uint id = 0; id < _size; id++)
+    {
+        sum += _vec[id];
+    }
+
+    return sum;
 }
 
 double NMR_PFGSE::mean(vector<double> &_vec)
