@@ -50,6 +50,7 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
     this->NOISE_AMP = otherConfig.NOISE_AMP;
     this->THRESHOLD_TYPE = otherConfig.THRESHOLD_TYPE;
     this->THRESHOLD_VALUE = otherConfig.THRESHOLD_VALUE;
+    this->THRESHOLD_WINDOW = otherConfig.THRESHOLD_WINDOW;
 
     // --- Wave-vector 'k' computation.
     this->USE_WAVEVECTOR_TWOPI = otherConfig.USE_WAVEVECTOR_TWOPI;
@@ -106,6 +107,7 @@ void pfgse_config::readConfigFile(const string configFile)
             else if(token == "INSPECTION_LENGTH") (*this).readInspectionLength(content);
             else if(token == "THRESHOLD_TYPE") (*this).readThresholdType(content);
             else if(token == "THRESHOLD_VALUE") (*this).readThresholdValue(content);
+            else if(token == "THRESHOLD_WINDOW") (*this).readThresholdWindow(content);
             else if(token == "USE_WAVEVECTOR_TWOPI") (*this).readUseWaveVectorTwoPi(content);
             else if(token == "ALLOW_WALKER_SAMPLING") (*this).readAllowWalkerSampling(content);
             else if(token == "APPLY_ABSORPTION") (*this).readApplyAbsorption(content);
@@ -272,6 +274,11 @@ void pfgse_config::readThresholdType(string s)
 void pfgse_config::readThresholdValue(string s)
 {
     this->THRESHOLD_VALUE = std::stod(s);
+}
+
+void pfgse_config::readThresholdWindow(string s)
+{
+    this->THRESHOLD_WINDOW = std::stoi(s);
 }
 
 void pfgse_config::readUseWaveVectorTwoPi(string s)

@@ -129,9 +129,10 @@ void NMR_PFGSE::applyThreshold()
 {
 	// apply threshold for D(t) extraction
 	string threshold_type = this->PFGSE_config.getThresholdType();
-	double threshold = this->PFGSE_config.getThresholdValue();
-	if(threshold_type == "lhs") (*this).setThresholdFromLHSValue(threshold);
-	else if(threshold_type == "samples") (*this).setThresholdFromSamples(int(threshold));
+	double threshold_value = this->PFGSE_config.getThresholdValue();
+	uint threshold_window = this->PFGSE_config.getThresholdWindow();
+	if(threshold_type == "lhs") (*this).setThresholdFromLHS(threshold_value);
+	else if(threshold_type == "samples") (*this).setThresholdFromSamples(int(threshold_value));
 	else (*this).setThresholdFromSamples(this->gradientPoints);
 }
 
@@ -355,32 +356,81 @@ void NMR_PFGSE::setVectorRHS()
 	}
 }
 
-void NMR_PFGSE::setThresholdFromLHSValue(double _value)
+void NMR_PFGSE::setThresholdFromLHS(double _value, uint _window)
 {
-	if(this->LHS.size() == 0) 
+
+	if(this->LHS.size() < _window) 
 		return;
 
 	if(_value > 0.0 && _value < 1.0)
 	{
-		int idx = 0;
-		bool isGreater = true;
-		double logValue = log(_value);
-
-		while(idx < this->LHS.size() && isGreater == true)
+		if((*this).getNoiseAmp() == 0.0)
 		{
-			if(this->LHS[idx] < logValue)
-			{
-				isGreater = false;
-			}
-			else
-			{
-				idx++;
-			}
+			(*this).setThresholdFromLHSValue(_value, _window);
+		} 
+		else
+		{
+			(*this).setThresholdFromLHSWindow(_value, _window);
 		}
-
-		if(isGreater) idx--;
-		this->DsatAdjustSamples = idx;
 	}
+}
+
+void NMR_PFGSE::setThresholdFromLHSValue(double _value, uint _window)
+{
+	uint minSize = _window;
+	int idx = minSize - 1;
+	bool isGreater = true;
+	double logValue = log(_value);
+
+	while(idx < this->LHS.size() && isGreater == true)
+	{
+		if(this->LHS[idx] < logValue)
+		{
+			isGreater = false;
+		}
+		else
+		{
+			idx++;
+		}
+	}
+
+	if(isGreater) idx--;
+	this->DsatAdjustSamples = idx;
+}
+
+void NMR_PFGSE::setThresholdFromLHSWindow(double _value, uint _window)
+{
+	if(this->LHS.size() < _window) 
+		return;
+
+	vector<double> windowValues;
+	for(uint idx = 0; idx < _window; idx++) windowValues.push_back(this->LHS[idx]);
+	int idx = _window;
+	bool isGreater = true;
+	double logValue = log(_value);
+
+	if((*this).mean(windowValues) < logValue)
+	{
+		isGreater = false;
+	}
+	
+	while(idx < this->LHS.size() && isGreater == true)
+	{
+		uint currentIdx = idx % _window;
+		windowValues[currentIdx] = this->LHS[idx];
+
+		if((*this).mean(windowValues) < logValue)
+		{
+			isGreater = false;
+		}
+		else
+		{
+			idx++;
+		}
+	}
+
+	if(isGreater) idx--;
+	this->DsatAdjustSamples = idx;
 }
 
 void NMR_PFGSE::setThresholdFromSamples(int _samples)
@@ -546,7 +596,7 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 	for(uint point = idx_begin; point < idx_end; point++)
 	{	
 		// this->LHS.push_back((*this).computeLHS(this->Mkt[point], this->Mkt[0]));
-		this->LHS.push_back((*this).computeLHS(normMkt[point], this->Mkt[0]));
+		this->LHS.push_back((*this).computeLHS(normMkt[point], normMkt[0]));
 	}
 
 	// fill standard deviation vectors with null values
@@ -1705,7 +1755,7 @@ double NMR_PFGSE::stdDev(double *_vec, int _size, double mean)
 
 vector<double> NMR_PFGSE::getNormalDistributionSamples(const double loc, const double std, const int size)
 {
-	std::default_random_engine generator;
+	std::default_random_engine generator(this->NMR.getInitialSeed());
 	std::normal_distribution<double> distribution(loc, std);
 	vector<double> normal_dist;
 	normal_dist.reserve(size);

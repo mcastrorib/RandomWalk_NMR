@@ -78,7 +78,9 @@ public:
 	void setVectorK();
 	void setVectorMkt();
 	void setVectorRHS();
-    void setThresholdFromLHSValue(double _value);
+	void setThresholdFromLHS(double _value, uint _window=5);
+    void setThresholdFromLHSValue(double _value, uint _window=5);
+    void setThresholdFromLHSWindow(double _value, uint _window=5);
     void setThresholdFromSamples(int _samples);
     void applyThreshold();
 	double computeRHS(double _Gvalue);

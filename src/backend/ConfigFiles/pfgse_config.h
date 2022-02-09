@@ -35,6 +35,7 @@ public:
     double NOISE_AMP;
     string THRESHOLD_TYPE;
     double THRESHOLD_VALUE;
+    uint THRESHOLD_WINDOW;
 
     // --- Wave-vector 'k' computation.
     bool USE_WAVEVECTOR_TWOPI;
@@ -82,6 +83,7 @@ public:
     void readNoiseAmp(string s);
     void readThresholdType(string s);
     void readThresholdValue(string s);
+    void readThresholdWindow(string s);
     void readUseWaveVectorTwoPi(string s);
     void readAllowWalkerSampling(string s);
     void readApplyAbsorption(string s);
@@ -109,6 +111,7 @@ public:
     double getNoiseAmp() { return this->NOISE_AMP; }
     string getThresholdType() { return this->THRESHOLD_TYPE; }
     double getThresholdValue() { return this->THRESHOLD_VALUE; }
+    uint getThresholdWindow() { return this->THRESHOLD_WINDOW; }
     bool getUseWaveVectorTwoPi() { return this->USE_WAVEVECTOR_TWOPI; }
     bool getAllowWalkerSampling() { return this->ALLOW_WALKER_SAMPLING; }
     bool getApplyAbsorption() { return this->APPLY_ABSORPTION; }
