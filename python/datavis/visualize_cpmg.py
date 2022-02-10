@@ -74,7 +74,7 @@ def read_data_from_cpmg_folder(cpmg_folder):
 
 	return rw_wrap
 
-def plot_rw_T2_data(rw_wrap):
+def plot_rw_T2_data(rw_wrap, save=False, name=None):
 	rows = 2
 	cols = 1
 	if(rw_wrap['use_hist']):
@@ -103,7 +103,10 @@ def plot_rw_T2_data(rw_wrap):
 		axs[2].set_ylim([0.0, 1.1*100.0*rw_wrap['T2_hist']['Amps'].max()])
 
 	plt.tight_layout()
-	plt.show()
+	if(save and name):
+		plt.savefig(name, format='svg')
+	else:
+		plt.show()
 	return
 
 def main():
@@ -116,6 +119,11 @@ def main():
 		cpmg_folder = get_rwnmr_cpmg_folder(rwnmr_folder)
 		rw_wrap = read_data_from_cpmg_folder(cpmg_folder)
 		plot_rw_T2_data(rw_wrap)	
+
+		save_input = input('\n>> Want to save plot? (y/n):')
+		if (save_input == 'y' or save_input == 'Y'):
+			fname = cpmg_folder + '.svg'
+			plot_rw_T2_data(rw_wrap, save=True, name=fname)
 
 		quit_input = input('\n>> Want to plot again? (y/n): ')
 		if not (quit_input == 'y' or quit_input == 'Y'):
