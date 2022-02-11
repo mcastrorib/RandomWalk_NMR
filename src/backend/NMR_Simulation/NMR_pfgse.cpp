@@ -131,7 +131,7 @@ void NMR_PFGSE::applyThreshold()
 	string threshold_type = this->PFGSE_config.getThresholdType();
 	double threshold_value = this->PFGSE_config.getThresholdValue();
 	uint threshold_window = this->PFGSE_config.getThresholdWindow();
-	if(threshold_type == "lhs") (*this).setThresholdFromLHS(threshold_value);
+	if(threshold_type == "lhs") (*this).setThresholdFromLHS(threshold_value, threshold_window);
 	else if(threshold_type == "samples") (*this).setThresholdFromSamples(int(threshold_value));
 	else (*this).setThresholdFromSamples(this->gradientPoints);
 }
@@ -404,7 +404,8 @@ void NMR_PFGSE::setThresholdFromLHSWindow(double _value, uint _window)
 		return;
 
 	vector<double> windowValues;
-	for(uint idx = 0; idx < _window; idx++) windowValues.push_back(this->LHS[idx]);
+	for(uint idx = 0; idx < _window; idx++) 
+		windowValues.push_back(this->LHS[idx]);
 	int idx = _window;
 	bool isGreater = true;
 	double logValue = log(_value);
