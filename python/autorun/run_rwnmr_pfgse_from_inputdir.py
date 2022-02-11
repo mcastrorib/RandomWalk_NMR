@@ -60,7 +60,12 @@ def run_rwnmr_pfgse(rwnmr_execpath, config_files, output_file, verbose=False):
 		# Write results in output file
 		lines = stdout.decode('utf-8').split('\n')
 		with open(output_file, 'w') as file:
-			file.writelines(lines)
+			write_line = False
+			for line in lines:
+				if(write_line == False and '>>> NMR SIMULATION 3D PARAMETERS:' in line):
+					write_line = True
+				if(write_line):
+					file.write(line+'\n')
 
 	except subprocess.CalledProcessError as e:
 	    print('exit code: {}'.format(e.returncode))
