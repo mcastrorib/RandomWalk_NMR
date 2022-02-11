@@ -80,6 +80,7 @@ void LeastSquareAdjust::solve()
 	(*this).computeA();
 	(*this).computeMeanSquaredResiduals();
 	(*this).setSolved(true);
+	cout << "LSA:: A: " << (*this).getA() << " B: " << (*this).getB() << endl;
 }    
 
 double LeastSquareAdjust::computeMean(vector<double> &_vector)
