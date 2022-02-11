@@ -608,7 +608,7 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 	}
 
 	(*this).applyThreshold();
-	cout << "points to sample: " << this->DsatAdjustSamples << endl;
+	cout << "points to sample: " << this->DsatAdjustSamples << " where lhs: " << exp(this->LHS[this->DsatAdjustSamples-1]) << endl;
 	vector<double> RHS_buffer; RHS_buffer.reserve(this->DsatAdjustSamples);
 	vector<double> LHS_buffer; LHS_buffer.reserve(this->DsatAdjustSamples);
 	// fill RHS data buffer only once
