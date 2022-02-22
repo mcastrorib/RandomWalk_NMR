@@ -14,14 +14,16 @@
 // Class header
 #include "LeastSquareAdjust.h"
 
-LeastSquareAdjust::LeastSquareAdjust(vector<double> &_x, vector<double> &_y): X(_x), 
+LeastSquareAdjust::LeastSquareAdjust(vector<double> &_x, vector<double> &_y, bool _intercept): X(_x), 
 															Y(_y),
+															intercept(_intercept),
 															meanX(0.0),
 															meanY(0.0),
 															A(0.0),
 															B(0.0),
 															residual(0.0),
-															solved(false)
+															solved(false),
+															verbose(false)
 {
 	this->begin = 0;
 	this->end = this->X.size();
@@ -80,7 +82,7 @@ void LeastSquareAdjust::solve()
 	(*this).computeA();
 	(*this).computeMeanSquaredResiduals();
 	(*this).setSolved(true);
-	cout << "LSA:: A: " << (*this).getA() << " B: " << (*this).getB() << endl;
+	if((*this).isVerbose()) cout << "LSA:: A: " << (*this).getA() << " B: " << (*this).getB() << endl;
 }    
 
 double LeastSquareAdjust::computeMean(vector<double> &_vector)
@@ -99,6 +101,12 @@ double LeastSquareAdjust::computeMean(vector<double> &_vector)
 
 void LeastSquareAdjust::computeB()
 {
+	if((*this).hasIntercept()) (*this).computeBWithIntercept();
+	else (*this).computeBWithoutIntercept();
+}
+
+void LeastSquareAdjust::computeBWithIntercept()
+{
 	// get B dividend
 	double dividend = 0.0;
 	for(uint idx = this->begin; idx < this->end; idx++)
@@ -116,9 +124,39 @@ void LeastSquareAdjust::computeB()
 	this->B = (dividend/divisor);
 }
 
+void LeastSquareAdjust::computeBWithoutIntercept()
+{
+	// get B dividend
+	double dividend = 0.0;
+	for(uint idx = this->begin; idx < this->end; idx++)
+	{
+		dividend += (this->X[idx] * this->Y[idx]);
+	}
+
+	// get B divisor
+	double divisor = 0.0;
+	for(uint idx = this->begin; idx < this->end; idx++)
+	{
+		divisor += (this->X[idx] * this->X[idx]);
+	}
+
+	this->B = (dividend/divisor);
+}
+
 void LeastSquareAdjust::computeA()
 {
+	if((*this).hasIntercept()) (*this).computeAWithIntercept();
+	else (*this).computeAWithoutIntercept();
+}
+
+void LeastSquareAdjust::computeAWithIntercept()
+{
 	this->A = this->meanY - (this->B * this->meanX);
+}
+
+void LeastSquareAdjust::computeAWithoutIntercept()
+{
+	this->A = 0.0;
 }
 
 void LeastSquareAdjust::computeMeanSquaredResiduals()

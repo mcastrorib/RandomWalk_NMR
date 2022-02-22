@@ -617,7 +617,8 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 		RHS_buffer.push_back(this->RHS[point]);
 		LHS_buffer.push_back(this->LHS[point]);
 	}
-	LeastSquareAdjust lsa(RHS_buffer, LHS_buffer);
+	bool intercept = false;
+	LeastSquareAdjust lsa(RHS_buffer, LHS_buffer, intercept);
 	lsa.setPoints(this->DsatAdjustSamples);
 	lsa.solve();
 	
@@ -904,7 +905,8 @@ void NMR_PFGSE::recoverDsatWithSampling()
 			LHS_buffer.push_back(LHS_samples[point][sample]);
 		}
 
-		LeastSquareAdjust lsa(RHS_buffer, LHS_buffer);
+		bool intercept = false;	
+		LeastSquareAdjust lsa(RHS_buffer, LHS_buffer, intercept);
 		lsa.setPoints(this->DsatAdjustSamples);
 		lsa.solve();
 		Dsat.push_back(lsa.getB());
