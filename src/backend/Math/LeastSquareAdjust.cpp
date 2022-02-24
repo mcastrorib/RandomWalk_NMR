@@ -23,7 +23,7 @@ LeastSquareAdjust::LeastSquareAdjust(vector<double> &_x, vector<double> &_y, boo
 															B(0.0),
 															residual(0.0),
 															solved(false),
-															verbose(false)
+															verbose(true)
 {
 	this->begin = 0;
 	this->end = this->X.size();
