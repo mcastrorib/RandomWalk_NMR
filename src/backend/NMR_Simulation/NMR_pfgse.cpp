@@ -1306,7 +1306,7 @@ void NMR_PFGSE::writeEchoes()
     file << "Idx,";
     file << "Gradient,";
     file << "NMR_signal(mean),NMR_signal(noise),NMR_signal(std),";
-    file << "SAT_lhs(mean), SAT_lhs(std),";
+    file << "SAT_lhs(mean),SAT_lhs(std),";
     file << "SAT_rhs" << endl;
 
     uint size = this->gradientPoints;
