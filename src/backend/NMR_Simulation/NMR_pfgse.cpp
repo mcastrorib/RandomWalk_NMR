@@ -1758,7 +1758,7 @@ double NMR_PFGSE::stdDev(double *_vec, int _size, double mean)
 
 vector<double> NMR_PFGSE::getNormalDistributionSamples(const double loc, const double std, const int size)
 {
-	std::default_random_engine generator(this->NMR.getInitialSeed());
+	std::default_random_engine generator(this->NMR.getInitialSeed() + (*this).getCurrentTime());
 	std::normal_distribution<double> distribution(loc, std);
 	vector<double> normal_dist;
 	normal_dist.reserve(size);
