@@ -551,7 +551,7 @@ double NMR_PFGSE::computeCurrentSNR()
 	if(this->Mkt.size() != this->rawNoise.size() or this->rawNoise.size() == 0)
 		return 0.0;
 
-	// sum of squared signal data
+	// sum of squared signal/noise data
 	double sss = 0.0;
 	double ssn = 0.0;
 	for(uint idx = 0; idx < (*this).getGradientPoints(); idx++)
@@ -607,7 +607,7 @@ void NMR_PFGSE::recoverDsat()
 
 void NMR_PFGSE::recoverDmsd()
 {
-	cout << "- Mean squared displacement (msd) " << endl;
+	cout << "- Mean squared displacement (msd) ";
 	double time = omp_get_wtime();
 
 	if(this->PFGSE_config.getAllowWalkerSampling())
