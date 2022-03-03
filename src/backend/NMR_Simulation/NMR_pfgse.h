@@ -25,7 +25,9 @@ public:
 	vector<double> gradient;
 	double gradient_max;
 	double noiseAmp;	
+	double targetSNR;
 	vector<double> rawNoise;
+
 
 	double gradient_X;
 	double gradient_Y;
@@ -75,6 +77,8 @@ public:
 	void setGradientVector(double _GF, int _GPoints);
 	void setGradientVector();
 	void createNoiseVector();
+	double computeTargetNoiseAmp();
+	double computeCurrentSNR();
 	void setVectorK();
 	void setVectorMkt();
 	void setVectorRHS();
@@ -140,6 +144,7 @@ public:
 	void setD_msd(double _value) { this->D_msd = _value; }
 	void setD_msd_StdDev(double _value) { this->D_msd_stdev = _value; }
 	void setNoiseAmp(double _amp) { this->noiseAmp = _amp; }
+	void setTargetSNR(double _snr) { this->targetSNR = _snr; }
 	
 	void setMsd(double _value) { this->msd = _value; }
 	void setMsdStdDev(double _value) { this->msd_stdev = _value; }	
@@ -182,6 +187,7 @@ public:
 	double getGiromagneticRatio() {return this->giromagneticRatio; }
 	bool getApplyBulkRelaxation() { return this->applyBulkRelaxation; }
 	double getNoiseAmp() { return this->noiseAmp; }
+	double getTargetSNR() { return this->targetSNR; }
 	double getD_sat() { return this->D_sat; }
 	double getD_sat_error() { return this->D_sat_error; }
 	double getD_sat_stdev() { return this->D_sat_stdev; }

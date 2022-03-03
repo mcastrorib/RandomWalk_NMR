@@ -71,6 +71,7 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	if(this->PFGSE_config.getUseWaveVectorTwoPi()) this->giromagneticRatio *= TWO_PI;
 	(*this).setApplyBulkRelaxation(this->PFGSE_config.getApplyBulk());
 	(*this).setNoiseAmp(this->PFGSE_config.getNoiseAmp());
+	(*this).setTargetSNR(this->PFGSE_config.getTargetSNR());
 	(*this).setThresholdFromSamples(this->gradientPoints);
 	(*this).setGradientVector();
 	(*this).setVectorK();
@@ -479,13 +480,13 @@ void NMR_PFGSE::runSequence()
 	// run pfgse experiment -- this method will fill Mkt vector
 	(*this).simulation();
 
-	// apply bulk relaxation to signal
+	// apply bulk relaxation to raw signal
 	if((*this).getApplyBulkRelaxation())
 	{
 		(*this).applyBulk();
 	}
 
-	// apply white noise to signal
+	// add white noise to raw signal
 	(*this).createNoiseVector();
 	if((*this).getNoiseAmp() > 0.0)
 	{
@@ -510,12 +511,54 @@ void NMR_PFGSE::createNoiseVector()
 	if(this->rawNoise.size() != (*this).getGradientPoints()) 
 		this->rawNoise.clear();
 
+	double noiseBasis;
+	if((*this).getTargetSNR() > 0.0) 
+	{
+		(*this).setNoiseAmp((*this).computeTargetNoiseAmp()); 
+		noiseBasis = 1.0;
+	} else 
+	{
+		noiseBasis = (double) this->NMR.getNumberOfWalkers(); 
+	}
+
 	this->rawNoise = getNormalDistributionSamples(0.0, 1.0, (*this).getGradientPoints());
-	double M0 = (double) this->NMR.getNumberOfWalkers(); 
 	for(int idx = 0; idx < (*this).getGradientPoints(); idx++)
 	{
-		this->rawNoise[idx] *= M0 * (*this).getNoiseAmp();
+		this->rawNoise[idx] *= noiseBasis * (*this).getNoiseAmp();
 	}
+
+	cout << "Noise:: Amp: " << (*this).getNoiseAmp();
+	cout << ", SNR: " << (*this).computeCurrentSNR() << endl;
+}
+
+double NMR_PFGSE::computeTargetNoiseAmp()
+{
+	// sum of squared signal data
+	double sss = 0.0;
+	for(uint idx = 0; idx < (*this).getGradientPoints(); idx++)
+	{
+		sss += this->Mkt[idx] * this->Mkt[idx];
+	}
+	sss /= (double) (*this).getGradientPoints();
+
+	return sqrt(sss/(*this).getTargetSNR());	
+}
+
+double NMR_PFGSE::computeCurrentSNR()
+{
+	if(this->Mkt.size() != this->rawNoise.size() or this->rawNoise.size() == 0)
+		return 0.0;
+
+	// sum of squared signal data
+	double sss = 0.0;
+	double ssn = 0.0;
+	for(uint idx = 0; idx < (*this).getGradientPoints(); idx++)
+	{
+		sss += this->Mkt[idx] * this->Mkt[idx];
+		ssn += this->rawNoise[idx] * this->rawNoise[idx];
+	}
+
+	return (sss/ssn);	
 }
 
 void NMR_PFGSE::applyNoiseToSignal()
