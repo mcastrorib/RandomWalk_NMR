@@ -465,8 +465,10 @@ void NMR_PFGSE::setVectorLHS()
 
 double NMR_PFGSE::computeLHS(double _Mg, double _M0)
 {
-	return log(fabs(_Mg/_M0));
-	// return log(fabs(_Mg));
+	double threshold = 1.0e-06;
+	double ratio = _Mg/_M0;
+	if(ratio > threshold) return log(ratio);
+	else return log(threshold);
 
 }
 
