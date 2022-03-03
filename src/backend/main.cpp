@@ -8,13 +8,17 @@
 // include interface header files
 #include "rwnmrApp.h"
 
+#include "myRNG.h"
+
 using namespace std;
 
 // Main program
 int main(int argc, char *argv[])
 {    	
-	rwnmrApp app(argc, argv, PROJECT_ROOT_DIR);
-	app.exec();
+	// rwnmrApp app(argc, argv, PROJECT_ROOT_DIR);
+	// app.exec();
 
+
+	cout << "RNG: " << myRNG::RNG_uint64() << endl;
     return 0;
 }
