@@ -14,7 +14,7 @@
 using namespace std;
 
 // default constructors
-pfgse_config::pfgse_config(const string configFile) : config_filepath(configFile)
+pfgse_config::pfgse_config(const string configFile) : config_filepath(configFile), THRESHOLD_WINDOW(1), NOISE_AMP(0.0), TARGET_SNR(-1.0)
 {
     vector<double> TIME_VALUES();
 
@@ -48,6 +48,7 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
 
     // --- Threshold application for D(t) recovering.
     this->NOISE_AMP = otherConfig.NOISE_AMP;
+    this->TARGET_SNR = otherConfig.TARGET_SNR;
     this->THRESHOLD_TYPE = otherConfig.THRESHOLD_TYPE;
     this->THRESHOLD_VALUE = otherConfig.THRESHOLD_VALUE;
     this->THRESHOLD_WINDOW = otherConfig.THRESHOLD_WINDOW;
@@ -104,6 +105,7 @@ void pfgse_config::readConfigFile(const string configFile)
             else if(token == "TIME_MAX") (*this).readTimeMax(content);
             else if(token == "APPLY_SCALE_FACTOR") (*this).readApplyScaleFactor(content);
             else if(token == "NOISE_AMP") (*this).readNoiseAmp(content);
+            else if(token == "TARGET_SNR") (*this).readTargetSNR(content);
             else if(token == "INSPECTION_LENGTH") (*this).readInspectionLength(content);
             else if(token == "THRESHOLD_TYPE") (*this).readThresholdType(content);
             else if(token == "THRESHOLD_VALUE") (*this).readThresholdValue(content);
@@ -263,7 +265,14 @@ void pfgse_config::readInspectionLength(string s)
 
 void pfgse_config::readNoiseAmp(string s)
 {
-    this->NOISE_AMP = std::stod(s);
+    double amp = std::stod(s);
+    if(amp > 0.0) this->NOISE_AMP = amp;
+}
+
+void pfgse_config::readTargetSNR(string s)
+{
+    double snr = std::stod(s);
+    if(snr > 0.0) this->TARGET_SNR = snr;
 }
 
 void pfgse_config::readThresholdType(string s)

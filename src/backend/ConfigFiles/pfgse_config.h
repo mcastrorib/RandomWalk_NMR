@@ -33,6 +33,7 @@ public:
 
     // --- Threshold application for D(t) recovering.
     double NOISE_AMP;
+    double TARGET_SNR;
     string THRESHOLD_TYPE;
     double THRESHOLD_VALUE;
     uint THRESHOLD_WINDOW;
@@ -81,6 +82,7 @@ public:
     void readApplyScaleFactor(string s);
     void readInspectionLength(string s);
     void readNoiseAmp(string s);
+    void readTargetSNR(string s);
     void readThresholdType(string s);
     void readThresholdValue(string s);
     void readThresholdWindow(string s);
@@ -109,6 +111,7 @@ public:
     bool getApplyScaleFactor() { return this->APPLY_SCALE_FACTOR; }
     double getInspectionLength() { return this->INSPECTION_LENGTH; }
     double getNoiseAmp() { return this->NOISE_AMP; }
+    double getTargetSNR() { return this->TARGET_SNR; }
     string getThresholdType() { return this->THRESHOLD_TYPE; }
     double getThresholdValue() { return this->THRESHOLD_VALUE; }
     uint getThresholdWindow() { return this->THRESHOLD_WINDOW; }
