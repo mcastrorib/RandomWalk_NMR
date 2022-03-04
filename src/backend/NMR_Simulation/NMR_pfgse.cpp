@@ -537,13 +537,16 @@ double NMR_PFGSE::computeTargetNoiseAmp()
 {
 	// sum of squared signal data
 	double sss = 0.0;
+	double uss = 0.0;
 	for(uint idx = 0; idx < (*this).getGradientPoints(); idx++)
 	{
 		sss += this->Mkt[idx] * this->Mkt[idx];
+		uss += this->Mkt[idx];
 	}
 	sss /= (double) (*this).getGradientPoints();
+	uss /= (double) (*this).getGradientPoints();
 
-	return sqrt(sss/(*this).getTargetSNR());	
+	return sqrt((sss - uss*uss)/(*this).getTargetSNR());	
 }
 
 double NMR_PFGSE::computeCurrentSNR()
