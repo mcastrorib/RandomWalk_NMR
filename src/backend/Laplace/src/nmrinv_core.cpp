@@ -3,7 +3,21 @@
 
 vector<double> get_normal_distribution(const double loc, const double std, const int size)
 {
-	std::default_random_engine generator;
+	std::random_device rd;
+    unsigned seed;
+
+    // check if the implementation provides a usable random_device
+    if (0 != rd.entropy())
+    {
+       seed = rd();
+    }
+    else
+    {
+       // no random_device available, seed using the system clock
+       seed = static_cast<unsigned> (std::chrono::system_clock::now().time_since_epoch().count());
+    }
+
+	std::default_random_engine generator(seed);
 	std::normal_distribution<double> distribution(loc, std);
 	vector<double> normal_dist;
 	normal_dist.reserve(size);

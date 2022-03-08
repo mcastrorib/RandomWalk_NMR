@@ -65,7 +65,8 @@ The other functions are for internal operations or other specific things used in
 
 #include <tuple>
 #include <time.h>
-#include <random>
+#include <random> 
+#include <chrono>
 #include "NNLS.hpp"
 #include "TikhonovSolver.h"
 
