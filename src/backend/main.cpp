@@ -16,5 +16,5 @@ int main(int argc, char *argv[])
 	rwnmrApp app(argc, argv, PROJECT_ROOT_DIR);
 	app.exec();
 
-    return 0;
+	return 0;
 }

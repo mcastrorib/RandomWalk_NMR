@@ -9,6 +9,7 @@
 
 #include "NMR_defs.h"
 #include "NMR_Simulation.h"
+#include "InternalField.h"
 #include "../Walker/walker.h"
 #include "../Math/Vector3D.h"
 
@@ -31,6 +32,7 @@ public:
     vector<double> T2_amps;
     vector<double> noise;
     double *penalties;
+    InternalField *internalField;
     
 
 
@@ -45,6 +47,12 @@ public:
         {
             delete[] this->penalties;
             this->penalties = NULL;
+        }
+
+        if(this->internalField != NULL)
+        {
+        	delete internalField;
+        	this->internalField = NULL;
         }
 	};
 
@@ -70,6 +78,7 @@ public:
 	void setExposureTime(double _value){ this->exposureTime = _value; }
 	void setApplyBulkRelaxation(bool _bulk){ this->applyBulkRelaxation = _bulk; }
     void setMethod(string _method){ this->method = _method; }
+    void setInternalField(string _mode);
 	
     // -- Get methods
 	double getExposureTime() { return this->exposureTime; }

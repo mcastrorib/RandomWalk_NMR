@@ -7,6 +7,7 @@ add_library(NMR_Simulation
 			NMR_Simulation_cuda.cpp 
 			CollisionHistogram.cpp 
 			ChordLengthHistogram.cpp
+			InternalField.cpp
 			NMR_cpmg.cpp
 			NMR_cpmg_cuda.cpp
 			NMR_pfgse.cpp
@@ -44,6 +45,7 @@ install(TARGETS NMR_Simulation DESTINATION lib)
 install(FILES 
 		CollisionHistogram.h
 		ChordLengthHistogram.h
+		InternalField.h
 		NMR_Simulation.h 
 		NMR_Simulation_cuda.h 
 		NMR_cpmg.h

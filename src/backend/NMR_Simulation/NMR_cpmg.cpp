@@ -28,7 +28,8 @@ NMR_cpmg::NMR_cpmg( NMR_Simulation &_NMR,
                                         CPMG_config(_cpmgConfig),
                                         mpi_rank(_mpi_rank),
                                         mpi_processes(_mpi_processes),
-                                        penalties(NULL)
+                                        penalties(NULL),
+                                        internalField(NULL)
 {
 	// vectors object init
     vector<double> signal_amps();
@@ -40,7 +41,20 @@ NMR_cpmg::NMR_cpmg( NMR_Simulation &_NMR,
     (*this).setExposureTime(this->CPMG_config.getObservationTime());
     (*this).setApplyBulkRelaxation(this->CPMG_config.getApplyBulk());
     (*this).setMethod(this->CPMG_config.getMethod());
+    (*this).setInternalField(this->CPMG_config.getResidualField());
     (*this).set();
+}
+
+void NMR_cpmg::setInternalField(string _mode)
+{
+    if(_mode == "uniform")
+    {
+        this->internalField = new InternalField(this->NMR.bitBlock, this->CPMG_config.getPoreField(), this->CPMG_config.getMatField());
+    } 
+    else if(_mode == "import")
+    {
+        this->internalField = new InternalField(this->CPMG_config.getPathToField());
+    } 
 }
 
 void NMR_cpmg::set()
