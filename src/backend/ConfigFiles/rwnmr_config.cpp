@@ -33,6 +33,7 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
     this->PLACEMENT_DEVIATION = otherConfig.PLACEMENT_DEVIATION;
     this->RHO_TYPE = otherConfig.RHO_TYPE;
     this->RHO = otherConfig.RHO;
+    this->GIROMAGNETIC_RATIO = otherConfig.GIROMAGNETIC_RATIO;
     this->D0 = otherConfig.D0; 
     this->BULK_TIME = otherConfig.BULK_TIME;
     this->STEPS_PER_ECHO = otherConfig.STEPS_PER_ECHO;
@@ -106,6 +107,7 @@ void rwnmr_config::readConfigFile(const string configFile)
 			else if(token == "RHO_TYPE") (*this).readRhoType(content);
 			else if(token == "RHO") (*this).readRho(content);
 			else if(token == "STEPS_PER_ECHO") (*this).readStepsPerEcho(content);
+			else if(token == "GIROMAGNETIC_RATIO")	(*this).readGiromagneticRatio(content);
 			else if(token == "D0") (*this).readD0(content);
 			else if(token == "BULK_TIME") (*this).readBulkTime(content);
 			else if(token == "SEED") (*this).readSeed(content);
@@ -193,6 +195,11 @@ void rwnmr_config::readRho(string s) // vector?
 		{
 			this->RHO.push_back(std::stod(s));
 		}		
+}
+
+void rwnmr_config::readGiromagneticRatio(string s)
+{
+	this->GIROMAGNETIC_RATIO = std::stod(s);
 }
 
 void rwnmr_config::readD0(string s)

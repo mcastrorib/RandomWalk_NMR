@@ -31,6 +31,11 @@ cpmg_config::cpmg_config(const cpmg_config &otherConfig)
     this->METHOD = otherConfig.METHOD;
     this->TIME_VERBOSE = otherConfig.TIME_VERBOSE;
 
+    this->RESIDUAL_FIELD = otherConfig.RESIDUAL_FIELD;
+    this->PORE_FIELD = otherConfig.PORE_FIELD;
+    this->MAT_FIELD = otherConfig.MAT_FIELD;
+    this->PATH_TO_FIELD = otherConfig.PATH_TO_FIELD;
+
     this->MIN_T2 = otherConfig.MIN_T2;
     this->MAX_T2 = otherConfig.MAX_T2;
     this->USE_T2_LOGSPACE = otherConfig.USE_T2_LOGSPACE;
@@ -81,7 +86,11 @@ void cpmg_config::readConfigFile(const string configFile)
             else if(token == "APPLY_BULK") (*this).readApplyBulk(content);  
 			else if(token == "OBS_TIME") (*this).readObservationTime(content);  
             else if(token == "METHOD") (*this).readMethod(content);
-            else if(token == "TIME_VERBOSE") (*this).readTimeVerbose(content);            
+            else if(token == "TIME_VERBOSE") (*this).readTimeVerbose(content);
+            else if(token == "RESIDUAL_FIELD") (*this).readResidualField(content);
+            else if(token == "PORE_FIELD") (*this).readPoreField(content);
+            else if(token == "MAT_FIELD") (*this).readMatField(content);
+            else if(token == "PATH_TO_FIELD") (*this).readPathToField(content);            
             else if(token == "MIN_T2") (*this).readMinT2(content);
             else if(token == "MAX_T2") (*this).readMaxT2(content);
             else if(token == "USE_T2_LOGSPACE") (*this).readUseT2Logspace(content);
@@ -129,6 +138,27 @@ void cpmg_config::readObservationTime(string s)
 void cpmg_config::readMethod(string s)
 {
     this->METHOD = s;
+}
+
+void cpmg_config::readResidualField(string s)
+{
+    if(s == "uniform" or s == "import") this->RESIDUAL_FIELD = s;
+    else this->RESIDUAL_FIELD = "none";
+}
+
+void cpmg_config::readPoreField(string s)
+{
+    this->PORE_FIELD = std::stod(s);
+}
+
+void cpmg_config::readMatField(string s)
+{
+    this->MAT_FIELD = std::stod(s);
+}
+
+void cpmg_config::readPathToField(string s)
+{
+    this->RESIDUAL_FIELD = "none";
 }
 
 void cpmg_config::readMinT2(string s)

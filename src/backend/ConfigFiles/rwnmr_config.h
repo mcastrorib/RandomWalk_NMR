@@ -21,6 +21,7 @@ public:
     string RHO_TYPE;
     vector<double> RHO;
     double D0;
+    double GIROMAGNETIC_RATIO;
     double BULK_TIME; 
     uint STEPS_PER_ECHO;
     uint64_t SEED;
@@ -83,6 +84,7 @@ public:
     void readRhoType(string s);
     void readRho(string s); 
     void readD0(string s); 
+    void readGiromagneticRatio(string s);    
     void readBulkTime(string s);
     void readStepsPerEcho(string s);
     void readSeed(string s);
@@ -128,7 +130,8 @@ public:
     string getWalkersPlacement(){ return this->WALKERS_PLACEMENT;}
     uint getPlacementDeviation(){ return this->PLACEMENT_DEVIATION;}
     string getRhoType(){ return this->RHO_TYPE;}
-    vector<double> getRho(){ return this->RHO;}
+    vector<double> getRho(){ return this->RHO;} 
+    double getGiromagneticRatio() { return this->GIROMAGNETIC_RATIO; }
     double getD0(){ return this->D0;}
     double getBulkTime(){ return this->BULK_TIME; }
     uint getStepsPerEcho(){ return this->STEPS_PER_ECHO;}

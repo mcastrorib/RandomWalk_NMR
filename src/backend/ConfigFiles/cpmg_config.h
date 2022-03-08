@@ -20,6 +20,12 @@ public:
     string METHOD;
     bool TIME_VERBOSE;
 
+    // --- Diffusive relaxation.
+    string RESIDUAL_FIELD;
+    double PORE_FIELD;
+    double MAT_FIELD;
+    string PATH_TO_FIELD;
+
     // LAPLACE INVERSION
     double MIN_T2;
     double MAX_T2;
@@ -63,6 +69,12 @@ public:
     void readObservationTime(string s);
     void readMethod(string s);
 
+    void readResidualField(string s);
+    void readPoreField(string s);
+    void readMatField(string s);
+    void readPathToField(string s);
+
+
     void readMinT2(string s);
     void readMaxT2(string s);
     void readUseT2Logspace(string s);
@@ -88,6 +100,11 @@ public:
     bool getTimeVerbose(){ return this->TIME_VERBOSE; }
     double getObservationTime(){return this->OBS_TIME; }
     string getMethod() { return this->METHOD; }
+
+    string getResidualField() { return this->RESIDUAL_FIELD; }
+    double getPoreField() { return this->PORE_FIELD; }
+    double getMatField() { return this->MAT_FIELD; }
+    string getPathToField() { return this->PATH_TO_FIELD; }
 
     double getMinT2(){ return this->MIN_T2; }
     double getMaxT2(){ return this->MAX_T2; }
