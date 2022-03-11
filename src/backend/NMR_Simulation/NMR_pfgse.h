@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <random>
 
 // include configuration file classes
 #include "../ConfigFiles/pfgse_config.h"
@@ -77,6 +78,7 @@ public:
 	void setGradientVector(double _GF, int _GPoints);
 	void setGradientVector();
 	void createNoiseVector();
+	vector<double> getNewNoiseVector(double _noiseAmp, uint _size = 0);
 	double computeTargetNoiseAmp();
 	double computeCurrentSNR();
 	void setVectorK();
@@ -95,6 +97,7 @@ public:
 	double ** computeSamplesMagnitude();
 	double ** computeSamplesMagnitudeWithOmp();
 	double ** computeSamplesMagnitudeWithGpu();
+	double ** computeSamplesNoise();
 	void computeMktSmallPopulation(double **Mkt_samples, bool time_verbose);
 	void computeMktSmallPopulation2(double **Mkt_samples, bool time_verbose);
 	void computeMktSmallSamples(double **Mkt_samples, bool time_verbose);
@@ -203,6 +206,7 @@ public:
 	
 
 private:
+	static std::mt19937 _rng;
 	int mpi_rank;
 	int mpi_processes;
 

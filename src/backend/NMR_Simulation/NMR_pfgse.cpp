@@ -25,6 +25,8 @@
 using namespace cv;
 using namespace std;
 
+std::mt19937 NMR_PFGSE::_rng;
+
 NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,  
 				     pfgse_config _pfgseConfig,
 					 int _mpi_rank,
@@ -47,6 +49,10 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 										   mpi_rank(_mpi_rank),
 										   mpi_processes(_mpi_processes)
 {
+	// Initialize random state
+	NMR_PFGSE::_rng.seed(this->NMR.getInitialSeed());
+	NMR_PFGSE::_rng.discard(4096);
+
 	// vectors object init
 	vector<double> exposureTimes();
 	vector<double> gradient();
@@ -132,6 +138,7 @@ void NMR_PFGSE::applyThreshold()
 	string threshold_type = this->PFGSE_config.getThresholdType();
 	double threshold_value = this->PFGSE_config.getThresholdValue();
 	uint threshold_window = this->PFGSE_config.getThresholdWindow();
+	if(threshold_window > (*this).getGradientPoints()) threshold_window = (*this).getGradientPoints();
 	if(threshold_type == "lhs") (*this).setThresholdFromLHS(threshold_value, threshold_window);
 	else if(threshold_type == "samples") (*this).setThresholdFromSamples(int(threshold_value));
 	else (*this).setThresholdFromSamples(this->gradientPoints);
@@ -236,9 +243,6 @@ void NMR_PFGSE::correctExposureTimes()
 
 void NMR_PFGSE::setName()
 {
-	// this->name = "/NMR_pfgse_timesample_" + std::to_string((*this).getCurrentTime());
-
-	// new
 	this->name = "/NMR_pfgse";
 }
 
@@ -508,6 +512,14 @@ void NMR_PFGSE::applyBulk()
 	}
 }
 
+vector<double> NMR_PFGSE::getNewNoiseVector(double _noiseAmp, uint _size)
+{
+	vector<double> newNoise;
+	if(_size == 0) newNoise = getNormalDistributionSamples(0.0, _noiseAmp, (*this).getGradientPoints());
+	else newNoise = getNormalDistributionSamples(0.0, _noiseAmp, _size);
+	return newNoise;
+}
+
 void NMR_PFGSE::createNoiseVector()
 {
 	if(this->rawNoise.size() != (*this).getGradientPoints()) 
@@ -523,12 +535,8 @@ void NMR_PFGSE::createNoiseVector()
 		noiseBasis = (double) this->NMR.getNumberOfWalkers(); 
 	}
 
-	this->rawNoise = getNormalDistributionSamples(0.0, 1.0, (*this).getGradientPoints());
-	for(int idx = 0; idx < (*this).getGradientPoints(); idx++)
-	{
-		this->rawNoise[idx] *= noiseBasis * (*this).getNoiseAmp();
-	}
-
+	this->rawNoise = getNewNoiseVector(0.0, noiseBasis * (*this).getNoiseAmp());
+	
 	cout << "Noise:: Amp: " << (*this).getNoiseAmp();
 	cout << ", SNR: " << (*this).computeCurrentSNR() << endl;
 }
@@ -818,6 +826,49 @@ double ** NMR_PFGSE::computeSamplesMagnitude()
 	return Mkt_samples;
 }
 
+double ** NMR_PFGSE::computeSamplesNoise()
+{
+	/* 
+		alloc table for Mkt data each row will represent a wavevector K value, 
+		while each column represent a sample of random walkers
+	*/
+	double **Mkt_noise;
+	Mkt_noise = new double*[(*this).getGradientPoints()];
+	for(uint kIdx = 0; kIdx < (*this).getGradientPoints(); kIdx++)
+	{
+		Mkt_noise[kIdx] = new double[this->NMR.getWalkerSamples()];
+	}
+
+	/*
+		initialize each element in table with zeros
+	*/
+	for(uint kIdx = 0; kIdx < this->getGradientPoints(); kIdx++)
+	{
+		for(int sample = 0; sample < this->NMR.getWalkerSamples(); sample++)
+		{
+			Mkt_noise[kIdx][sample] = 0.0;
+		}
+	}	
+
+	if((*this).getNoiseAmp() > 0.0)
+	{
+		// this factor is applied beacuse of the decreased magnetization Mkt
+		double M0 = (double) this->NMR.getNumberOfWalkers() / (double) this->NMR.getWalkerSamples();
+		
+		
+		for(int sample = 0; sample < this->NMR.getWalkerSamples(); sample++)
+		{
+			vector<double> noise = (*this).getNewNoiseVector(M0 * (*this).getNoiseAmp());
+			for(uint kIdx = 0; kIdx < this->getGradientPoints(); kIdx++)
+			{
+				Mkt_noise[kIdx][sample] = noise[kIdx];
+			}
+		}	
+	}
+
+	return Mkt_noise;	
+}
+
 void NMR_PFGSE::recoverDsatWithSampling()
 {
 	bool time_verbose = false;
@@ -828,8 +879,9 @@ void NMR_PFGSE::recoverDsatWithSampling()
 		Compute magnitude Mkt for each sample of walkers
 	*/
 	tick = omp_get_wtime();
-	double **Mkt_samples;
+	double **Mkt_samples, **Mkt_noise;
 	Mkt_samples = (*this).getSamplesMagnitude();	
+	Mkt_noise = (*this).computeSamplesNoise();
 	phaseTime = omp_get_wtime() - tick;
 
 
@@ -852,13 +904,11 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	// Add noise to signal
 	if((*this).getNoiseAmp() > 0.0)
 	{
-		// this factor is applied beacuse of the decreased magnetization Mkt
-		double M0 = 1.0 / ((double) this->NMR.walkerSamples);
-		for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
+		for(uint sample = 0; sample < this->NMR.walkerSamples; sample++)
 		{
 			for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 			{
-				Mkt_samples[kIdx][sample] += M0 * this->rawNoise[kIdx];
+				Mkt_samples[kIdx][sample] += Mkt_noise[kIdx][sample];
 			}
 		}	
 	}
@@ -905,12 +955,14 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	tick = omp_get_wtime();
 	vector<double> meanMkt; meanMkt.reserve(this->gradientPoints);
 	vector<double> stDevMkt; stDevMkt.reserve(this->gradientPoints);
+	vector<double> meanNoise; meanNoise.reserve(this->gradientPoints);
 	vector<double> meanLHS; meanLHS.reserve(this->gradientPoints);
 	vector<double> stDevLHS; stDevLHS.reserve(this->gradientPoints);
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 	{
 		meanMkt.push_back((*this).mean(Mkt_samples[kIdx], this->NMR.walkerSamples));
 		stDevMkt.push_back((*this).stdDev(Mkt_samples[kIdx], this->NMR.walkerSamples, meanMkt[kIdx]));
+		meanNoise.push_back((*this).mean(Mkt_noise[kIdx], this->NMR.walkerSamples));
 		meanLHS.push_back((*this).mean(LHS_samples[kIdx], this->NMR.walkerSamples));
 		stDevLHS.push_back((*this).stdDev(LHS_samples[kIdx], this->NMR.walkerSamples, meanLHS[kIdx]));
 	}
@@ -920,6 +972,7 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	// copy data to class members
 	this->Mkt = meanMkt;
 	this->Mkt_stdev = stDevMkt;
+	this->rawNoise = meanNoise;
 	this->LHS = meanLHS;
 	this->LHS_stdev = stDevLHS;
 
@@ -972,9 +1025,9 @@ void NMR_PFGSE::recoverDsatWithSampling()
 
 	// log results	
 	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat();
-	cout << " +/- " << 1.96 * (*this).getD_sat_error();
-	cout << " [+/- " << (*this).getD_sat_stdev() << "]"<< endl;
-
+	cout << " +/- " << (*this).getD_sat_stdev();
+	cout << " [+/- " << 1.96 * (*this).getD_sat_error() << "]" << endl;
+	
 	if(time_verbose)
     {
         cout << "--- Time analysis ---" << endl;
@@ -996,7 +1049,16 @@ void NMR_PFGSE::recoverDsatWithSampling()
 		Mkt_samples[kIdx] = NULL;
 	}
 	delete [] Mkt_samples;
-	Mkt_samples = NULL; 
+	Mkt_samples = NULL;
+
+	// free data for Mkt_noise
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		delete [] Mkt_noise[kIdx];
+		Mkt_noise[kIdx] = NULL;
+	}
+	delete [] Mkt_noise;
+	Mkt_noise = NULL; 
 
 	// free data for LHS_samples
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
@@ -1806,13 +1868,12 @@ double NMR_PFGSE::stdDev(double *_vec, int _size, double mean)
 
 vector<double> NMR_PFGSE::getNormalDistributionSamples(const double loc, const double std, const int size)
 {
-	std::default_random_engine generator(this->NMR.getInitialSeed() + (*this).getCurrentTime());
+	vector<double> randomData;
+	randomData.reserve(size);
 	std::normal_distribution<double> distribution(loc, std);
-	vector<double> normal_dist;
-	normal_dist.reserve(size);
 	for (int i = 0; i < size; i++)
 	{
-		normal_dist.emplace_back(distribution(generator));
+		randomData.emplace_back(distribution(NMR_PFGSE::_rng));
 	}
-	return normal_dist;
+	return randomData;
 }
