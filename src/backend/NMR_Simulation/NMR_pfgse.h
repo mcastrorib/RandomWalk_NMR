@@ -210,6 +210,7 @@ private:
 	int mpi_rank;
 	int mpi_processes;
 
+	
 	void simulation_cuda();
 	void simulation_omp();
 	double sum(vector<double> &_vec);
