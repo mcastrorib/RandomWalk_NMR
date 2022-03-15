@@ -89,7 +89,8 @@ public:
     void setThresholdFromLHSWindow(double _value, uint _window=5);
     void setThresholdFromSamples(int _samples);
     void applyThreshold();
-	double computeRHS(double _Gvalue);
+	double computeRHS_legacy(double _Gvalue);
+	double computeRHS(double _kValue);
 	void setVectorLHS();
 	double computeLHS(double _Mg, double _M0);
 	double computeWaveVectorK(double gradientMagnitude, double pulse_width, double giromagneticRatio);

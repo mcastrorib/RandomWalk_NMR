@@ -356,7 +356,8 @@ void NMR_PFGSE::setVectorRHS()
 
 	for(uint idx = 0; idx < this->gradientPoints; idx++)
 	{
-		double rhs = (*this).computeRHS(this->gradient[idx]);
+		double rhs = (*this).computeRHS(this->vecK[idx].getNorm());
+		// double rhs = (*this).computeRHS_legacy(this->gradient[idx]);
 		this->RHS.push_back(rhs);
 	}
 }
@@ -448,10 +449,15 @@ void NMR_PFGSE::setThresholdFromSamples(int _samples)
 }
 
 
-double NMR_PFGSE::computeRHS(double _Gvalue)
+double NMR_PFGSE::computeRHS(double _kValue)
+{
+	return (-1.0) * _kValue * _kValue * (this->exposureTime - ((this->pulseWidth) / 3.0));  
+}
+
+double NMR_PFGSE::computeRHS_legacy(double _Gvalue)
 {
 	double gamma = this->giromagneticRatio;
-	if(this->PFGSE_config.getUseWaveVectorTwoPi()) gamma *= TWO_PI;
+	// if(this->PFGSE_config.getUseWaveVectorTwoPi()) gamma *= TWO_PI;
 	
 	return (-1.0e-10) * (gamma * this->pulseWidth) * (gamma * this->pulseWidth) 
 			* (this->exposureTime - ((this->pulseWidth) / 3.0)) 
@@ -684,7 +690,7 @@ void NMR_PFGSE::recoverDsatWithoutSampling()
 
 	// log results
 	cout << "D(" << (*this).getExposureTime((*this).getCurrentTime()) << " ms) {s&t} = " << (*this).getD_sat();
-	cout << " +/- " << 1.96 * (*this).getD_sat_error() << endl;	
+	cout << "[+/- " << 1.96 * (*this).getD_sat_error() << "]" << endl;	
 }
 
 double ** NMR_PFGSE::getSamplesMagnitude()
@@ -914,12 +920,24 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	}
 
 	// Normalize for k=0
+	/* 
+		alloc table for normalized Mkt data
+		each row will represent a wavevector K value, 
+		while each column represent a sample of random walkers
+	*/
+	double **nMkt_samples;
+	nMkt_samples = new double*[this->gradientPoints];
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		nMkt_samples[kIdx] = new double[this->NMR.walkerSamples];
+	}
+
 	for(int sample = 0; sample < this->NMR.walkerSamples; sample++)
 	{
 		double M0 = Mkt_samples[0][sample];
 		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 		{
-			Mkt_samples[kIdx][sample] /= M0;
+			nMkt_samples[kIdx][sample] = Mkt_samples[kIdx][sample] / M0;
 		}
 	}	
 	normTime = omp_get_wtime() - tick;
@@ -944,7 +962,7 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	{
 		for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
 		{	
-			LHS_samples[kIdx][sample] = (*this).computeLHS(Mkt_samples[kIdx][sample], Mkt_samples[0][sample]);
+			LHS_samples[kIdx][sample] = (*this).computeLHS(nMkt_samples[kIdx][sample], nMkt_samples[0][sample]);
 		}
 	}
 	lhsTime = omp_get_wtime() - tick;
@@ -1050,6 +1068,15 @@ void NMR_PFGSE::recoverDsatWithSampling()
 	}
 	delete [] Mkt_samples;
 	Mkt_samples = NULL;
+
+	// free data for nMkt_samples
+	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
+	{
+		delete [] nMkt_samples[kIdx];
+		nMkt_samples[kIdx] = NULL;
+	}
+	delete [] nMkt_samples;
+	nMkt_samples = NULL;
 
 	// free data for Mkt_noise
 	for(uint kIdx = 0; kIdx < this->gradientPoints; kIdx++)
@@ -1647,8 +1674,7 @@ void NMR_PFGSE::simulation_omp()
 
     // set derivables
     double gamma = this->giromagneticRatio;
-    if(!this->PFGSE_config.getUseWaveVectorTwoPi()) gamma /= TWO_PI;
-
+    
 	myAllocator arrayFactory; 
 	double *globalPhase = arrayFactory.getDoubleArray(this->gradientPoints);
     double globalEnergy = 0.0;
