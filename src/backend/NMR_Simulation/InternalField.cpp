@@ -14,16 +14,16 @@
 
 using namespace std;
 
-InternalField::InternalField(BitBlock &_bitblock, double _poreValue, double _matValue) : dimX(0), 
-																						 dimY(0), 
-																						 dimZ(0),
-																						 rowScale(0),
-																						 depthScale(0), 
-																						 data(NULL)
+InternalField::InternalField(BitBlock &_bitblock, double _resolution, double _gradient, int _direction) : dimX(0), 
+																											 dimY(0), 
+																											 dimZ(0), 
+																											 rowScale(0), 
+																											 depthScale(0), 
+																											 data(NULL)
 {
 	(*this).setDims(_bitblock.imageColumns, _bitblock.imageRows, _bitblock.imageDepth);
 	(*this).allocDataArray();
-	(*this).fillDataArray(_bitblock, _poreValue, _matValue);
+	(*this).fillDataArray(_bitblock, _resolution, _gradient, _direction);
 }
 
 InternalField::InternalField(string _file) : dimX(0), 
@@ -84,28 +84,43 @@ void InternalField::allocDataArray()
 	this->data = new double[size];
 }
 
-void InternalField::fillDataArray(BitBlock &_bitblock, double _poreValue, double _matValue)
+void InternalField::fillDataArray(BitBlock &_bitblock, double _resolution, double _gValue, int _gDirection)
 {
+	double dGx = 0;
+	double dGy = 0;
+	double dGz = 0;
+	if(_gDirection == 0) dGx = _gValue / (1.0e6 * _resolution);
+	if(_gDirection == 1) dGy = _gValue / (1.0e6 * _resolution);
+	if(_gDirection == 2) dGz = _gValue / (1.0e6 * _resolution);
+	
+	double initialValue = 0.0;
+	double currentValue;
 	double newValue;
 	long currentIndex;
 	
+	currentValue = initialValue;
 	for(int z = 0; z < (*this).getDimZ(); z++)
 	{
+		if(_gDirection == 2)
+			currentValue = z*dGz;
+
 		for(int y = 0; y < (*this).getDimY(); y++)
 		{
+			if(_gDirection == 1) 
+				currentValue = y*dGy;		
+			
 			for(int x = 0; x < (*this).getDimX(); x++)
 			{
-				
+				if(_gDirection == 0) 
+					currentValue = x*dGx;
+		
 				int block = _bitblock.findBlock(x, y, z);
 				int bit = _bitblock.findBitInBlock(x, y, z);
 				if(_bitblock.checkIfBitIsWall(block, bit))
-				{
-					newValue = _matValue;
-				} else
-				{
-					newValue = _poreValue;
-				}
-				
+					newValue = 0.0;
+				else
+					newValue = currentValue;
+								
 				currentIndex = (*this).getIndex(x, y, z);
 				(*this).fillData(currentIndex, newValue);
 			}

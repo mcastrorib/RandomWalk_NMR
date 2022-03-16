@@ -49,7 +49,10 @@ void NMR_cpmg::setInternalField(string _mode)
 {
     if(_mode == "uniform")
     {
-        this->internalField = new InternalField(this->NMR.bitBlock, this->CPMG_config.getPoreField(), this->CPMG_config.getMatField());
+        this->internalField = new InternalField(this->NMR.bitBlock, 
+                                                this->NMR.getImageResolution(), 
+                                                this->CPMG_config.getGradientValue(), 
+                                                this->CPMG_config.getGradientDirection());
     } 
     else if(_mode == "import")
     {

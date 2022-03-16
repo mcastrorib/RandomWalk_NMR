@@ -22,8 +22,8 @@ public:
 
     // --- Diffusive relaxation.
     string RESIDUAL_FIELD;
-    double PORE_FIELD;
-    double MAT_FIELD;
+    double GRADIENT_VALUE;
+    int GRADIENT_DIRECTION;
     string PATH_TO_FIELD;
 
     // LAPLACE INVERSION
@@ -70,8 +70,8 @@ public:
     void readMethod(string s);
 
     void readResidualField(string s);
-    void readPoreField(string s);
-    void readMatField(string s);
+    void readGradientValue(string s);
+    void readGradientDirection(string s);
     void readPathToField(string s);
 
 
@@ -102,8 +102,8 @@ public:
     string getMethod() { return this->METHOD; }
 
     string getResidualField() { return this->RESIDUAL_FIELD; }
-    double getPoreField() { return this->PORE_FIELD; }
-    double getMatField() { return this->MAT_FIELD; }
+    double getGradientValue() { return this->GRADIENT_VALUE; }
+    int getGradientDirection() { return this->GRADIENT_DIRECTION; }
     string getPathToField() { return this->PATH_TO_FIELD; }
 
     double getMinT2(){ return this->MIN_T2; }

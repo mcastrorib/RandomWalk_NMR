@@ -15,7 +15,7 @@ public:
 	double *data;
 	
 	InternalField(string _file);
-	InternalField(BitBlock &_bitblock, double _poreVal, double _matVal);
+	InternalField(BitBlock &_bitblock, double _resolution, double _gradient, int _direction);
 	InternalField(const InternalField &_other);
 	virtual ~InternalField()
 	{
@@ -51,7 +51,7 @@ private:
 	void setLinearDepthScale();
 	void setDims(int _x, int _y, int _z);
 	void allocDataArray();
-	void fillDataArray(BitBlock &_bitblock, double _poreVal, double _matVal);
+	void fillDataArray(BitBlock &_bitblock, double _resolution, double _gValue, int _gDirection);
 	void fillData(long _index, double _data);
 	void readDataFromFile(string _file);
 	void show();	
