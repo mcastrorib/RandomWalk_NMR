@@ -30,21 +30,22 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
 {
     this->config_filepath = otherConfig.config_filepath;
     // --- Physical attributes.
-    this->GIROMAGNETIC_RATIO = otherConfig.GIROMAGNETIC_RATIO;
-    this->D0 = otherConfig.D0;
-    this->APPLY_BULK = otherConfig.APPLY_BULK;
     this->PULSE_WIDTH = otherConfig.PULSE_WIDTH;
     this->MAX_GRADIENT = otherConfig.MAX_GRADIENT;
     this->GRADIENT_SAMPLES = otherConfig.GRADIENT_SAMPLES;
-
+    this->APPLY_BULK = otherConfig.APPLY_BULK;
+    this->ALLOW_WALKER_SAMPLING = otherConfig.ALLOW_WALKER_SAMPLING;
+    this->APPLY_ABSORPTION = otherConfig.APPLY_ABSORPTION;
+    
     // --- Time sequence 
     this->TIME_SEQ = otherConfig.TIME_SEQ;
     this->TIME_SAMPLES = otherConfig.TIME_SAMPLES;
     this->TIME_VALUES = otherConfig.TIME_VALUES;
     this->TIME_MIN = otherConfig.TIME_MIN;
-    this->TIME_MAX = otherConfig.TIME_MAX;
+    this->TIME_MAX = otherConfig.TIME_MAX;    
     this->APPLY_SCALE_FACTOR = otherConfig.APPLY_SCALE_FACTOR;
     this->INSPECTION_LENGTH = otherConfig.INSPECTION_LENGTH;
+
 
     // --- Threshold application for D(t) recovering.
     this->NOISE_AMP = otherConfig.NOISE_AMP;
@@ -54,9 +55,6 @@ pfgse_config::pfgse_config(const pfgse_config &otherConfig)
     this->THRESHOLD_WINDOW = otherConfig.THRESHOLD_WINDOW;
 
     // --- Wave-vector 'k' computation.
-    this->USE_WAVEVECTOR_TWOPI = otherConfig.USE_WAVEVECTOR_TWOPI;
-    this->ALLOW_WALKER_SAMPLING = otherConfig.ALLOW_WALKER_SAMPLING;
-    this->APPLY_ABSORPTION = otherConfig.APPLY_ABSORPTION;
 
     // --- PFGSE SAVE. 
     this->SAVE_MODE = otherConfig.SAVE_MODE;
@@ -92,12 +90,10 @@ void pfgse_config::readConfigFile(const string configFile)
 			content = s.substr(pos + delimiter.length(), s.length());
 			s.erase(0, pos + delimiter.length());
 
-			if(token == "GIROMAGNETIC_RATIO")	(*this).readGiromagneticRatio(content);
-            else if(token == "D0") (*this).readD0(content);
-            else if(token == "APPLY_BULK") (*this).readApplyBulk(content);
-			else if(token == "PULSE_WIDTH") (*this).readPulseWidth(content);
+			if(token == "PULSE_WIDTH") (*this).readPulseWidth(content);
             else if(token == "MAX_GRADIENT") (*this).readMaxGradient(content);
             else if(token == "GRADIENT_SAMPLES") (*this).readGradientSamples(content);
+            else if(token == "APPLY_BULK") (*this).readApplyBulk(content);
             else if(token == "TIME_SEQ") (*this).readTimeSequence(content);
             else if(token == "TIME_SAMPLES") (*this).readTimeSamples(content);
             else if(token == "TIME_VALUES") (*this).readTimeValues(content);
@@ -110,7 +106,6 @@ void pfgse_config::readConfigFile(const string configFile)
             else if(token == "THRESHOLD_TYPE") (*this).readThresholdType(content);
             else if(token == "THRESHOLD_VALUE") (*this).readThresholdValue(content);
             else if(token == "THRESHOLD_WINDOW") (*this).readThresholdWindow(content);
-            else if(token == "USE_WAVEVECTOR_TWOPI") (*this).readUseWaveVectorTwoPi(content);
             else if(token == "ALLOW_WALKER_SAMPLING") (*this).readAllowWalkerSampling(content);
             else if(token == "APPLY_ABSORPTION") (*this).readApplyAbsorption(content);
             else if(token == "SAVE_MODE") (*this).readSaveMode(content);
@@ -122,16 +117,6 @@ void pfgse_config::readConfigFile(const string configFile)
     } 
 
     fileObject.close();
-}
-
-void pfgse_config::readGiromagneticRatio(string s)
-{
-	this->GIROMAGNETIC_RATIO = std::stod(s);
-}
-
-void pfgse_config::readD0(string s)
-{
-	this->D0 = std::stod(s);
 }
 
 void pfgse_config::readApplyBulk(string s)
@@ -288,12 +273,6 @@ void pfgse_config::readThresholdValue(string s)
 void pfgse_config::readThresholdWindow(string s)
 {
     this->THRESHOLD_WINDOW = std::stoi(s);
-}
-
-void pfgse_config::readUseWaveVectorTwoPi(string s)
-{
-    if(s == "true") this->USE_WAVEVECTOR_TWOPI = true;
-    else this->USE_WAVEVECTOR_TWOPI = false;
 }
 
 void pfgse_config::readAllowWalkerSampling(string s)

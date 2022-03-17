@@ -15,8 +15,6 @@ class pfgse_config
 public:
     string config_filepath;
     // --- Physical attributes.
-    double GIROMAGNETIC_RATIO;
-    double D0;
     bool APPLY_BULK;
     double PULSE_WIDTH;
     Vector3D MAX_GRADIENT;
@@ -38,8 +36,7 @@ public:
     double THRESHOLD_VALUE;
     uint THRESHOLD_WINDOW;
 
-    // --- Wave-vector 'k' computation.
-    bool USE_WAVEVECTOR_TWOPI;
+    // --- Some useful flags.
     bool ALLOW_WALKER_SAMPLING;
     bool APPLY_ABSORPTION;
 
@@ -68,8 +65,6 @@ public:
     void createTimeSamples();
     
     // -- Read methods
-    void readGiromagneticRatio(string s);
-    void readD0(string s);
     void readApplyBulk(string s);
     void readPulseWidth(string s);
     void readMaxGradient(string s);
@@ -86,7 +81,6 @@ public:
     void readThresholdType(string s);
     void readThresholdValue(string s);
     void readThresholdWindow(string s);
-    void readUseWaveVectorTwoPi(string s);
     void readAllowWalkerSampling(string s);
     void readApplyAbsorption(string s);
     void readSaveMode(string s);
@@ -97,8 +91,6 @@ public:
 
     // -- Get methods
     string getConfigFilepath() {return this->config_filepath; } 
-    double getGiromagneticRatio() { return this->GIROMAGNETIC_RATIO ; }
-    double getD0() { return this->D0 ; }
     bool getApplyBulk(){ return this->APPLY_BULK; }
     double getPulseWidth() { return this->PULSE_WIDTH ; }
     Vector3D getMaxGradient() { return this->MAX_GRADIENT ; }
@@ -115,7 +107,6 @@ public:
     string getThresholdType() { return this->THRESHOLD_TYPE; }
     double getThresholdValue() { return this->THRESHOLD_VALUE; }
     uint getThresholdWindow() { return this->THRESHOLD_WINDOW; }
-    bool getUseWaveVectorTwoPi() { return this->USE_WAVEVECTOR_TWOPI; }
     bool getAllowWalkerSampling() { return this->ALLOW_WALKER_SAMPLING; }
     bool getApplyAbsorption() { return this->APPLY_ABSORPTION; }
     bool getSaveMode() { return this->SAVE_MODE; }
