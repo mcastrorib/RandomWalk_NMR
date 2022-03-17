@@ -41,7 +41,6 @@ public:
 	vector<double> exposureTimes;
 	double exposureTime;
 	double pulseWidth;
-	double giromagneticRatio;
 	bool applyBulkRelaxation;
 
 	vector<double> Mkt;
@@ -140,7 +139,6 @@ public:
 	// Inline methods
 	void setExposureTime(double _value){ this->exposureTime = _value; }
 	void setPulseWidth(double _value){ this->pulseWidth = _value; }
-	void setGiromagneticRatio(double _value){ this->giromagneticRatio = _value; }
 	void setApplyBulkRelaxation(bool _bulk) { this->applyBulkRelaxation = _bulk; }
 	void setD_sat(double _value) { this->D_sat = _value; }
 	void setD_sat_error(double _value) { this->D_sat_error = _value; }
@@ -188,7 +186,7 @@ public:
 	double getExposureTime() {return this->exposureTime; }
 	double getExposureTime(uint _idx) {return this->exposureTimes[_idx]; }
 	double getPulseWidth() {return this->pulseWidth; }
-	double getGiromagneticRatio() {return this->giromagneticRatio; }
+	double getGiromagneticRatio() {return this->NMR.getGiromagneticRatio(); }
 	bool getApplyBulkRelaxation() { return this->applyBulkRelaxation; }
 	double getNoiseAmp() { return this->noiseAmp; }
 	double getTargetSNR() { return this->targetSNR; }

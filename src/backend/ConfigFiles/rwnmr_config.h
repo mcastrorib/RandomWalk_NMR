@@ -22,6 +22,7 @@ public:
     vector<double> RHO;
     double D0;
     double GIROMAGNETIC_RATIO;
+    string GIROMAGNETIC_UNIT;
     double BULK_TIME; 
     uint STEPS_PER_ECHO;
     uint64_t SEED;
@@ -85,6 +86,7 @@ public:
     void readRho(string s); 
     void readD0(string s); 
     void readGiromagneticRatio(string s);    
+    void readGiromagneticUnit(string s);    
     void readBulkTime(string s);
     void readStepsPerEcho(string s);
     void readSeed(string s);
@@ -132,6 +134,7 @@ public:
     string getRhoType(){ return this->RHO_TYPE;}
     vector<double> getRho(){ return this->RHO;} 
     double getGiromagneticRatio() { return this->GIROMAGNETIC_RATIO; }
+    string getGiromagneticUnit() { return this->GIROMAGNETIC_UNIT; }
     double getD0(){ return this->D0;}
     double getBulkTime(){ return this->BULK_TIME; }
     uint getStepsPerEcho(){ return this->STEPS_PER_ECHO;}

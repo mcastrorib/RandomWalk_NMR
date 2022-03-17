@@ -73,8 +73,6 @@ NMR_PFGSE::NMR_PFGSE(NMR_Simulation &_NMR,
 	this->gradientPoints = this->PFGSE_config.getGradientSamples();
 	this->exposureTimes = this->PFGSE_config.getTimeValues(); 
 	this->pulseWidth = this->PFGSE_config.getPulseWidth();
-	this->giromagneticRatio = this->PFGSE_config.getGiromagneticRatio();
-	if(this->PFGSE_config.getUseWaveVectorTwoPi()) this->giromagneticRatio *= TWO_PI;
 	(*this).setApplyBulkRelaxation(this->PFGSE_config.getApplyBulk());
 	(*this).setNoiseAmp(this->PFGSE_config.getNoiseAmp());
 	(*this).setTargetSNR(this->PFGSE_config.getTargetSNR());
@@ -456,7 +454,7 @@ double NMR_PFGSE::computeRHS(double _kValue)
 
 double NMR_PFGSE::computeRHS_legacy(double _Gvalue)
 {
-	double gamma = this->giromagneticRatio;
+	double gamma = (*this).getGiromagneticRatio();
 	// if(this->PFGSE_config.getUseWaveVectorTwoPi()) gamma *= TWO_PI;
 	
 	return (-1.0e-10) * (gamma * this->pulseWidth) * (gamma * this->pulseWidth) 
@@ -1375,7 +1373,7 @@ void NMR_PFGSE::writeParameters()
 	file << "RWNMR-PFGSE Parameters" << endl; 
 	file << setprecision(precision) << "D_0: " << this->NMR.getDiffusionCoefficient() << endl;  
     file << setprecision(precision) << "Pulse width: " << this->pulseWidth << endl;
-    file << setprecision(precision) << "Giromagnetic Ratio: " << this->giromagneticRatio << endl;
+    file << setprecision(precision) << "Giromagnetic Ratio: " << (*this).getGiromagneticRatio() << endl;
 	file << setprecision(precision) << "Gradient direction: {" 
 		 << (maxGradient.getX() / maxGradient.getNorm()) << ", "
 		 << (maxGradient.getY() / maxGradient.getNorm()) << ", "
@@ -1673,7 +1671,7 @@ void NMR_PFGSE::simulation_omp()
     }
 
     // set derivables
-    double gamma = this->giromagneticRatio;
+    double gamma = (*this).getGiromagneticRatio();
     
 	myAllocator arrayFactory; 
 	double *globalPhase = arrayFactory.getDoubleArray(this->gradientPoints);

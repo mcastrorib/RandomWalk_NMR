@@ -79,7 +79,7 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
     (*this).setNumberOfWalkers(this->rwNMR_config.getWalkers());
     (*this).setWalkerSamples(this->rwNMR_config.getWalkerSamples());
     (*this).setFreeDiffusionCoefficient(this->rwNMR_config.getD0());
-    (*this).setGiromagneticRatio(this->rwNMR_config.getGiromagneticRatio());
+    (*this).setGiromagneticRatio(this->rwNMR_config.getGiromagneticRatio(), this->rwNMR_config.getGiromagneticUnit());
     (*this).setBulkRelaxationTime(this->rwNMR_config.getBulkTime());
     (*this).setNumberOfStepsPerEcho(this->rwNMR_config.getStepsPerEcho());
     (*this).setGPU(this->rwNMR_config.getGPUUsage());
@@ -151,9 +151,10 @@ void NMR_Simulation::setFreeDiffusionCoefficient(double _D0)
     this->diffusionCoefficient = _D0;
 }
 
-void NMR_Simulation::setGiromagneticRatio(double _gamma)
+void NMR_Simulation::setGiromagneticRatio(double _gamma, string _unit)
 {
-    this->giromagneticRatio = _gamma;
+    if(_unit == "mhertz") this->giromagneticRatio = _gamma * TWO_PI;
+    else this->giromagneticRatio = _gamma;
 }
 
 void NMR_Simulation::setBulkRelaxationTime(double _bulkTime)

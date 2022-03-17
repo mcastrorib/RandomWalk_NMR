@@ -34,6 +34,7 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
     this->RHO_TYPE = otherConfig.RHO_TYPE;
     this->RHO = otherConfig.RHO;
     this->GIROMAGNETIC_RATIO = otherConfig.GIROMAGNETIC_RATIO;
+    this->GIROMAGNETIC_UNIT = otherConfig.GIROMAGNETIC_UNIT;
     this->D0 = otherConfig.D0; 
     this->BULK_TIME = otherConfig.BULK_TIME;
     this->STEPS_PER_ECHO = otherConfig.STEPS_PER_ECHO;
@@ -200,6 +201,12 @@ void rwnmr_config::readRho(string s) // vector?
 void rwnmr_config::readGiromagneticRatio(string s)
 {
 	this->GIROMAGNETIC_RATIO = std::stod(s);
+}
+
+void rwnmr_config::readGiromagneticUnit(string s)
+{
+	if(s == "MHertz" or s == "mhertz")this->GIROMAGNETIC_UNIT = "mhertz";
+	else this->GIROMAGNETIC_UNIT = "rad";
 }
 
 void rwnmr_config::readD0(string s)
