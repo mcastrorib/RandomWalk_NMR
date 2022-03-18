@@ -80,8 +80,6 @@ void NMR_cpmg::setName()
     int precisionVal = 2;
     string bigDelta = std::to_string(this->exposureTime);
     string trimmedDelta = bigDelta.substr(0, std::to_string(this->exposureTime).find(".") + precisionVal + 1);
-	// string big_delta = std::to_string((int) this->exposureTime) + "-" 
-					   // + std::to_string(((int) (this->exposureTime * 100)) % 100);
 	this->name = "/NMR_cpmg_t=" + trimmedDelta + "ms";
 }
 

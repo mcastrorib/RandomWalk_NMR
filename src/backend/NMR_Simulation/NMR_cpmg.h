@@ -86,6 +86,8 @@ public:
     string getMethod() { return this->method; }
     vector<double> getSignalAmps() { return this->signal_amps; }
     vector<double> getSignalTimes() { return this->signal_times; }
+    InternalField *getInternalField() {return this->internalField; }
+    double *getInternalFieldData() { return (this->internalField == NULL) ? NULL : this->internalField->getData(); }
 
 
     // -- Simulations

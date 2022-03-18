@@ -27,6 +27,28 @@ __global__ void CPMG_walk_noflux(int *walker_px,
                                  const uint map_depth,
                                  const uint shift_convert);
 
+__global__ void CPMG_walk_noflux_field(int *walker_px,
+                                       int *walker_py,
+                                       int *walker_pz,
+                                       double *decreaseFactor,
+                                       double *energy,
+                                       double *phase,
+                                       uint64_t *seed,
+                                       const uint64_t *bitBlock,
+                                       const uint bitBlockColumns,
+                                       const uint bitBlockRows,
+                                       const uint numberOfWalkers,
+                                       const uint energyArraySize,
+                                       const uint echoesPerKernel,
+                                       const uint stepsPerEcho,
+                                       const uint map_columns,
+                                       const uint map_rows,
+                                       const uint map_depth,
+                                       const uint shift_convert,
+                                       const double gamma,
+                                       const double tau,
+                                       const double *field);
+
 __global__ void CPMG_walk_periodic(int *walker_px,
                                    int *walker_py,
                                    int *walker_pz,
@@ -108,4 +130,5 @@ __device__ bool checkIfBlockBitIsWall_CPMG(uint64_t currentBlock, int currentBit
 __device__ uint64_t xorShift64_CPMG(struct xorshift64_state *state);
 __device__ uint64_t mod6_CPMG(uint64_t a);
 __device__ int convertLocalToGlobal_CPMG(int _localPos, uint _shiftConverter);
+__device__ long getFieldIndex(int _x, int _y, int _z, int _rowScale, int _depthScale);
 #endif

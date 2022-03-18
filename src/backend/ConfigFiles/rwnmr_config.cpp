@@ -109,6 +109,7 @@ void rwnmr_config::readConfigFile(const string configFile)
 			else if(token == "RHO") (*this).readRho(content);
 			else if(token == "STEPS_PER_ECHO") (*this).readStepsPerEcho(content);
 			else if(token == "GIROMAGNETIC_RATIO")	(*this).readGiromagneticRatio(content);
+			else if(token == "GIROMAGNETIC_UNIT")	(*this).readGiromagneticUnit(content);
 			else if(token == "D0") (*this).readD0(content);
 			else if(token == "BULK_TIME") (*this).readBulkTime(content);
 			else if(token == "SEED") (*this).readSeed(content);
@@ -205,7 +206,7 @@ void rwnmr_config::readGiromagneticRatio(string s)
 
 void rwnmr_config::readGiromagneticUnit(string s)
 {
-	if(s == "MHertz" or s == "mhertz")this->GIROMAGNETIC_UNIT = "mhertz";
+	if(s == "MHertz" or s == "mhertz") this->GIROMAGNETIC_UNIT = "mhertz";
 	else this->GIROMAGNETIC_UNIT = "rad";
 }
 
