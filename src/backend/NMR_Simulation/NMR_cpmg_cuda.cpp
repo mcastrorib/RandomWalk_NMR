@@ -200,9 +200,10 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
         local_seed = seed[walkerId];
         local_phase = phase[walkerId];
         energyLvl = energy[walkerId + energy_OFFSET];
+      
 
         for (int echo = 0; echo < echoesPerKernel; echo++)
-        {
+        {    
             // update the offset
             energy_OFFSET = echo * energyArraySize;
 
@@ -214,9 +215,14 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
                 for (int step = 0; step < stepsPerInversion; step++)
                 {
                     // update phase at starting point
-                    fieldIdx = getFieldIndex(position_x, position_y, position_z, row_scale, depth_scale);
+                    fieldIdx = getFieldIndex(convertLocalToGlobal_CPMG(position_x, shift_convert),
+                                             convertLocalToGlobal_CPMG(position_y, shift_convert),
+                                             convertLocalToGlobal_CPMG(position_z, shift_convert),
+                                             row_scale, 
+                                             depth_scale);
                     local_phase += gammatau * field[fieldIdx];
-
+                    
+                    // compute next direction and next position
                     nextDirection = computeNextDirection_CPMG(local_seed);
                     nextDirection = checkBorder_CPMG(convertLocalToGlobal_CPMG(position_x, shift_convert),
                                                      convertLocalToGlobal_CPMG(position_y, shift_convert),
@@ -233,6 +239,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
                                              next_y, 
                                              next_z);
 
+                    // check if next position is a valid position
                     if (checkNextPosition_CPMG(convertLocalToGlobal_CPMG(next_x, shift_convert),
                                                convertLocalToGlobal_CPMG(next_y, shift_convert),
                                                convertLocalToGlobal_CPMG(next_z, shift_convert),
@@ -247,19 +254,24 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
                     }
                     else
                     {
-                        // walker chocks with wall and comes back to the same position
+                        // walker hits the wall and comes back to the same position
                         // walker loses energy due to this collision
                         energyLvl = energyLvl * local_dFactor;
                     }
 
                     // update phase at finishing point
-                    fieldIdx = getFieldIndex(position_x, position_y, position_z, row_scale, depth_scale);
-                    local_phase += gammatau * field[fieldIdx];
-
-                    // account for phase relaxation
-                    energyLvl *= cos(local_phase);
+                                        // update phase at starting point
+                    fieldIdx = getFieldIndex(convertLocalToGlobal_CPMG(position_x, shift_convert),
+                                             convertLocalToGlobal_CPMG(position_y, shift_convert),
+                                             convertLocalToGlobal_CPMG(position_z, shift_convert),
+                                             row_scale, 
+                                             depth_scale);
+                    local_phase += gammatau * field[fieldIdx];                
                 }
             }
+
+            // account for phase relaxation
+            energyLvl *= cos(local_phase);
 
             // walker's energy device global memory update
             // must be done for each echo
@@ -655,11 +667,9 @@ void NMR_cpmg::image_simulation_cuda()
     // THIS NEEDS TO BE REVISED LATER!!!
     bool applyField = (this->internalField == NULL) ? applyField = false : applyField = true;
     double *field = (*this).getInternalFieldData();
+    long fieldSize = (*this).getInternalFieldSize();
     double tau = 1.0e-3 * this->NMR.getTimeInterval() * stepsPerEcho; 
     double gamma = 1.0e+06 * this->NMR.getGiromagneticRatio();
-    cout << endl << "field:" << applyField << endl;
-    cout << "tau:" << tau << endl;
-    cout << "gamma:" << gamma << endl;
     
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
     uint threadsPerBlock = this->NMR.rwNMR_config.getThreadsPerBlock();
@@ -726,6 +736,7 @@ void NMR_cpmg::image_simulation_cuda()
     int *d_walker_pz;
     double *d_penalty;
     double *d_phase;
+    double *d_field;
     double *d_energy;
     double *d_energyCollector;
     uint64_t *d_seed;
@@ -740,6 +751,12 @@ void NMR_cpmg::image_simulation_cuda()
     cudaMalloc((void **)&d_energyCollector, echoesPerKernel * energyCollectorSize * sizeof(double));
     cudaMalloc((void **)&d_seed, walkersPerKernel * sizeof(uint64_t));
     
+    if(applyField)
+    {
+        cudaMalloc((void **)&d_field, fieldSize * sizeof(double));
+        cudaMemcpy(d_field, field, fieldSize * sizeof(double), cudaMemcpyHostToDevice);
+    }
+
     tick = omp_get_wtime();
     for (uint i = 0; i < energyArraySize * echoesPerKernel; i++)
     {
@@ -840,7 +857,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                              shiftConverter,
                                                                              gamma,
                                                                              tau,
-                                                                             field);
+                                                                             d_field);
             }
             else if(!applyField and bc == "periodic")
             {
@@ -1087,7 +1104,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                              shiftConverter,
                                                                              gamma,
                                                                              tau,
-                                                                             field);
+                                                                             d_field);
             }
             else if(!applyField and bc == "periodic")
             {
@@ -1270,6 +1287,7 @@ void NMR_cpmg::image_simulation_cuda()
     cudaFree(d_walker_pz);
     cudaFree(d_penalty);
     if(applyField) cudaFree(d_phase);
+    if(applyField) cudaFree(d_field);
     cudaFree(d_energy);
     cudaFree(d_energyCollector);
     cudaFree(d_seed);
