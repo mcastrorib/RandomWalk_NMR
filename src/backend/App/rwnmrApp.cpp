@@ -17,6 +17,8 @@
 #include "../NMR_Simulation/NMR_Simulation.h"
 #include "../NMR_Simulation/NMR_pfgse.h"
 #include "../NMR_Simulation/NMR_cpmg.h"
+#include "../NMR_Simulation/NMR_multitau.h"
+
 
 // include class header file
 #include "rwnmrApp.h"
@@ -78,6 +80,7 @@ void rwnmrApp::exec()
         if(this->args.commands[current] == "cpmg") (*this).CPMG(current);
         else if(this->args.commands[current] == "pfgse") (*this).PFGSE(current);
         else if(this->args.commands[current] == "ga") (*this).GA(current);
+        else if(this->args.commands[current] == "multitau") (*this).MultiTau(current);
 
         current++;
     }
@@ -121,4 +124,28 @@ void rwnmrApp::PFGSE(uint command_idx)
 void rwnmrApp::GA(uint command_idx)
 {
     cout << "-- GA is under construction." << endl;
+}
+
+void rwnmrApp::MultiTau(uint command_idx)
+{
+    cout << "-- MultiTau to be executed:" << endl;
+
+    // -- Read MultiTau routine config files
+    string multitau_config_path;
+    if((*this).getArgsPath(command_idx) != "default") multitau_config_path = (*this).getArgsPath(command_idx);
+    else multitau_config_path = (*this).getConfigRoot() + MULTITAU_CONFIG_DEFAULT;
+    multitau_config multitau_Config(multitau_config_path);
+    // --
+
+    // -- Read CPMG routine config files
+    string cpmg_config_path;
+    if((*this).getArgsPath(command_idx + 1) != "default") cpmg_config_path = (*this).getArgsPath(command_idx + 1);
+    else cpmg_config_path = (*this).getConfigRoot() + CPMG_CONFIG_DEFAULT;
+    cpmg_config cpmg_Config(cpmg_config_path);
+    // --
+    
+    NMR_multitau multitau((*this).getNMR(), multitau_Config, cpmg_Config);
+    multitau.run();
+    cout << "- multitau sequence executed succesfully" << endl << endl;
+    // -----
 }

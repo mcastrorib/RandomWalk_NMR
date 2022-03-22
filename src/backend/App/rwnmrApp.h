@@ -46,6 +46,8 @@ public:
     void CPMG(uint command_idx);
     void PFGSE(uint command_idx);
     void GA(uint command_idx);
+    void MultiTau(uint command_idx);
+
 
     string getProjectRoot() { return this->project_root; }
     string getConfigRoot() { return this->config_root; }

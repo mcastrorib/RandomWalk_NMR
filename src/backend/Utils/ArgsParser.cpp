@@ -103,6 +103,47 @@ ArgsParser::ArgsParser(int argc, char *argv[])
                     this->paths.push_back("default");
                 }  
             }
+            else if(argument == "multitau")
+            {
+                this->commands.push_back("multitau");
+                this->commands.push_back("mtoff");
+
+                if((arg_idx + 1) < argc)
+                {
+                    string addFlag = argv[arg_idx + 1];
+                    if(addFlag == "-config" and (arg_idx + 3) < argc)
+                    {
+
+                        string multitauPath = argv[arg_idx + 2];
+                        string cpmgPath = argv[arg_idx + 3];
+                        this->paths.push_back(multitauPath);
+                        this->paths.push_back(cpmgPath);
+
+                    } else if(addFlag == "-mtconfig" and (arg_idx + 2) < argc)
+                    {
+                        string multitauPath = argv[arg_idx + 2];
+                        string cpmgPath = "default";
+                        this->paths.push_back(multitauPath);
+                        this->paths.push_back(cpmgPath);
+
+                    }else if(addFlag == "-cpmgconfig" and (arg_idx + 2) < argc)
+                    {
+                        string multitauPath = "default";
+                        string cpmgPath = argv[arg_idx + 2];
+                        this->paths.push_back(multitauPath);
+                        this->paths.push_back(cpmgPath);
+                        
+                    } else
+                    {
+                        this->paths.push_back("default");
+                        this->paths.push_back("default");
+                    }
+                } else
+                {
+                    this->paths.push_back("default");
+                    this->paths.push_back("default");
+                }  
+            }
             // increment argument
             arg_idx++;
         }
