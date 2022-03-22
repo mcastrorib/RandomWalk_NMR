@@ -11,7 +11,8 @@ add_library(NMR_Simulation
 			NMR_cpmg.cpp
 			NMR_cpmg_cuda.cpp
 			NMR_pfgse.cpp
-			NMR_pfgse_cuda.cpp)
+			NMR_pfgse_cuda.cpp
+			NMR_multitau.cpp)
 
 # Include directory in build up
 target_include_directories(NMR_Simulation
@@ -52,4 +53,5 @@ install(FILES
 		NMR_cpmg_cuda.h
 		NMR_pfgse.h
 		NMR_pfgse_cuda.h
+		NMR_multitau.h
 		NMR_defs.h DESTINATION include)

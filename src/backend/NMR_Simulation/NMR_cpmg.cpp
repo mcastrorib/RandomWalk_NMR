@@ -42,7 +42,7 @@ NMR_cpmg::NMR_cpmg( NMR_Simulation &_NMR,
     (*this).setApplyBulkRelaxation(this->CPMG_config.getApplyBulk());
     (*this).setMethod(this->CPMG_config.getMethod());
     (*this).setInternalField(this->CPMG_config.getResidualField());
-    (*this).set();
+    // (*this).set();
 }
 
 void NMR_cpmg::setInternalField(string _mode)
@@ -69,6 +69,7 @@ void NMR_cpmg::set()
 
 void NMR_cpmg::run()
 {
+    (*this).set();
     (*this).run_simulation();
     (*this).applyLaplace();
     (*this).save();
@@ -91,7 +92,7 @@ void NMR_cpmg::createDirectoryForData()
 }
 
 
-void NMR_cpmg::setNMRTimeFramework()
+void NMR_cpmg::setNMRTimeFramework(bool _map)
 {
     this->NMR.setTimeFramework((*this).getExposureTime()); 
 
@@ -113,7 +114,7 @@ void NMR_cpmg::setNMRTimeFramework()
 
     cout << "- Initial map time: " << (*this).getExposureTime() << " ms ";
     cout << "[" << this->NMR.simulationSteps << " RW-steps]" << endl;
-    this->NMR.mapSimulation();
+    if(_map) this->NMR.mapSimulation();
 
     // Update xi_rate and relaxivity of walkers
     vector<double> rho = this->NMR.rwNMR_config.getRho();

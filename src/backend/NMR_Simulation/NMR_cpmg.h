@@ -37,7 +37,7 @@ public:
 
 
 	NMR_cpmg(NMR_Simulation &_NMR, 
-			  cpmg_config _pfgseConfig,
+			  cpmg_config _cpmgConfig,
 			  int _mpi_rank = 0, 
 			  int _mpi_processes = 0);	
 
@@ -51,13 +51,13 @@ public:
 
         if(this->internalField != NULL)
         {
-        	delete internalField;
+        	delete this->internalField;
         	this->internalField = NULL;
         }
 	};
 
     // -- Essentials
-	void setNMRTimeFramework();
+	void setNMRTimeFramework(bool map = true);
     void set();
     void run();
     void resetSignal();
