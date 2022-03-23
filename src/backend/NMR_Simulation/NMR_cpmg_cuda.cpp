@@ -162,7 +162,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
                                        const uint map_depth,
                                        const uint shift_convert,
                                        const double gamma,
-                                       const double tau,
+                                       const double timeInterval,
                                        const double *field)
 {
     // identify thread's walker
@@ -184,7 +184,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
 
     // thread variables for phase computation
     double local_phase;
-    double gammatau = .5*gamma*tau;
+    double gammatau = 0.5*gamma*timeInterval;
     uint stepsPerInversion = stepsPerEcho / 2;
     long fieldIdx;
     int row_scale = map_columns;
@@ -668,7 +668,7 @@ void NMR_cpmg::image_simulation_cuda()
     bool applyField = (this->internalField == NULL) ? applyField = false : applyField = true;
     double *field = (*this).getInternalFieldData();
     long fieldSize = (*this).getInternalFieldSize();
-    double tau = 1.0e-3 * this->NMR.getTimeInterval() * stepsPerEcho; 
+    double timeInterval = 1.0e-3 * this->NMR.getTimeInterval(); 
     double gamma = 1.0e+06 * this->NMR.getGiromagneticRatio();
     
     // define parameters for CUDA kernel launch: blockDim, gridDim etc
@@ -856,7 +856,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                              map_depth, 
                                                                              shiftConverter,
                                                                              gamma,
-                                                                             tau,
+                                                                             timeInterval,
                                                                              d_field);
             }
             else if(!applyField and bc == "periodic")
@@ -1103,7 +1103,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                              map_depth, 
                                                                              shiftConverter,
                                                                              gamma,
-                                                                             tau,
+                                                                             timeInterval,
                                                                              d_field);
             }
             else if(!applyField and bc == "periodic")

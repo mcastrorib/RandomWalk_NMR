@@ -46,7 +46,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
                                        const uint map_depth,
                                        const uint shift_convert,
                                        const double gamma,
-                                       const double tau,
+                                       const double timeInterval,
                                        const double *field);
 
 __global__ void CPMG_walk_periodic(int *walker_px,

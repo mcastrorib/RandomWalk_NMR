@@ -118,16 +118,28 @@ void NMR_multitau::runCPMG()
         cout << "M[" << idx << "] = " << this->cpmg->signal_amps[idx] << endl;
     }
     cout << endl;
+    if(size > 0)
+    {
+        this->signalAmps.push_back(this->cpmg->signal_amps[1]);
+    }
 }
 
 void NMR_multitau::run()
 {
+    // before everything, reset conditions and map with highest time value
+    double tick = omp_get_wtime();
+    
     for(uint index = 0; index < this->requiredSteps.size(); index++)
     {
         (*this).setExposureTime(index);
         (*this).setNMRTimeFramework();
         (*this).runCPMG();
     }
+
+    (*this).save();
+
+    double time = omp_get_wtime() - tick;
+    cout << endl << "multitau_time: " << time << " seconds." << endl;
 }
 
 // -- Savings
@@ -173,16 +185,18 @@ void NMR_multitau::writeDecay()
         exit(1);
     }
 
-    const size_t num_points = this->signalAmps.size();
+    const int num_points = this->signalAmps.size();
     const int precision = std::numeric_limits<double>::max_digits10;
 
-    file << "time,signal,noise,noiseless" << endl;
-    for (int idx = 0; idx < num_points; idx++)
+    file << "echo_time,signal" << endl;
+    if(this->signalTimes.size() == this->signalAmps.size())
     {
-        file << setprecision(precision) << this->signalTimes[idx] << ",";
-        file << setprecision(precision) << this->signalAmps[idx] << endl;    
-    }
-    
+        for (int idx = 0; idx < num_points; idx++)
+        {
+            file << setprecision(precision) << this->signalTimes[idx] << ",";
+            file << setprecision(precision) << this->signalAmps[idx] << endl;    
+        }
+    }    
     file.close();
 }
 

@@ -89,9 +89,9 @@ void InternalField::fillDataArray(BitBlock &_bitblock, double _resolution, doubl
 	double dGx = 0;
 	double dGy = 0;
 	double dGz = 0;
-	if(_gDirection == 0) dGx = _gValue / (1.0e6 * _resolution);
-	if(_gDirection == 1) dGy = _gValue / (1.0e6 * _resolution);
-	if(_gDirection == 2) dGz = _gValue / (1.0e6 * _resolution);
+	if(_gDirection == 0) dGx = _gValue * (1.0e-6) * _resolution;
+	if(_gDirection == 1) dGy = _gValue * (1.0e-6) * _resolution;
+	if(_gDirection == 2) dGz = _gValue * (1.0e-6) * _resolution;
 	
 	double initialValue = 0.0;
 	double currentValue;
