@@ -62,9 +62,9 @@ __global__ void map_3D_noflux( int *walker_px,
                                const uint bitBlockRows,
                                const uint numberOfWalkers,
                                const uint numberOfSteps,
-                               const uint map_columns,
-                               const uint map_rows,
-                               const uint map_depth,
+                               const int map_columns,
+                               const int map_rows,
+                               const int map_depth,
                                const uint shift_convert);
 
 __global__ void map_3D_periodic(int *walker_px,
@@ -77,9 +77,9 @@ __global__ void map_3D_periodic(int *walker_px,
                                 const uint bitBlockRows,
                                 const uint numberOfWalkers,
                                 const uint numberOfSteps,
-                                const uint map_columns,
-                                const uint map_rows,
-                                const uint map_depth,
+                                const int map_columns,
+                                const int map_rows,
+                                const int map_depth,
                                 const uint shift_convert);
 
 __global__ void map_3D_mirror( int *walker_px,
@@ -92,9 +92,9 @@ __global__ void map_3D_mirror( int *walker_px,
                                const uint bitBlockRows,
                                const uint numberOfWalkers,
                                const uint numberOfSteps,
-                               const uint map_columns,
-                               const uint map_rows,
-                               const uint map_depth,
+                               const int map_columns,
+                               const int map_rows,
+                               const int map_depth,
                                const uint shift_convert);
 
 // Device functions for 3D simulation

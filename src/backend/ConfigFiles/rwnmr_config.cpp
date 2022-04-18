@@ -238,6 +238,9 @@ void rwnmr_config::readBC(string s)
 	} else if(s == "mirror") 
 	{
 		this->BC = "mirror";
+	} else if(s == "debug" or s == "test")
+	{
+		this->BC = "test";
 	} else this->BC = "noflux";
 }
 

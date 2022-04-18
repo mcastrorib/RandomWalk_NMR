@@ -425,9 +425,9 @@ __global__ void map_3D_noflux( int *walker_px,
                                const uint bitBlockRows,
                                const uint numberOfWalkers,
                                const uint numberOfSteps,
-                               const uint map_columns,
-                               const uint map_rows,
-                               const uint map_depth,
+                               const int map_columns,
+                               const int map_rows,
+                               const int map_depth,
                                const uint shift_convert)
 {
 
@@ -512,9 +512,9 @@ __global__ void map_3D_periodic(int *walker_px,
                                 const uint bitBlockRows,
                                 const uint numberOfWalkers,
                                 const uint numberOfSteps,
-                                const uint map_columns,
-                                const uint map_rows,
-                                const uint map_depth,
+                                const int map_columns,
+                                const int map_rows,
+                                const int map_depth,
                                 const uint shift_convert)
 {
 
@@ -606,9 +606,9 @@ __global__ void map_3D_mirror(int *walker_px,
                               const uint bitBlockRows,
                               const uint numberOfWalkers,
                               const uint numberOfSteps,
-                              const uint map_columns,
-                              const uint map_rows,
-                              const uint map_depth,
+                              const int map_columns,
+                              const int map_rows,
+                              const int map_depth,
                               const uint shift_convert)
 {
     // identify thread's walker
@@ -777,9 +777,9 @@ void NMR_Simulation::mapSimulation_CUDA_3D_histograms(bool reset)
     uint bitBlockRows = this->bitBlock.blockRows;
     uint numberOfBitBlocks = this->bitBlock.numberOfBlocks;
     uint numberOfWalkers = this->numberOfWalkers;
-    uint map_columns = this->bitBlock.imageColumns;
-    uint map_rows = this->bitBlock.imageRows;
-    uint map_depth = this->bitBlock.imageDepth;
+    int map_columns = this->bitBlock.imageColumns;
+    int map_rows = this->bitBlock.imageRows;
+    int map_depth = this->bitBlock.imageDepth;
     uint shiftConverter = log2(this->voxelDivision);
 
     // define parameters for CUDA kernel launch: blockDim, gridDim etc

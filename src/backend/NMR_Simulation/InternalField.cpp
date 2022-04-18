@@ -127,7 +127,7 @@ void InternalField::fillDataArray(BitBlock &_bitblock, double _resolution, doubl
 		}
 	}
 
-	// (*this).show();
+	(*this).show();
 }
 
 
