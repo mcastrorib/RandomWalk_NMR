@@ -58,6 +58,22 @@ void NMR_cpmg::setInternalField(string _mode)
     {
         this->internalField = new InternalField(this->CPMG_config.getPathToField());
     } 
+
+    (*this).checkInternalField();
+}
+
+void NMR_cpmg::checkInternalField()
+{
+    if(this->internalField != NULL)
+    {
+        if(this->NMR.getImageWidth() != this->internalField->getDimX() 
+           or this->NMR.getImageHeight() != this->internalField->getDimY() 
+           or this->NMR.getImageDepth() != this->internalField->getDimZ())
+        {
+            cout << "Internal field dimensions doesnt match image data." << endl;
+            exit(1);
+        }
+    }
 }
 
 void NMR_cpmg::set()

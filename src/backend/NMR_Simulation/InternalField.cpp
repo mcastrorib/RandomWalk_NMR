@@ -3,6 +3,7 @@
 #include <iomanip>      // std::setprecision
 #include <sstream>
 #include <fstream>
+#include <stdint.h>
 #include <string>
 
 // include OpenMP for multicore implementation
@@ -24,6 +25,7 @@ InternalField::InternalField(BitBlock &_bitblock, double _resolution, double _gr
 	(*this).setDims(_bitblock.imageColumns, _bitblock.imageRows, _bitblock.imageDepth);
 	(*this).allocDataArray();
 	(*this).fillDataArray(_bitblock, _resolution, _gradient, _direction);
+	(*this).show();
 }
 
 InternalField::InternalField(string _file) : dimX(0), 
@@ -33,7 +35,8 @@ InternalField::InternalField(string _file) : dimX(0),
 											 depthScale(0), 
 											 data(NULL)
 {
-	cout << "import internal magnetic field map to be implemented." << endl;
+	(*this).readDataFromFile(_file);
+	(*this).show();
 }
 
 InternalField::InternalField(const InternalField &_other)
@@ -160,4 +163,44 @@ double InternalField::getData(int _x, int _y, int _z)
 {
 	long index = (*this).getIndex(_x, _y, _z);
 	return this->data[index];			
+}
+
+void InternalField::readDataFromFile(string _file)
+{
+	cout << "import internal magnetic field map to be implemented." << endl;
+	ifstream datafile(_file, ios::in | ios::binary);
+	if(!datafile) {
+	  cout << "Cannot open file!" << endl;
+	  exit(1);
+	}
+
+	int32_t dims[3];
+	for(int i = 0; i < 3; i++)
+		datafile.read((char *) &dims[i], sizeof(int32_t));
+
+	(*this).setDims((int) dims[0],(int) dims[1], (int) dims[2]);
+	(*this).allocDataArray();
+
+	double inData;
+	long index;
+	for(int z = 0; z < (*this).getDimZ(); z++)
+	{
+		for(int y = 0; y < (*this).getDimY(); y++)
+		{		
+			for(int x = 0; x < (*this).getDimX(); x++)
+			{					
+				index = (*this).getIndex(x, y, z);
+				datafile.read((char *) &inData, sizeof(double));				
+				(*this).fillData(index, inData);
+			}
+		}
+	}
+
+	datafile.close();
+
+	if(!datafile.good()) 
+	{
+	  cout << "Error occurred at reading time!" << endl;
+	  exit(1);
+	}
 }

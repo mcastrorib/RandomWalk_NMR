@@ -79,6 +79,7 @@ public:
 	void setApplyBulkRelaxation(bool _bulk){ this->applyBulkRelaxation = _bulk; }
     void setMethod(string _method){ this->method = _method; }
     void setInternalField(string _mode);
+    void checkInternalField();
 	
     // -- Get methods
 	double getExposureTime() { return this->exposureTime; }
