@@ -539,7 +539,7 @@ void NMR_PFGSE::createNoiseVector()
 		noiseBasis = (double) this->NMR.getNumberOfWalkers(); 
 	}
 
-	this->rawNoise = getNewNoiseVector(0.0, noiseBasis * (*this).getNoiseAmp());
+	this->rawNoise = getNewNoiseVector(noiseBasis * (*this).getNoiseAmp());
 	
 	cout << "Noise:: Amp: " << (*this).getNoiseAmp();
 	cout << ", SNR: " << (*this).computeCurrentSNR() << endl;
@@ -1895,9 +1895,11 @@ vector<double> NMR_PFGSE::getNormalDistributionSamples(const double loc, const d
 	vector<double> randomData;
 	randomData.reserve(size);
 	std::normal_distribution<double> distribution(loc, std);
+	
 	for (int i = 0; i < size; i++)
 	{
 		randomData.emplace_back(distribution(NMR_PFGSE::_rng));
 	}
+
 	return randomData;
 }
