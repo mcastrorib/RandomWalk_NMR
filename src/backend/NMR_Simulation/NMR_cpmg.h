@@ -71,7 +71,7 @@ public:
 	void writeHistogramList();
 	void writeT2decay();
 	void writeT2dist();
-	void setName();
+	void setName(string parent = "", string sufix = "");
 	void createDirectoryForData();
 
     // -- Set methods

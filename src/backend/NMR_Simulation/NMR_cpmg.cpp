@@ -92,18 +92,18 @@ void NMR_cpmg::run()
 }
 
 
-void NMR_cpmg::setName()
+void NMR_cpmg::setName(string parent, string sufix)
 {
     int precisionVal = 2;
     string bigDelta = std::to_string(this->exposureTime);
     string trimmedDelta = bigDelta.substr(0, std::to_string(this->exposureTime).find(".") + precisionVal + 1);
-	this->name = "/NMR_cpmg_t=" + trimmedDelta + "ms";
+	this->name = parent + "/NMR_cpmg_t=" + trimmedDelta + "ms" + sufix;
 }
 
 void NMR_cpmg::createDirectoryForData()
 {
 	string path = this->NMR.getDBPath();
-    createDirectory(path, this->NMR.simulationName + "/" + this->name);
+    createDirectory(path, this->NMR.simulationName + "/" + this->name );
     this->dir = (path + this->NMR.simulationName + "/" + this->name);
 }
 

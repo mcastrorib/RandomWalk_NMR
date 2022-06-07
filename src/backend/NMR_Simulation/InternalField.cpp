@@ -25,7 +25,7 @@ InternalField::InternalField(BitBlock &_bitblock, double _resolution, double _gr
 	(*this).setDims(_bitblock.imageColumns, _bitblock.imageRows, _bitblock.imageDepth);
 	(*this).allocDataArray();
 	(*this).fillDataArray(_bitblock, _resolution, _gradient, _direction);
-	(*this).show();
+	// (*this).show();
 }
 
 InternalField::InternalField(string _file) : dimX(0), 
@@ -129,8 +129,6 @@ void InternalField::fillDataArray(BitBlock &_bitblock, double _resolution, doubl
 			}
 		}
 	}
-
-	(*this).show();
 }
 
 

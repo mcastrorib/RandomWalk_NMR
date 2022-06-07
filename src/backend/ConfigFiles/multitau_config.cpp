@@ -30,6 +30,7 @@ multitau_config::multitau_config(const multitau_config &otherConfig)
     this->TAU_MAX = otherConfig.TAU_MAX;
     this->TAU_POINTS = otherConfig.TAU_POINTS;
     this->TAU_SCALE = otherConfig.TAU_SCALE;
+    this->COMPLETE_DECAY = otherConfig.COMPLETE_DECAY;
 
     // --- cpmg SAVE. 
     this->SAVE_MODE = otherConfig.SAVE_MODE;
@@ -70,6 +71,7 @@ void multitau_config::readConfigFile(const string configFile)
             else if(token == "TAU_MAX") (*this).readTauMax(content);
             else if(token == "TAU_POINTS") (*this).readTauPoints(content);
             else if(token == "TAU_SCALE") (*this).readTauScale(content);
+            else if(token == "COMPLETE_DECAY") (*this).readCompleteDecay(content);
             else if(token == "SAVE_MODE") (*this).readSaveMode(content);
             else if(token == "SAVE_DECAY") (*this).readSaveDecay(content);
             else if(token == "SAVE_WALKERS") (*this).readSaveWalkers(content);
@@ -101,6 +103,12 @@ void multitau_config::readTauScale(string s)
 {
     if(s == "log") this->TAU_SCALE = s;
     else this->TAU_SCALE = "linear";
+}
+
+void multitau_config::readCompleteDecay(string s)
+{
+    if(s == "true" or s == "True" or s == "TRUE") this->COMPLETE_DECAY = true;
+    else this->COMPLETE_DECAY = false;
 }
 
 void multitau_config::readSaveMode(string s)

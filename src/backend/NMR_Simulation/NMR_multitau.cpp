@@ -101,39 +101,88 @@ void NMR_multitau::setTauSequence()
 void NMR_multitau::setExposureTime(uint index)
 {
     this->NMR.setNumberOfStepsPerEcho(this->requiredSteps[index]);
-    this->cpmg->setExposureTime(this->signalTimes[index]);
+    if(!this->MultiTau_config.getCompleteDecay()) 
+        this->cpmg->setExposureTime(this->signalTimes[index]);
 }
 
-void NMR_multitau::setNMRTimeFramework()
+
+void NMR_multitau::setCPMG(uint index)
 {
+    (*this).setExposureTime(index);
     this->cpmg->setNMRTimeFramework(false);
+    
+    int precisionVal = 3;
+    string te = std::to_string(this->requiredSteps[index] * this->NMR.getTimeInterval());
+    string sufix = "_te=" + te.substr(0, std::to_string(this->requiredSteps[index] * this->NMR.getTimeInterval()).find(".") + precisionVal + 1);
+    this->cpmg->setName(this->name, sufix);
+    this->cpmg->createDirectoryForData();
 }
 
 void NMR_multitau::runCPMG()
 {
     this->cpmg->run_simulation();
     int size = this->cpmg->signal_amps.size();
-    for(int idx = 0; idx < size; idx++)
+    if(size > 1) 
     {
-        cout << "M[" << idx << "] = " << this->cpmg->signal_amps[idx] << endl;
+        cout << "M[0] = " << this->cpmg->signal_amps[0] << endl;
+        cout << "M[1] = " << this->cpmg->signal_amps[1] << endl;
     }
-    cout << endl;
+
     if(size > 0)
     {
         this->signalAmps.push_back(this->cpmg->signal_amps[1]);
     }
+    if(this->MultiTau_config.getCompleteDecay())
+    {
+        this->cpmg->applyLaplace();
+    }
+}
+
+void NMR_multitau::saveCPMG()
+{
+    if(this->MultiTau_config.getCompleteDecay()) 
+    {
+        double time = omp_get_wtime();
+        cout << "saving results...";
+
+        if(this->MultiTau_config.getSaveWalkers())
+        {
+            this->cpmg->writeWalkers();
+        }
+    
+        if(this->MultiTau_config.getSaveHistogram())
+        {
+            this->cpmg->writeHistogram();
+        }    
+    
+        if(this->MultiTau_config.getSaveHistogramList())
+        {
+            this->cpmg->writeHistogramList();
+        }
+    
+        if(this->MultiTau_config.getSaveDecay()) 
+        {
+            this->cpmg->writeT2decay();
+            this->cpmg->writeT2dist();
+        }
+
+        time = omp_get_wtime() - time;
+        cout << "Ok. (" << time << " seconds)." << endl; 
+    }
+
 }
 
 void NMR_multitau::run()
 {
-    // before everything, reset conditions and map with highest time value
+    // first of all, reset conditions and map with highest time value
     double tick = omp_get_wtime();
     
     for(uint index = 0; index < this->requiredSteps.size(); index++)
     {
-        (*this).setExposureTime(index);
-        (*this).setNMRTimeFramework();
+        (*this).setCPMG(index);
         (*this).runCPMG();
+        (*this).saveCPMG();
+        cout << endl;
     }
 
     (*this).save();
@@ -147,22 +196,7 @@ void NMR_multitau::save()
 {
 	double time = omp_get_wtime();
     cout << "saving results...";
-       
-    if(this->MultiTau_config.getSaveWalkers())
-    {
-        (*this).writeWalkers();
-    }
-
-    if(this->MultiTau_config.getSaveHistogram())
-    {
-        (*this).writeHistogram();
-    }    
-
-    if(this->MultiTau_config.getSaveHistogramList())
-    {
-        (*this).writeHistogramList();
-    }
-
+    
     // write multitau data
     if(this->MultiTau_config.getSaveDecay()) 
     {

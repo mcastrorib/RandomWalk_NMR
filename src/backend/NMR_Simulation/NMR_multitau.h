@@ -45,10 +45,11 @@ public:
 	void setName();
 	void createDirectoryForData();
 	void setTauSequence();
-	void runCPMG();
-	void run();
 	void setExposureTime(uint index);
-	void setNMRTimeFramework();
+	void setCPMG(uint index);
+	void runCPMG();
+	void saveCPMG();
+	void run();
 	void save();
 	void writeDecay();
 	void writeWalkers();
