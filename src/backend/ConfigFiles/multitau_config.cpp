@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <stdint.h>
-
+#include <algorithm> 
 #include "multitau_config.h"
 
 using namespace std;
@@ -14,6 +14,7 @@ using namespace std;
 // default constructors
 multitau_config::multitau_config(const string configFile) : config_filepath(configFile)
 {
+    vector<double> TAU_VALUES();
     string default_dirpath = CONFIG_ROOT;
     string default_filename = CPMG_CONFIG_DEFAULT;
     (*this).readConfigFile(default_dirpath + default_filename);
@@ -29,6 +30,7 @@ multitau_config::multitau_config(const multitau_config &otherConfig)
     this->TAU_MIN = otherConfig.TAU_MIN;
     this->TAU_MAX = otherConfig.TAU_MAX;
     this->TAU_POINTS = otherConfig.TAU_POINTS;
+    this->TAU_VALUES = otherConfig.TAU_VALUES;
     this->TAU_SCALE = otherConfig.TAU_SCALE;
     this->COMPLETE_DECAY = otherConfig.COMPLETE_DECAY;
 
@@ -70,6 +72,7 @@ void multitau_config::readConfigFile(const string configFile)
 			if(token == "TAU_MIN") (*this).readTauMin(content);
             else if(token == "TAU_MAX") (*this).readTauMax(content);
             else if(token == "TAU_POINTS") (*this).readTauPoints(content);
+            else if(token == "TAU_VALUES") (*this).readTauValues(content);
             else if(token == "TAU_SCALE") (*this).readTauScale(content);
             else if(token == "COMPLETE_DECAY") (*this).readCompleteDecay(content);
             else if(token == "SAVE_MODE") (*this).readSaveMode(content);
@@ -99,10 +102,43 @@ void multitau_config::readTauPoints(string s)
     this->TAU_POINTS = std::stoi(s);
 }
 
+void multitau_config::readTauValues(string s)
+{
+    if(this->TAU_VALUES.size() > 0) this->TAU_VALUES.clear();
+
+    // parse vector
+    if(s.compare(0, 1, "{") == 0 and s.compare(s.length() - 1, 1, "}") == 0)
+    {
+        string strvec = s.substr(1, s.length() - 2);
+        string delimiter = ",";
+        size_t pos = 0;
+        string token, content;
+        while ((pos = strvec.find(delimiter)) != std::string::npos) 
+        {
+            token = strvec.substr(0, pos);
+            content = strvec.substr(pos + delimiter.length(), strvec.length());
+            strvec.erase(0, pos + delimiter.length());
+
+            // add value 
+            this->TAU_VALUES.push_back(std::stod(token));
+        }
+        // add value to RHO attribute
+        this->TAU_VALUES.push_back(std::stod(strvec));
+    } 
+
+    std::sort(this->TAU_VALUES.begin(), this->TAU_VALUES.end());
+    cout << "tau values: ";
+    for(int i = 0; i < this->TAU_VALUES.size(); i++)
+    {
+        cout << this->TAU_VALUES[i] << " ";
+    } cout << endl;
+}
+
 void multitau_config::readTauScale(string s)
 {
     if(s == "log") this->TAU_SCALE = s;
-    else this->TAU_SCALE = "linear";
+    else if(s == "linear") this->TAU_SCALE = "linear";
+    else this->TAU_SCALE = "manual";
 }
 
 void multitau_config::readCompleteDecay(string s)

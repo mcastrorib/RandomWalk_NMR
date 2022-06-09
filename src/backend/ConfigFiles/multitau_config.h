@@ -4,6 +4,7 @@
 // include C++ standard libraries
 #include <iostream>
 #include <string>
+#include <vector>
 #include "configFiles_defs.h"
 
 using namespace std;
@@ -15,6 +16,7 @@ public:
     double TAU_MIN;
     double TAU_MAX;
     int TAU_POINTS;
+    vector<double> TAU_VALUES;
     string TAU_SCALE;
     bool COMPLETE_DECAY;
 
@@ -42,6 +44,7 @@ public:
     void readTauMax(string s);
     void readTauPoints(string s);
     void readTauScale(string s);
+    void readTauValues(string s);
     void readCompleteDecay(string s);
     void readSaveMode(string s);
     void readSaveDecay(string s);
@@ -53,6 +56,7 @@ public:
     double getTauMin(){ return this->TAU_MIN; }
     double getTauMax(){ return this->TAU_MAX; }
     int getTauPoints(){ return this->TAU_POINTS; }
+    vector<double> getTauValues(){ return this->TAU_VALUES; }
     string getTauScale(){ return this->TAU_SCALE; }
     bool getCompleteDecay(){ return this->COMPLETE_DECAY; }
     bool getSaveMode(){return this->SAVE_MODE; }

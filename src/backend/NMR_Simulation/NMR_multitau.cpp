@@ -47,10 +47,20 @@ NMR_multitau::NMR_multitau( NMR_Simulation &_NMR,
 void NMR_multitau::setName()
 {
     int precisionVal = 2;
-    string tauMin = std::to_string(this->MultiTau_config.getTauMin());
-    string tauMax = std::to_string(this->MultiTau_config.getTauMax());
-    string points = std::to_string(this->MultiTau_config.getTauPoints());
+    string tauMin, tauMax, points;
     string scale = this->MultiTau_config.getTauScale();
+    if(scale == "manual")
+    {
+        vector<double> tauValues = this->MultiTau_config.getTauValues();
+        tauMin = std::to_string(tauValues[0]);
+        tauMax = std::to_string(tauValues[tauValues.size()-1]);
+        points = std::to_string(tauValues.size());
+    } else
+    {
+        tauMin = std::to_string(this->MultiTau_config.getTauMin());
+        tauMax = std::to_string(this->MultiTau_config.getTauMax());
+        points = std::to_string(this->MultiTau_config.getTauPoints());
+    }
 
     string trimmedTauMin = tauMin.substr(0, std::to_string(this->MultiTau_config.getTauMin()).find(".") + precisionVal + 1);
     string trimmedTauMax = tauMax.substr(0, std::to_string(this->MultiTau_config.getTauMax()).find(".") + precisionVal + 1);
@@ -72,7 +82,8 @@ void NMR_multitau::setTauSequence()
     string scale = this->MultiTau_config.getTauScale();
 
     vector<double> times;
-    if(scale == "log") times = (*this).logspace(log10(tauMin), log10(tauMax), tauPoints);
+    if(scale == "manual") times = this->MultiTau_config.getTauValues();
+    else if(scale == "log") times = (*this).logspace(log10(tauMin), log10(tauMax), tauPoints);
     else times = (*this).linspace(tauMin, tauMax, tauPoints);
 
     double timeInterval = this->NMR.getTimeInterval();
