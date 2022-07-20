@@ -148,6 +148,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
                                        int *walker_pz,
                                        double *penalty,
                                        double *energy,
+                                       double *pAlive,
                                        double *phase,
                                        uint64_t *seed,
                                        const uint64_t *bitBlock,
@@ -183,6 +184,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
     direction nextDirection = None;
 
     // thread variables for phase computation
+    double local_pAlive;
     double local_phase;
     double gammatau = 0.5*gamma*timeInterval;
     uint stepsPerInversion = stepsPerEcho / 2;
@@ -198,6 +200,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
         position_z = walker_pz[walkerId];
         local_dFactor = penalty[walkerId];
         local_seed = seed[walkerId];
+        local_pAlive = pAlive[walkerId];
         local_phase = phase[walkerId];
         energyLvl = energy[walkerId + energy_OFFSET];
       
@@ -257,7 +260,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
                     {
                         // walker hits the wall and comes back to the same position
                         // walker loses energy due to this collision
-                        energyLvl = energyLvl * local_dFactor;
+                        local_pAlive *= local_dFactor;
                     }
 
                     // update phase at finishing point
@@ -270,12 +273,12 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
                 }
             }
 
-            // account for phase relaxation
-            energyLvl *= cos(local_phase);
+            // // account for phase relaxation
+            // energyLvl *= cos(local_phase);
 
             // walker's energy device global memory update
             // must be done for each echo
-            energy[walkerId + energy_OFFSET] = energyLvl;
+            energy[walkerId + energy_OFFSET] = local_pAlive * cos(local_phase);
         }
 
         // position and seed device global memory update
@@ -284,6 +287,7 @@ __global__ void CPMG_walk_noflux_field(int *walker_px,
         walker_py[walkerId] = position_y;
         walker_pz[walkerId] = position_z;
         seed[walkerId] = local_seed;
+        pAlive[walkerId] = local_pAlive;
         phase[walkerId] = local_phase;
     }
 }
@@ -406,7 +410,8 @@ __global__ void CPMG_walk_periodic_field(int *walker_px,
                                          int *walker_py,
                                          int *walker_pz, 
                                          double *penalty, 
-                                         double *energy, 
+                                         double *energy,
+                                         double *pAlive, 
                                          double *phase, 
                                          uint64_t *seed, 
                                          const uint64_t *bitBlock, 
@@ -444,6 +449,7 @@ __global__ void CPMG_walk_periodic_field(int *walker_px,
     double energyLvl;
 
     // thread variables for phase computation
+    double local_pAlive;
     double local_phase;
     double gammatau = 0.5*gamma*timeInterval;
     uint stepsPerInversion = stepsPerEcho / 2;
@@ -460,6 +466,7 @@ __global__ void CPMG_walk_periodic_field(int *walker_px,
         localPosZ = walker_pz[walkerId];
         localDFactor = penalty[walkerId];
         localSeed = seed[walkerId];
+        local_pAlive = pAlive[walkerId];
         local_phase = phase[walkerId];
         energyLvl = energy[walkerId + energy_OFFSET];
 
@@ -526,7 +533,7 @@ __global__ void CPMG_walk_periodic_field(int *walker_px,
                     {
                         // walker hits wall and comes back to the same position
                         // collisions count is incremented
-                        energyLvl = energyLvl * localDFactor;
+                        local_pAlive *= localDFactor;
                     }
 
                     // update phase at finishing point
@@ -540,12 +547,12 @@ __global__ void CPMG_walk_periodic_field(int *walker_px,
 
             }
 
-            // account for phase relaxation
-            energyLvl *= cos(local_phase);
+            // // account for phase relaxation
+            // energyLvl *= cos(local_phase);
 
             // walker's energy device global memory update
             // must be done for each echo
-            energy[walkerId + energy_OFFSET] = energyLvl;
+            energy[walkerId + energy_OFFSET] = local_pAlive * cos(local_phase);
         }
 
         // position and seed device global memory update
@@ -554,6 +561,7 @@ __global__ void CPMG_walk_periodic_field(int *walker_px,
         walker_py[walkerId] = localPosY;
         walker_pz[walkerId] = localPosZ;
         seed[walkerId] = localSeed;
+        pAlive[walkerId] = local_pAlive;
         phase[walkerId] = local_phase;
     }
 }
@@ -677,6 +685,7 @@ __global__ void CPMG_walk_mirror_field(int *walker_px,
                                        int *walker_pz,
                                        double *penalty,
                                        double *energy,
+                                       double *pAlive,
                                        double *phase,
                                        uint64_t *seed,
                                        const uint64_t *bitBlock,
@@ -716,6 +725,7 @@ __global__ void CPMG_walk_mirror_field(int *walker_px,
     double energyLvl;
 
     // thread variables for phase computation
+    double local_pAlive;
     double local_phase;
     double gammatau = 0.5*gamma*timeInterval;
     uint stepsPerInversion = stepsPerEcho / 2;
@@ -732,6 +742,7 @@ __global__ void CPMG_walk_mirror_field(int *walker_px,
         localPosZ = walker_pz[walkerId];
         localDFactor = penalty[walkerId];
         localSeed = seed[walkerId];
+        local_pAlive = pAlive[walkerId];
         local_phase = phase[walkerId];
         energyLvl = energy[walkerId + energy_OFFSET];
 
@@ -797,7 +808,7 @@ __global__ void CPMG_walk_mirror_field(int *walker_px,
                     {
                         // walker hits wall and comes back to the same position
                         // collisions count is incremented
-                        energyLvl = energyLvl * localDFactor;
+                        local_pAlive *= localDFactor;
                     }
 
                     // update phase at finishing point
@@ -810,12 +821,12 @@ __global__ void CPMG_walk_mirror_field(int *walker_px,
                 }
             }
 
-            // account for phase relaxation
-            energyLvl *= cos(local_phase);
+            // // account for phase relaxation
+            // energyLvl *= cos(local_phase);
 
             // walker's energy device global memory update
             // must be done for each echo
-            energy[walkerId + energy_OFFSET] = energyLvl;
+            energy[walkerId + energy_OFFSET] = local_pAlive * cos(local_phase);
         }
 
         // position and seed device global memory update
@@ -823,6 +834,7 @@ __global__ void CPMG_walk_mirror_field(int *walker_px,
         walker_px[walkerId] = localPosX;
         walker_py[walkerId] = localPosY;
         walker_pz[walkerId] = localPosZ;
+        pAlive[walkerId] = local_pAlive;
         phase[walkerId] = local_phase;
         seed[walkerId] = localSeed;
     }
@@ -1042,6 +1054,7 @@ void NMR_cpmg::image_simulation_cuda()
     int *walker_py = arrayFactory.getIntArray(walkersPerKernel);
     int *walker_pz = arrayFactory.getIntArray(walkersPerKernel);
     double *penalty = arrayFactory.getDoubleArray(walkersPerKernel);
+    double *pAlive = arrayFactory.getDoubleArray(walkersPerKernel);
     double *phase = arrayFactory.getDoubleArray(walkersPerKernel);
     double *energy = arrayFactory.getDoubleArray(echoesPerKernel * energyArraySize);
     double *energyCollector = arrayFactory.getDoubleArray(echoesPerKernel * energyCollectorSize);
@@ -1063,6 +1076,7 @@ void NMR_cpmg::image_simulation_cuda()
     int *d_walker_py;
     int *d_walker_pz;
     double *d_penalty;
+    double *d_pAlive;
     double *d_phase;
     double *d_field;
     double *d_energy;
@@ -1074,6 +1088,7 @@ void NMR_cpmg::image_simulation_cuda()
     cudaMalloc((void **)&d_walker_py, walkersPerKernel * sizeof(int));
     cudaMalloc((void **)&d_walker_pz, walkersPerKernel * sizeof(int));
     cudaMalloc((void **)&d_penalty, walkersPerKernel * sizeof(double));
+    if(applyField) cudaMalloc((void **)&d_pAlive, walkersPerKernel * sizeof(double));
     if(applyField) cudaMalloc((void **)&d_phase, walkersPerKernel * sizeof(double));
     cudaMalloc((void **)&d_energy, echoesPerKernel * energyArraySize * sizeof(double));
     cudaMalloc((void **)&d_energyCollector, echoesPerKernel * energyCollectorSize * sizeof(double));
@@ -1120,6 +1135,7 @@ void NMR_cpmg::image_simulation_cuda()
                     walker_py[i] = this->NMR.walkers[i + packOffset].initialPosition.y;
                     walker_pz[i] = this->NMR.walkers[i + packOffset].initialPosition.z;
                     penalty[i] = this->NMR.walkers[i + packOffset].decreaseFactor;
+                    pAlive[i] = 1.0;
                     phase[i] = 0.0;
                     energy[i + ((echoesPerKernel - 1) * energyArraySize)] = this->NMR.walkers[i + packOffset].energy;
                     seed[i] = this->NMR.walkers[i + packOffset].initialSeed;
@@ -1133,6 +1149,7 @@ void NMR_cpmg::image_simulation_cuda()
                 walker_py[i] = this->NMR.walkers[i + packOffset].initialPosition.y;
                 walker_pz[i] = this->NMR.walkers[i + packOffset].initialPosition.z;
                 penalty[i] = this->NMR.walkers[i + packOffset].decreaseFactor;
+                pAlive[i] = 1.0;    
                 phase[i] = 0.0;
                 energy[i + ((echoesPerKernel - 1) * energyArraySize)] = this->NMR.walkers[i + packOffset].energy;
                 seed[i] = this->NMR.walkers[i + packOffset].initialSeed;
@@ -1147,6 +1164,7 @@ void NMR_cpmg::image_simulation_cuda()
         cudaMemcpy(d_walker_py, walker_py, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_pz, walker_pz, walkersPerKernel * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_penalty, penalty, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
+        if(applyField) cudaMemcpy(d_pAlive, pAlive, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
         if(applyField) cudaMemcpy(d_phase, phase, walkersPerKernel * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_energy, energy, echoesPerKernel * energyArraySize * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_seed, seed, walkersPerKernel * sizeof(uint64_t), cudaMemcpyHostToDevice);
@@ -1170,6 +1188,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                              d_walker_pz, 
                                                                              d_penalty, 
                                                                              d_energy,
+                                                                             d_pAlive,
                                                                              d_phase, 
                                                                              d_seed, 
                                                                              d_bitBlock, 
@@ -1194,6 +1213,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                                d_walker_pz, 
                                                                                d_penalty, 
                                                                                d_energy,
+                                                                               d_pAlive,
                                                                                d_phase, 
                                                                                d_seed, 
                                                                                d_bitBlock, 
@@ -1218,6 +1238,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                              d_walker_pz, 
                                                                              d_penalty, 
                                                                              d_energy,
+                                                                             d_pAlive,
                                                                              d_phase, 
                                                                              d_seed, 
                                                                              d_bitBlock, 
@@ -1405,6 +1426,7 @@ void NMR_cpmg::image_simulation_cuda()
                     walker_py[i] = this->NMR.walkers[i + packOffset].initialPosition.y;
                     walker_pz[i] = this->NMR.walkers[i + packOffset].initialPosition.z;
                     penalty[i] = this->NMR.walkers[i + packOffset].decreaseFactor;
+                    pAlive[i] = 1.0;
                     phase[i] = 0.0;
                     energy[i + ((echoesPerKernel - 1) * energyArraySize)] = this->NMR.walkers[i + packOffset].energy;
                     seed[i] = this->NMR.walkers[i + packOffset].initialSeed;
@@ -1418,6 +1440,7 @@ void NMR_cpmg::image_simulation_cuda()
                 walker_py[i] = this->NMR.walkers[i + packOffset].initialPosition.y;
                 walker_pz[i] = this->NMR.walkers[i + packOffset].initialPosition.z;
                 penalty[i] = this->NMR.walkers[i + packOffset].decreaseFactor;
+                pAlive[i] = 1.0;
                 phase[i] = 0.0;
                 energy[i + ((echoesPerKernel - 1) * energyArraySize)] = this->NMR.walkers[i + packOffset].energy;
                 seed[i] = this->NMR.walkers[i + packOffset].initialSeed;
@@ -1444,6 +1467,7 @@ void NMR_cpmg::image_simulation_cuda()
         cudaMemcpy(d_walker_py, walker_py, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_walker_pz, walker_pz, lastWalkerPackSize * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(d_penalty, penalty, lastWalkerPackSize * sizeof(double), cudaMemcpyHostToDevice);
+        if(applyField) cudaMemcpy(d_pAlive, pAlive, lastWalkerPackSize * sizeof(double), cudaMemcpyHostToDevice);
         if(applyField) cudaMemcpy(d_phase, phase, lastWalkerPackSize * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_energy, energy, echoesPerKernel * energyArraySize * sizeof(double), cudaMemcpyHostToDevice);
         cudaMemcpy(d_seed, seed, lastWalkerPackSize * sizeof(uint64_t), cudaMemcpyHostToDevice);
@@ -1468,6 +1492,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                              d_walker_pz, 
                                                                              d_penalty, 
                                                                              d_energy,
+                                                                             d_pAlive,
                                                                              d_phase, 
                                                                              d_seed, 
                                                                              d_bitBlock, 
@@ -1492,6 +1517,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                                d_walker_pz, 
                                                                                d_penalty, 
                                                                                d_energy,
+                                                                               d_pAlive,
                                                                                d_phase, 
                                                                                d_seed, 
                                                                                d_bitBlock, 
@@ -1516,6 +1542,7 @@ void NMR_cpmg::image_simulation_cuda()
                                                                              d_walker_pz, 
                                                                              d_penalty, 
                                                                              d_energy,
+                                                                             d_pAlive,
                                                                              d_phase, 
                                                                              d_seed, 
                                                                              d_bitBlock, 
@@ -1687,6 +1714,7 @@ void NMR_cpmg::image_simulation_cuda()
     free(walker_py);
     free(walker_pz);
     free(penalty);
+    free(pAlive);
     free(phase);
     free(h_globalEnergy);
     free(energy);
@@ -1699,6 +1727,7 @@ void NMR_cpmg::image_simulation_cuda()
     walker_py = NULL;
     walker_pz = NULL;
     penalty = NULL;
+    pAlive = NULL;
     phase = NULL;
     h_globalEnergy = NULL;
     energy = NULL;
@@ -1716,6 +1745,7 @@ void NMR_cpmg::image_simulation_cuda()
     cudaFree(d_walker_py);
     cudaFree(d_walker_pz);
     cudaFree(d_penalty);
+    if(applyField) cudaFree(d_pAlive);
     if(applyField) cudaFree(d_phase);
     if(applyField) cudaFree(d_field);
     cudaFree(d_energy);
