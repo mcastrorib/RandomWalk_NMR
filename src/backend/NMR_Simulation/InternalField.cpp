@@ -28,15 +28,17 @@ InternalField::InternalField(BitBlock &_bitblock, double _resolution, double _gr
 	// (*this).show();
 }
 
-InternalField::InternalField(string _file) : dimX(0), 
-											 dimY(0), 
-											 dimZ(0), 
-											 rowScale(0), 
-											 depthScale(0), 
-											 data(NULL)
+InternalField::InternalField(BitBlock &_bitblock, string _file) : dimX(0), 
+																  dimY(0), 
+																  dimZ(0), 
+																  rowScale(0), 
+																  depthScale(0), 
+																  data(NULL)
 {
+	(*this).setDims(_bitblock.imageColumns, _bitblock.imageRows, _bitblock.imageDepth);
+	(*this).allocDataArray();
 	(*this).readDataFromFile(_file);
-	(*this).show();
+	// (*this).show();
 }
 
 InternalField::InternalField(const InternalField &_other)
@@ -148,7 +150,7 @@ void InternalField::show()
 			for(int x = 0; x < (*this).getDimX(); x++)
 			{
 				
-				cout << std::setprecision(2) << (*this).getData(x,y,z) << " ";
+				cout << std::setprecision(3) << (*this).getData(x,y,z) << " ";
 			}
 
 			cout << endl;
@@ -165,34 +167,42 @@ double InternalField::getData(int _x, int _y, int _z)
 
 void InternalField::readDataFromFile(string _file)
 {
-	cout << "import internal magnetic field map to be implemented." << endl;
+	cout << "- reading internal field from file: " << endl << _file << endl;
 	ifstream datafile(_file, ios::in | ios::binary);
 	if(!datafile) {
 	  cout << "Cannot open file!" << endl;
 	  exit(1);
 	}
 
-	int32_t dims[3];
-	for(int i = 0; i < 3; i++)
-		datafile.read((char *) &dims[i], sizeof(int32_t));
-
-	(*this).setDims((int) dims[0],(int) dims[1], (int) dims[2]);
-	(*this).allocDataArray();
-
-	double inData;
-	long index;
-	for(int z = 0; z < (*this).getDimZ(); z++)
+	// check data file size
+	datafile.seekg(0, datafile.end);
+    long fsize = datafile.tellg() / sizeof(double);
+    long fieldVolume = (*this).getDimZ()*(*this).getDimY()*(*this).getDimX();
+    if(fsize != fieldVolume)
 	{
-		for(int y = 0; y < (*this).getDimY(); y++)
-		{		
-			for(int x = 0; x < (*this).getDimX(); x++)
-			{					
-				index = (*this).getIndex(x, y, z);
-				datafile.read((char *) &inData, sizeof(double));				
-				(*this).fillData(index, inData);
-			}
-		}
+	  cout << "Error: dims from file don't match!" << endl;
+	  cout << fsize << " vs. " << fieldVolume << endl;
+      exit(1);
 	}
+
+    // If sizes match
+	datafile.seekg(0, datafile.beg);
+	datafile.read((char *)this->data, fsize*sizeof(double));
+
+	// double inData;
+	// long index;
+	// for(int z = 0; z < (*this).getDimZ(); z++)
+	// {
+	// 	for(int y = 0; y < (*this).getDimY(); y++)
+	// 	{		
+	// 		for(int x = 0; x < (*this).getDimX(); x++)
+	// 		{					
+	// 			index = (*this).getIndex(x, y, z);
+	// 			datafile.read((char *) &inData, sizeof(double));				
+	// 			(*this).fillData(index, inData);
+	// 		}
+	// 	}
+	// }
 
 	datafile.close();
 

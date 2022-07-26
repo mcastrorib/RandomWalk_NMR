@@ -56,7 +56,8 @@ void NMR_cpmg::setInternalField(string _mode)
     } 
     else if(_mode == "import")
     {
-        this->internalField = new InternalField(this->CPMG_config.getPathToField());
+        this->internalField = new InternalField(this->NMR.bitBlock, 
+                                                this->CPMG_config.getPathToField());
     } 
 
     (*this).checkInternalField();

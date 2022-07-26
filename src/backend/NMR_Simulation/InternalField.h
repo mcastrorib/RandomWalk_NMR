@@ -14,7 +14,7 @@ class InternalField
 public:	
 	double *data;
 	
-	InternalField(string _file);
+	InternalField(BitBlock &_bitblock, string _file);
 	InternalField(BitBlock &_bitblock, double _resolution, double _gradient, int _direction);
 	InternalField(const InternalField &_other);
 	virtual ~InternalField()
