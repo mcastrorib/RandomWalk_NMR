@@ -1,0 +1,8 @@
+.vscode
+build/*
+python
+requirements
+.gitignore
+.git
+Dockerfile
+RWNMR
