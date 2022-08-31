@@ -38,7 +38,38 @@ set_source_files_properties(NMR_pfgse_cuda.cpp PROPERTIES LANGUAGE "CUDA")
 
 # Set CUDA architecture and link to CUDA runtime environment
 # For better results, add current device architecture
-set_property(TARGET NMR_Simulation PROPERTY CUDA_ARCHITECTURES 35 50 72 75 86)
+find_package(CUDA)
+if (CUDA_FOUND)
+  #Get CUDA compute capability
+  set(OUTPUTFILE ${CMAKE_CURRENT_SOURCE_DIR}/cuda_check/cuda_script) # No suffix required
+  set(CUDAFILE ${CMAKE_CURRENT_SOURCE_DIR}/cuda_check/check_cuda.cu)
+  execute_process(COMMAND nvcc -lcuda ${CUDAFILE} -o ${OUTPUTFILE})
+  execute_process(COMMAND ${OUTPUTFILE}
+                  RESULT_VARIABLE CUDA_RETURN_CODE
+                  OUTPUT_VARIABLE ARCH)
+
+  if(${CUDA_RETURN_CODE} EQUAL 0)
+    set(CUDA_SUCCESS "TRUE")
+  else()
+    set(CUDA_SUCCESS "FALSE")
+  endif()
+
+  if (${CUDA_SUCCESS})
+    message(STATUS "CUDA Architecture: ${ARCH}")
+    message(STATUS "CUDA Version: ${CUDA_VERSION_STRING}")
+    message(STATUS "CUDA Path: ${CUDA_TOOLKIT_ROOT_DIR}")
+    message(STATUS "CUDA Libararies: ${CUDA_LIBRARIES}")
+    message(STATUS "CUDA Performance Primitives: ${CUDA_npp_LIBRARY}")
+
+    set(CUDA_NVCC_FLAGS "${ARCH}")
+	set_property(TARGET NMR_Simulation PROPERTY CUDA_ARCHITECTURES "${ARCH}")
+    add_definitions(-DGPU) #You may not require this
+
+  else()
+    message(WARNING ${ARCH})
+  endif()
+endif()
+# set_property(TARGET NMR_Simulation PROPERTY CUDA_ARCHITECTURES 35 50 72 75 86)
 target_link_libraries(NMR_Simulation PRIVATE CUDA::cudart)
 
 # Install lib in project tree
