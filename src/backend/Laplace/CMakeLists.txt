@@ -10,7 +10,7 @@ include_directories(/usr/include/eigen3)
 target_include_directories(Laplace
           INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
           )
-
+target_compile_options(Laplace PUBLIC -O3)
 install(TARGETS Laplace 
                 DESTINATION lib)
 

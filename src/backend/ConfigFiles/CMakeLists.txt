@@ -9,7 +9,7 @@ add_library(ConfigFiles rwnmr_config.cpp
 target_include_directories(ConfigFiles
           INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
           )
-
+target_compile_options(ConfigFiles PUBLIC -O3)
 install(TARGETS ConfigFiles DESTINATION lib)
 install(FILES configFiles_defs.h
 			  rwnmr_config.h 

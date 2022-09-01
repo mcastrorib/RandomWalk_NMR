@@ -6,7 +6,7 @@ add_library(GA
 target_include_directories(GA
           INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
           )
-
+target_compile_options(GA PUBLIC -O3)
 install(TARGETS GA DESTINATION lib)
 install(FILES ga_defs.h 
 			  ga_core.h

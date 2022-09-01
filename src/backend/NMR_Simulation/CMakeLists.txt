@@ -28,7 +28,7 @@ target_compile_features(NMR_Simulation PUBLIC cxx_std_11)
 # Explicitly state that all CUDA files in the 
 # library needs to be built with -dc as the member functions 
 # could be called by other libraries and executables
-set(CMAKE_CUDA_FLAGS "-Xcompiler -fopenmp")
+set(CMAKE_CUDA_FLAGS "-Xcompiler -fopenmp -O3 -w")
 set_source_files_properties(NMR_Simulation_cuda.h PROPERTIES LANGUAGE "CUDA")
 set_source_files_properties(NMR_Simulation_cuda.cpp PROPERTIES LANGUAGE "CUDA")
 set_source_files_properties(NMR_cpmg_cuda.h PROPERTIES LANGUAGE "CUDA")
@@ -58,8 +58,8 @@ if (CUDA_FOUND)
     message(STATUS "CUDA Architecture: ${ARCH}")
     message(STATUS "CUDA Version: ${CUDA_VERSION_STRING}")
     message(STATUS "CUDA Path: ${CUDA_TOOLKIT_ROOT_DIR}")
-    message(STATUS "CUDA Libararies: ${CUDA_LIBRARIES}")
-    message(STATUS "CUDA Performance Primitives: ${CUDA_npp_LIBRARY}")
+    # message(STATUS "CUDA Libararies: ${CUDA_LIBRARIES}")
+    # message(STATUS "CUDA Performance Primitives: ${CUDA_npp_LIBRARY}")
 
     set(CUDA_NVCC_FLAGS "${ARCH}")
 	set_property(TARGET NMR_Simulation PROPERTY CUDA_ARCHITECTURES "${ARCH}")
@@ -70,6 +70,7 @@ if (CUDA_FOUND)
   endif()
 endif()
 # set_property(TARGET NMR_Simulation PROPERTY CUDA_ARCHITECTURES 35 50 72 75 86)
+target_compile_options(NMR_Simulation PUBLIC -O3)
 target_link_libraries(NMR_Simulation PRIVATE CUDA::cudart)
 
 # Install lib in project tree

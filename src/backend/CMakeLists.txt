@@ -112,7 +112,7 @@ endif()
 
 # add the executable
 add_executable(RWNMR main.cpp)
-
+target_compile_options(RWNMR PUBLIC -O3)
 target_link_libraries(RWNMR PUBLIC ${EXTRA_LIBS} ${MPI_LIBRARIES} ${OpenCV_LIBS} OpenMP::OpenMP_CXX Eigen3::Eigen)
 target_link_libraries(RWNMR PRIVATE CUDA::cudart)
 
