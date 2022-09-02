@@ -44,6 +44,7 @@ rwnmr_config::rwnmr_config(const rwnmr_config &otherConfig)
     // SAVE MODE
     this->SAVE_IMG_INFO = otherConfig.SAVE_IMG_INFO;
     this->SAVE_BINIMG = otherConfig.SAVE_BINIMG;
+    this->SAVE_WALKERS = otherConfig.SAVE_WALKERS;
 
     // HISTOGRAM SIZE
     this->HISTOGRAMS = otherConfig.HISTOGRAMS;  
@@ -116,6 +117,7 @@ void rwnmr_config::readConfigFile(const string configFile)
 			else if(token == "BC") (*this).readBC(content);
 			else if(token == "SAVE_IMG_INFO") (*this).readSaveImgInfo(content);
 			else if(token == "SAVE_BINIMG") (*this).readSaveBinImg(content);
+			else if(token == "SAVE_WALKERS") (*this).readSaveWalkers(content);
 			else if(token == "HISTOGRAMS") (*this).readHistograms(content);
 			else if(token == "HISTOGRAM_SIZE") (*this).readHistogramSize(content);
 			else if(token == "HISTOGRAM_SCALE") (*this).readHistogramScale(content);
@@ -255,6 +257,12 @@ void rwnmr_config::readSaveBinImg(string s)
 {
 	if(s == "true") this->SAVE_BINIMG = true;
 	else this->SAVE_BINIMG = false;
+}
+
+void rwnmr_config::readSaveWalkers(string s)
+{
+	if(s == "true") this->SAVE_WALKERS = true;
+	else this->SAVE_WALKERS = false;
 }
 
 // Histograms

@@ -268,7 +268,7 @@ public:
     void associateMapSimulation();
 
     // Class supermethod:
-    void saveInfo();
+    void saveInfo(string _dir);
     void save();
     void save(string _otherDir);
 
@@ -326,7 +326,7 @@ public:
     // output generation class methods
     string createDirectoryForResults(string _root);
     void saveImageInfo(string filedir);
-    void saveWalkerCollisions(string filedir);
+    void saveWalkers(string filedir);
     void saveBitBlock(string filedir);
     void saveHistogram(string filedir);
     void saveHistogramList(string filedir);

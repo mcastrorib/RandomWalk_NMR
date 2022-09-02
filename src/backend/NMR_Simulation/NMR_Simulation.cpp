@@ -409,17 +409,13 @@ void NMR_Simulation::setWalkers(Point3D _point1, Point3D _point2, uint _numberOf
 }
 
 // save results
-void NMR_Simulation::saveInfo()
-{
-    
-}
-
 void NMR_Simulation::save()
 {
     double time = omp_get_wtime();
     cout << "saving results:" << endl;
+    (*this).saveInfo(this->simulationDirectory);
 
-    ProgressBar pBar(2.0);
+    ProgressBar pBar(3.0);
 
     if(this->rwNMR_config.getSaveImgInfo())
     {   
@@ -437,6 +433,14 @@ void NMR_Simulation::save()
     pBar.update(1);
     pBar.print();
 
+    if(this->rwNMR_config.getSaveWalkers())
+    {   
+        (*this).saveWalkers(this->simulationDirectory);
+    }
+
+    pBar.update(1);
+    pBar.print();
+
     time = omp_get_wtime() - time;
     cout << " in " << time << " seconds." << endl; 
 }
@@ -447,7 +451,7 @@ void NMR_Simulation::save(string _otherDir)
     double time = omp_get_wtime();
     cout << "saving results...";
 
-    ProgressBar pBar(2.0);
+    ProgressBar pBar(3.0);
     
     if(this->rwNMR_config.getSaveImgInfo())
     {   
@@ -460,6 +464,14 @@ void NMR_Simulation::save(string _otherDir)
     if(this->rwNMR_config.getSaveBinImg())
     {   
         (*this).saveBitBlock(_otherDir);
+    }
+
+    pBar.update(1);
+    pBar.print();
+
+    if(this->rwNMR_config.getSaveWalkers())
+    {   
+        (*this).saveWalkers(_otherDir);
     }
 
     pBar.update(1);
@@ -1573,6 +1585,62 @@ string NMR_Simulation::createDirectoryForResults(string _path)
     return (_path + this->simulationName);
 }
 
+void NMR_Simulation::saveInfo(string filedir)
+{
+    string filename = filedir + "/SimInfo.txt";
+
+    // file object init
+    ofstream fileObject;
+
+    // open file
+    fileObject.open(filename, ios::out);
+    if (fileObject.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
+
+    // print input details
+    fileObject << "------------------------------------------------------" << endl;
+    fileObject << ">>> NMR SIMULATION 3D PARAMETERS: " << this->simulationName << endl;
+    fileObject << "------------------------------------------------------" << endl;
+    fileObject << "Data path: " << this->DBPath + this->simulationName << endl;
+    fileObject << "Image path: " << this->imagePath.completePath << endl;
+    fileObject << "Image resolution (um/voxel): " << this->imageVoxelResolution << endl;
+    fileObject << "Diffusion coefficient (um^2/ms): " << this->diffusionCoefficient << endl;
+    fileObject << "Number of images: " << this->numberOfImages << endl;
+    fileObject << "Walkers pore occupancy in simulation: " << this->walkerOccupancy * 100.0 << "%" << endl;
+    
+
+    fileObject << "Initial seed: ";
+    if (this->seedFlag)
+    {
+        fileObject << this->initialSeed << endl;
+    }
+    else
+    {
+        fileObject << this->initialSeed << "\t(defined by user)" << endl;
+    }
+
+    fileObject << "GPU usage: ";
+    if (this->gpu_use)
+    {
+        fileObject << "ON" << endl;
+    }
+    else
+    {
+        fileObject << "OFF" << endl;
+    }
+
+    fileObject << "BC: " << (*this).getBoundaryCondition() << endl;
+
+    fileObject << "------------------------------------------------------" << endl;
+    fileObject << endl;
+
+    // close file
+    fileObject.close();
+}
+
 void NMR_Simulation::saveImageInfo(string filedir)
 {
     string filename = filedir + "/ImageInfo.txt";
@@ -1603,13 +1671,44 @@ void NMR_Simulation::saveImageInfo(string filedir)
     fileObject.close();
 }
 
-void NMR_Simulation::saveWalkerCollisions(string filePath)
+void NMR_Simulation::saveWalkers(string filedir)
 {
+    string filename = filedir + "/walkers.csv";
+    ofstream file;
+    file.open(filename, ios::out);
+    if (file.fail())
+    {
+        cout << "Could not open file from disc." << endl;
+        exit(1);
+    }
 
-    string fileName = filePath + "/NMR_collisions.txt";
+    file << "PositionXi";
+    file << ",PositionYi";
+    file << ",PositionZi";
+    file << ",PositionXf";
+    file << ",PositionYf";
+    file << ",PositionZf";
+    file << ",Collisions";
+    file << ",XIRate";
+    file << ",Energy"; 
+    file << ",RNGSeed" << endl;
 
-    fileHandler external_file(fileName);
-    external_file.writeIndividualCollisions(this->walkers, this->simulationSteps);
+    const int precision = 6;
+    for (uint index = 0; index < this->walkers.size(); index++)
+    {
+        file << setprecision(precision) << this->walkers[index].getInitialPositionX()
+        << "," << this->walkers[index].getInitialPositionY()
+        << "," << this->walkers[index].getInitialPositionZ()
+        << "," << this->walkers[index].getPositionX() 
+        << "," << this->walkers[index].getPositionY() 
+        << "," << this->walkers[index].getPositionZ() 
+        << "," << this->walkers[index].getCollisions() 
+        << "," << this->walkers[index].getXIrate() 
+        << "," << this->walkers[index].getEnergy() 
+        << "," << this->walkers[index].getInitialSeed() << endl;
+    }
+
+    file.close();
 }
 
 void NMR_Simulation::saveBitBlock(string filePath)

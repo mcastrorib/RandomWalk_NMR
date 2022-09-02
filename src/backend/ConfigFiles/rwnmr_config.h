@@ -31,6 +31,7 @@ public:
     // SAVE MODE
     bool SAVE_IMG_INFO;
     bool SAVE_BINIMG;
+    bool SAVE_WALKERS;
 
     // HISTOGRAM SIZE
     uint HISTOGRAMS;  
@@ -95,6 +96,7 @@ public:
     // -- Saving
     void readSaveImgInfo(string s);
     void readSaveBinImg(string s);
+    void readSaveWalkers(string s);
 
     // Histograms
     void readHistograms(string s);  
@@ -144,6 +146,7 @@ public:
     // -- Saving
     bool getSaveImgInfo(){ return this->SAVE_IMG_INFO;}
     bool getSaveBinImg(){ return this->SAVE_BINIMG;}
+    bool getSaveWalkers(){ return this->SAVE_WALKERS;}
 
     // Histograms
     uint getHistograms(){ return this->HISTOGRAMS;}
