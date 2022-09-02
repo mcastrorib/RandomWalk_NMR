@@ -249,3 +249,9 @@ void Walker::createRandomSeed()
     this->initialSeed = uint64_dist(myRNG) + 1;
     this->currentSeed = this->initialSeed;
 }
+
+void Walker::setRandomSeed(uint64_t _seed)
+{
+    this->initialSeed = _seed;
+    this->currentSeed = this->initialSeed;
+}

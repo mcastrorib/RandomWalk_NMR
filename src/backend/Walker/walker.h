@@ -104,6 +104,7 @@ public:
 
     //Class methods:
     void createRandomSeed();
+    void setRandomSeed(uint64_t _seed);
     void setInitialSeed(uint64_t _seed){ this->initialSeed = _seed; }
 
     // supermethods

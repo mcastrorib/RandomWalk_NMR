@@ -4,15 +4,14 @@
 // include string stream manipulation functions
 #include <sstream>
 #include <iomanip>
+#include <random>
+#include <vector>
 
 // include OpenCV core functions
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgcodecs.hpp"
 #include <opencv2/highgui.hpp>
-
-// STL vector container
-#include <vector>
 
 // include OpenMP for multicore implementation
 #include <omp.h>
@@ -37,6 +36,9 @@ public:
     // Config attributes
     rwnmr_config rwNMR_config;
     uct_config uCT_config;
+
+    // RNG State
+    static std::mt19937 _rng;
 
     // RW simulation parameters
     string simulationName;
@@ -265,13 +267,12 @@ public:
     }
     void associateMapSimulation();
 
-
     // Class supermethod:
     void saveInfo();
     void save();
     void save(string _otherDir);
 
-    uint pickRandomIndex(uint _maxValue);
+    uint pickRandomIndex(uint _minValue, uint _maxValue);
     Pore removeRandomPore(vector<Pore> &_pores, uint _randomIndex);
 
     void printDetails();

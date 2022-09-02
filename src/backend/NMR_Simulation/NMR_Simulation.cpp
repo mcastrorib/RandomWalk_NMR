@@ -36,10 +36,10 @@
 #include "../Utils/ProgressBar.h"
 #include "../RNG/randomIndex.h"
 
-
-
 using namespace cv;
 using namespace std;
+
+std::mt19937 NMR_Simulation::_rng;
 
 NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config, 
                                uct_config _uCT_config,
@@ -90,6 +90,10 @@ NMR_Simulation::NMR_Simulation(rwnmr_config _rwNMR_config,
     {
         (*this).setInitialSeed(this->rwNMR_config.getSeed(), true);
     }   
+    // Initialize random state
+    NMR_Simulation::_rng.seed((*this).getInitialSeed());
+    NMR_Simulation::_rng.discard(4096);
+
 
     // assign attributes from uct config files
     (*this).setImageResolution(this->uCT_config.getResolution());
@@ -208,23 +212,55 @@ void NMR_Simulation::applyVoxelDivision(uint _shifts)
         if(indexExpansion < 0) indexExpansion = 0;
         
         int shiftX, shiftY, shiftZ;
-        RandomIndex rIndex(0, indexExpansion);
-        ProgressBar pBar((double) this->walkers.size());
-        for(uint idx = 0; idx < this->walkers.size(); idx++)
-        {   
+        std::uniform_int_distribution<std::mt19937::result_type> dist(0, indexExpansion);
+
+        // Divide walkers in packs
+        uint walkerPacks = 10;
+        uint packSize = this->numberOfWalkers / walkerPacks;
+        uint lastPackSize = this->numberOfWalkers % walkerPacks;
+
+        // create progress bar object
+        ProgressBar pBar(10);
+        uint idx = 0;
+
+        for (uint pack = 0; pack < (walkerPacks - 1); pack++)
+        {
+            for (uint i = 0; i < packSize; i++)
+            {
+                idx = pack * packSize + i;
+
+                // randomly place walker in voxel sites
+                shiftX = ((int) this->walkers[idx].initialPosition.x * shiftFactor) + dist(NMR_Simulation::_rng);
+                shiftY = ((int) this->walkers[idx].initialPosition.y * shiftFactor) + dist(NMR_Simulation::_rng);
+                shiftZ = ((int) this->walkers[idx].initialPosition.z * shiftFactor) + dist(NMR_Simulation::_rng);
+                this->walkers[idx].placeWalker(shiftX, shiftY, shiftZ);
+
+                // update collision penalty
+                this->walkers[idx].computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
+            }
+
+            // Update progress bar
+            pBar.update(1);
+            pBar.print();
+        }
+
+        for (uint i = 0; i < (packSize + lastPackSize); i++)
+        {
+            idx = (walkerPacks - 1) * packSize + i;
+
             // randomly place walker in voxel sites
-            shiftX = ((int) this->walkers[idx].initialPosition.x * shiftFactor) + rIndex();
-            shiftY = ((int) this->walkers[idx].initialPosition.y * shiftFactor) + rIndex();
-            shiftZ = ((int) this->walkers[idx].initialPosition.z * shiftFactor) + rIndex();
+            shiftX = ((int) this->walkers[idx].initialPosition.x * shiftFactor) + dist(NMR_Simulation::_rng);
+            shiftY = ((int) this->walkers[idx].initialPosition.y * shiftFactor) + dist(NMR_Simulation::_rng);
+            shiftZ = ((int) this->walkers[idx].initialPosition.z * shiftFactor) + dist(NMR_Simulation::_rng);
             this->walkers[idx].placeWalker(shiftX, shiftY, shiftZ);
 
             // update collision penalty
             this->walkers[idx].computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
-
-            // update progress bar
-            pBar.update(1);
-            pBar.print();
         }
+
+        // Last update in progress bar
+        pBar.update(1);
+        pBar.print();    
     }
 
     time = omp_get_wtime() - time;
@@ -882,7 +918,7 @@ void NMR_Simulation::updateNumberOfPores()
 void NMR_Simulation::createPoreList()
 {
     double time = omp_get_wtime(); 
-    cout << "- creating pore list:" << endl;
+    cout << "- creating complete pore list:" << endl;
 
     // consider 2 or 3 dimensions
     bool dim3 = false; 
@@ -934,7 +970,7 @@ void NMR_Simulation::createPoreList()
 void NMR_Simulation::createPoreList(Point3D _vertex1, Point3D _vertex2)
 {
     double time = omp_get_wtime(); 
-    cout << "- creating pore list:" << endl;
+    cout << "- creating restricted pore list:" << endl;
 
     // consider 2 or 3 dimensions
     bool dim3 = false; 
@@ -1038,7 +1074,7 @@ void NMR_Simulation::updateWalkerOccupancy()
 void NMR_Simulation::createWalkersIDList()
 {
     double time = omp_get_wtime();
-    cout << "- creating list of " << this->numberOfWalkers << " random walkers ";
+    cout << "- creating walkers ID list:" << endl;
 
     if(this->walkersIDList.size() > 0) this->walkersIDList.clear();
     this->walkersIDList.reserve(this->numberOfWalkers);
@@ -1050,146 +1086,39 @@ void NMR_Simulation::createWalkersIDList()
         return;
     }
 
-    /*
-        case 1 - set exactly one random walker at each pore voxel in image
-    */
-    if(this->walkerOccupancy == 1.0)
+    // Divide walkers in packs
+    uint walkerPacks = 10;
+    uint packSize = this->numberOfWalkers / walkerPacks;
+    uint lastPackSize = this->numberOfWalkers % walkerPacks;
+
+    // create progress bar object
+    ProgressBar pBar(10);
+    uint idx = 0;
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0, (*this).getNumberOfPores());                
+    for (uint pack = 0; pack < (walkerPacks - 1); pack++)
     {
-        // set omp variables for parallel loop throughout walker list
-        const int num_cpu_threads = omp_get_max_threads();
-        const int loop_size = this->numberOfWalkers;
-        int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads:" << endl;
-
-        // create Progress Bar object
-        ProgressBar pBar((double) num_cpu_threads);
-        pBar.print();
-
-        #pragma omp parallel shared(walkersIDList, pBar) private(loop_start, loop_finish) 
+        for (uint i = 0; i < packSize; i++)
         {
-            const int thread_id = omp_get_thread_num();
-            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
-            loop_start = looper.getStart();
-            loop_finish = looper.getFinish();  
-            
-            for(uint idx = loop_start; idx < loop_finish; idx++)
-            {
-                #pragma omp critical
-                {
-                    this->walkersIDList.push_back(idx);
-                }
-            }
-
-            #pragma omp critical
-            {
-                pBar.update(1);
-                pBar.print();
-            }
+            idx = pack * packSize + i;
+            this->walkersIDList.push_back(dist(NMR_Simulation::_rng));
         }
+
+        // Update progress bar
+        pBar.update(1);
+        pBar.print();
     }
 
-    /* 
-        case 3 - for each walker, choose a pore voxel randomly 
-    */
-    // if(this->walkerOccupancy > 1.0)
-    if(this->walkerOccupancy != 1.0)
+    for (uint i = 0; i < (packSize + lastPackSize); i++)
     {
-        // set omp variables for parallel loop throughout walker list
-        const int num_cpu_threads = omp_get_max_threads();
-        const int loop_size = this->numberOfWalkers;
-        int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads:" << endl;
-
-        // create Progress Bar object
-        ProgressBar pBar((double) num_cpu_threads);
-        pBar.print();
-
-        const uint listSize = (*this).getNumberOfPores();
-        vector<RandomIndex> generators;
-        for(uint i = 0; i < num_cpu_threads; i++)
-        {
-            RandomIndex rnew(0, listSize - 1, i);
-            generators.emplace_back(rnew);
-        }
-
-        #pragma omp parallel shared(walkersIDList, generators, pBar) private(loop_start, loop_finish) 
-        {
-            const int thread_id = omp_get_thread_num();
-            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
-            loop_start = looper.getStart();
-            loop_finish = looper.getFinish();              
-
-            for (uint idx = loop_start; idx < loop_finish; idx++)
-            {
-                // ramdomly choose a pore location for the new walker with no restrictions
-                uint nextPoreIndex = generators[thread_id]();
-                #pragma omp critical
-                {
-                    this->walkersIDList.push_back(nextPoreIndex);
-                }
-            } 
-
-            #pragma omp critical
-            {
-                pBar.update(1);
-                pBar.print();
-            }
-        }
+        idx = (walkerPacks - 1) * packSize + i;
+        this->walkersIDList.push_back(dist(NMR_Simulation::_rng));
     }
 
-    /* 
-    case 3: 
-        for each walker, choose a pore voxel randomly but never allow two walkers in same voxel
-        - it needs to be revisited, a bug was found in the random picking procedure - try using 
-        RandomIndex class instead. 
-        For now, all the cases where occupancy != 1.0 will be branched to case 2
-    */
-    bool debuged = false; 
-    if(this->walkerOccupancy < 1.0 and debuged == true)
-    {
-        // create pore pool
-        vector<uint> porePool;
-        porePool.reserve(this->numberOfPores);
-        for(uint idx = 0; idx < this->numberOfPores; idx++)
-        {
-            porePool.push_back(idx);
-        }
+    // Last update in progress bar
+    pBar.update(1);
+    pBar.print();
 
-        // set omp variables for parallel loop throughout walker list
-        const int num_cpu_threads = omp_get_max_threads();
-        const int loop_size = this->numberOfWalkers;
-        int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads:" << endl;
-
-        // create Progress Bar object
-        ProgressBar pBar((double) num_cpu_threads);
-        pBar.print();
-
-        #pragma omp parallel shared(walkersIDList, pBar) private(loop_start, loop_finish) 
-        {
-            const int thread_id = omp_get_thread_num();
-            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
-            loop_start = looper.getStart();
-            loop_finish = looper.getFinish(); 
-
-            for (uint i = loop_start; i < loop_finish; i++)
-            {
-                // ramdomly choose a pore location for the new walker
-                uint nextPoreIndex = (*this).removeRandomIndexFromPool(porePool, (*this).pickRandomIndex(this->numberOfPores - i));
-                #pragma omp critical
-                {
-                    this->walkersIDList.push_back(nextPoreIndex);
-                }
-            }
-
-            #pragma omp critical
-            {
-                pBar.update(1);
-                pBar.print();
-            }
-        }
-    }
-
+    
     time = omp_get_wtime() - time;
     cout << " in " << time << " seconds." << endl; 
 }
@@ -1223,7 +1152,8 @@ void NMR_Simulation::createWalkers()
     // create progress bar object
     ProgressBar pBar(10);
     uint idx = 0;
-    uint count = 0;
+    std::uniform_int_distribution<uint64_t> uint64_dist;
+
     for (uint pack = 0; pack < (walkerPacks - 1); pack++)
     {
         for (uint i = 0; i < packSize; i++)
@@ -1234,24 +1164,7 @@ void NMR_Simulation::createWalkers()
             if(this->rwNMR_config.getRhoType() == "uniform") this->walkers[idx].setSurfaceRelaxivity(rho[0]);
             else if(this->rwNMR_config.getRhoType() == "sigmoid") this->walkers[idx].setSurfaceRelaxivity(rho);
             this->walkers[idx].computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
-            
-            // set initial seed
-            if (this->seedFlag != true)
-            {
-                this->walkers[idx].createRandomSeed();
-            }
-            else // seed was defined by user
-            {
-                // scramble some bits in the original seed
-                tempSeed ^= tempSeed >> 12;
-                tempSeed ^= tempSeed << 25;
-                tempSeed ^= tempSeed >> 27;
-
-                this->walkers[idx].setInitialSeed(tempSeed);
-                this->walkers[idx].resetSeed();
-            }  
-
-            count++;
+            this->walkers[idx].setRandomSeed(uint64_dist(NMR_Simulation::_rng));
         }
 
         // Update progress bar
@@ -1267,24 +1180,7 @@ void NMR_Simulation::createWalkers()
         if(this->rwNMR_config.getRhoType() == "uniform") this->walkers[idx].setSurfaceRelaxivity(rho[0]);
         else if(this->rwNMR_config.getRhoType() == "sigmoid") this->walkers[idx].setSurfaceRelaxivity(rho);
         this->walkers[idx].computeDecreaseFactor(this->imageVoxelResolution, this->diffusionCoefficient);
-        
-        // set initial seed
-        if (this->seedFlag != true)
-        {
-            this->walkers[idx].createRandomSeed();
-        }
-        else // seed was defined by user
-        {
-            // scramble some bits in the original seed
-            tempSeed ^= tempSeed >> 12;
-            tempSeed ^= tempSeed << 25;
-            tempSeed ^= tempSeed >> 27;
-
-            this->walkers[idx].setInitialSeed(tempSeed);
-            this->walkers[idx].resetSeed();
-        }  
-
-        count++;
+        this->walkers[idx].setRandomSeed(uint64_dist(NMR_Simulation::_rng)); 
     }
 
     // Update progress bar
@@ -1322,17 +1218,17 @@ void NMR_Simulation::placeWalkersByChance()
     uint idx = 0;
     Point3D point; 
     bool validPoint = false;   
-    
-    RandomIndex columnRandomIndex(0, this->bitBlock.imageColumns - 1);
-    RandomIndex rowRandomIndex(0, this->bitBlock.imageRows - 1);
-    RandomIndex depthRandomIndex(0, this->bitBlock.imageDepth - 1);
-    
+
+    std::uniform_int_distribution<std::mt19937::result_type> columnDist(0, this->bitBlock.imageColumns);
+    std::uniform_int_distribution<std::mt19937::result_type> rowDist(0, this->bitBlock.imageRows);
+    std::uniform_int_distribution<std::mt19937::result_type> depthDist(0, this->bitBlock.imageDepth);
+        
     while(walkersInserted < this->numberOfWalkers && errorCount < erroLimit)
     {
         // randomly choose a position
-        point.x = columnRandomIndex();
-        point.y = rowRandomIndex();
-        point.z = depthRandomIndex();
+        point.x = columnDist(NMR_Simulation::_rng);
+        point.y = rowDist(NMR_Simulation::_rng);
+        point.z = depthDist(NMR_Simulation::_rng);
         if(dim3)
         {
             validPoint = walkers[idx].checkNextPosition_3D(point, this->bitBlock);        
@@ -1522,53 +1418,27 @@ void NMR_Simulation::placeWalkersInCubicSpace(Point3D _vertex1, Point3D _vertex2
     }
     else
     {    
-        // set omp variables for parallel loop throughout walker list
-        const int num_cpu_threads = omp_get_max_threads();
-        const int loop_size = this->walkers.size();
-        int loop_start, loop_finish;
-        cout << "using " << num_cpu_threads << " cpu threads:" << endl;
-
-        const uint listSize = selectedPores.size();
-        vector<RandomIndex> generators;
-        for(uint i = 0; i < num_cpu_threads; i++)
-        {
-            RandomIndex rnew(0, listSize - 1, i);
-            generators.emplace_back(rnew);
-        }
 
         // Create Progress Bar object
-        ProgressBar pBar((double) num_cpu_threads);
+        ProgressBar pBar((double) this->numberOfWalkers);
         pBar.print();
 
-        #pragma omp parallel shared(walkers, pores, selectedPores, generators, pBar) private(loop_start, loop_finish) 
-        {
-            const int thread_id = omp_get_thread_num();
-            OMPLoopEnabler looper(thread_id, num_cpu_threads, loop_size);
-            loop_start = looper.getStart();
-            loop_finish = looper.getFinish();
-
-            // pick random pores in selected list
-            const uint listSize = selectedPores.size();
-            for(uint id = loop_start; id < loop_finish; id++)
-            {   
-        
-                uint poreID = selectedPores[generators[thread_id]()];
-                this->walkers[id].placeWalker(this->pores[poreID].position_x, 
-                                              this->pores[poreID].position_y, 
-                                              this->pores[poreID].position_z);
-            }
-
-            // update progress bar
-            #pragma omp critical
-            {
-                pBar.update(1);
-                pBar.print();
-            }
-        }
+        std::uniform_int_distribution<std::mt19937::result_type> dist(0, selectedPores.size());
+        for(uint id = 0; id < this->numberOfWalkers; id++)
+        {   
     
-        time = omp_get_wtime() - time;
-        cout << " in " << time << " seconds." << endl; 
+            uint poreID = selectedPores[dist(NMR_Simulation::_rng)];
+            this->walkers[id].placeWalker(this->pores[poreID].position_x, 
+                                          this->pores[poreID].position_y, 
+                                          this->pores[poreID].position_z);
+            
+            pBar.update(1);
+            pBar.print();
+        }
     }
+
+    time = omp_get_wtime() - time;
+    cout << " in " << time << " seconds." << endl; 
 }
 
 void NMR_Simulation::initHistogramList()
@@ -1656,18 +1526,14 @@ void NMR_Simulation::associateMapSimulation()
     }
 }
 
-uint NMR_Simulation::pickRandomIndex(uint _maxValue)
+uint NMR_Simulation::pickRandomIndex(uint _minValue, uint _maxValue)
 {
-    int CPUfactor = 1;
-    if(this->rwNMR_config.getOpenMPUsage()) CPUfactor += omp_get_thread_num();
-    std::random_device dev;
-    std::mt19937 rng(dev()* CPUfactor * CPUfactor);
-    std::uniform_int_distribution<std::mt19937::result_type> dist(1, _maxValue); 
-
-    // RNG warm up
-    for(int i = 0; i < 100; i++) dist(rng);
-
-    return (dist(rng) - 1);
+    // int CPUfactor = 1;
+    // if(this->rwNMR_config.getOpenMPUsage()) CPUfactor += omp_get_thread_num();
+    // std::random_device dev;
+    // std::mt19937 rng(dev()* CPUfactor * CPUfactor);
+    std::uniform_int_distribution<std::mt19937::result_type> dist(_minValue, _maxValue-1); 
+    return dist(NMR_Simulation::_rng); 
 }
 
 Pore NMR_Simulation::removeRandomPore(vector<Pore> &_pores, uint _randomIndex)

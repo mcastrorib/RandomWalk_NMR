@@ -1898,7 +1898,7 @@ vector<double> NMR_PFGSE::getNormalDistributionSamples(const double loc, const d
 	
 	for (int i = 0; i < size; i++)
 	{
-		randomData.emplace_back(distribution(NMR_PFGSE::_rng));
+		randomData.emplace_back(distribution(NMR_Simulation::_rng));
 	}
 
 	return randomData;
