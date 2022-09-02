@@ -66,6 +66,7 @@ Walker::Walker(bool _3rdDim) : position_x(0),
                                decreaseFactor(1.0),
                                collisions(0),
                                tCollisions(0),
+                               xi_rate(0.0),
                                initialSeed(0),
                                currentSeed(0)
 {
